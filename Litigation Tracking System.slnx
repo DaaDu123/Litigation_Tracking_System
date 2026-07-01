@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="LTSBackend/LTSBackend.csproj" />
+  <Project Path="LTSFrontend/LTSFrontend.csproj" />
+</Solution>

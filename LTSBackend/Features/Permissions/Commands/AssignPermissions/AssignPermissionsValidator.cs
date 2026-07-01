@@ -1,0 +1,17 @@
+﻿using FluentValidation;
+
+namespace LTSBackend.Features.Permissions.Commands.AssignPermissions;
+
+public class AssignPermissionsValidator
+    : AbstractValidator<AssignPermissionsCommand>
+{
+    public AssignPermissionsValidator()
+    {
+        RuleFor(x => x.RoleID)
+            .GreaterThan(0);
+
+        RuleFor(x => x.PermissionIds)
+            .NotEmpty()
+            .WithMessage("At least one permission is required.");
+    }
+}
