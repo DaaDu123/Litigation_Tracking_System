@@ -4,6 +4,6 @@ public class LogoutValidator : AbstractValidator<LogoutCommand>
 {
     public LogoutValidator()
     {
-        RuleFor(x => x.RefreshToken).NotEmpty().WithMessage("Refresh token is required.");
+        // Validation happens in handler — checks if refresh token exists in cookie
     }
 }

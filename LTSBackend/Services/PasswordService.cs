@@ -1,4 +1,5 @@
-﻿namespace LTSBackend.Services
+﻿using LTSBackend.Services;
+namespace LTSBackend.Services
 {
     public class PasswordService : IPasswordService
     {
@@ -6,10 +7,17 @@
         {
             return BCrypt.Net.BCrypt.HashPassword(password);
         }
-
         public bool VerifyPassword(string password, string hash)
         {
-            return BCrypt.Net.BCrypt.Verify(password, hash);
+            try
+            {
+                return BCrypt.Net.BCrypt.Verify(password, hash);
+            }
+            catch
+            {
+                // Hash format invalid — password cannot match
+                return false;
+            }
         }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace LTSBackend.Features.Permissions.Commands.AssignPermissions;
 
-public class AssignPermissionsValidator
+public sealed class AssignPermissionsValidator
     : AbstractValidator<AssignPermissionsCommand>
 {
     public AssignPermissionsValidator()
@@ -11,7 +11,9 @@ public class AssignPermissionsValidator
             .GreaterThan(0);
 
         RuleFor(x => x.PermissionIds)
+            .NotNull()
             .NotEmpty()
-            .WithMessage("At least one permission is required.");
+            .Must(x => x.Distinct().Count() == x.Count)
+            .WithMessage("Duplicate permissions are not allowed.");
     }
 }

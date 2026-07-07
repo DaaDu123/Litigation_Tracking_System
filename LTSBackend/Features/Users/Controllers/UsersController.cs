@@ -1,78 +1,185 @@
 ﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Features.Authorization;
 using LTSBackend.Features.Users.Commands.CreateUser;
 using LTSBackend.Features.Users.Commands.DeleteUser;
 using LTSBackend.Features.Users.Commands.UpdateUser;
 using LTSBackend.Features.Users.DTOs;
 using LTSBackend.Features.Users.Queries.GetAllUsers;
 using LTSBackend.Features.Users.Queries.GetUserById;
-using LTSBackend.Models;
+using LTSBackend.Models.Security;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LTSBackend.Features.Users.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class UsersController(IMediator mediator) : ControllerBase
+[Authorize]
+public class UsersController : ControllerBase
 {
-    // =========================
-    // CREATE USER
-    // =========================
-    [HttpPost]
-    [Authorize(Roles = RoleNames.AdminOnly)]
-    public async Task<IActionResult> Create(
-        [FromForm] CreateUserCommand command)
+    private readonly IMediator _mediator;
+    private readonly ILogger<UsersController> _logger;
+
+    public UsersController(IMediator mediator, ILogger<UsersController> logger)
     {
-        var id = await mediator.Send(command);
-        return Ok(ApiResponse<int>.SuccessResponse(id, "User created successfully."));
+        _mediator = mediator;
+        _logger = logger;
     }
 
-    // =========================
+    // =====================================================
+    // CREATE USER
+    // =====================================================
+    /// <summary>
+    /// Naya user create kare
+    /// Role-based: SuperAdmin, FirmAdmin, Partner
+    /// </summary>
+    [HttpPost]
+    [Authorize(Roles = RoleNames.PartnerAndAbove)]
+    public async Task<IActionResult> Create([FromForm] CreateUserCommand command)
+    {
+        _logger.LogInformation("Create user request for email: {Email}", command.Email);
+
+        var id = await _mediator.Send(command);
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id },
+            ApiResponse<int>.SuccessResponse(
+                id,
+                "User successfully created"));
+    }
+
+    // =====================================================
     // GET ALL USERS
-    // =========================
+    // =====================================================
+    /// <summary>
+    /// Tamam users fetch kare
+    /// Role-based: FirmAdmin, Partner can view all
+    /// </summary>
     [HttpGet]
-    [Authorize(Roles = RoleNames.Admin + "," + RoleNames.Clerk)]
+    [Authorize(Roles = RoleNames.PartnerAndAbove)]
     public async Task<IActionResult> GetAll()
     {
-        var users = await mediator.Send(new GetAllUsersQuery());
-        return Ok(ApiResponse<List<UserDTO>>.SuccessResponse(users, "Users fetched successfully."));
+        _logger.LogInformation("Get all users request");
+
+        var users = await _mediator.Send(new GetAllUsersQuery());
+
+        return Ok(ApiResponse<List<UserDTO>>.SuccessResponse(
+            users,
+            "Users successfully fetched"));
     }
 
-    // =========================
+    // =====================================================
     // GET USER BY ID
-    // =========================
+    // =====================================================
+    /// <summary>
+    /// Aik specific user fetch kare
+    /// Role-based: FirmAdmin, Partner, ya apne aap ko hi dekh sakte ho
+    /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = RoleNames.Admin + "," + RoleNames.Clerk)]
+    [Authorize(Roles = RoleNames.PartnerAndAbove)]
     public async Task<IActionResult> GetById(int id)
     {
-        var user = await mediator.Send(new GetUserByIdQuery(id));
-        return Ok(ApiResponse<UserDTO>.SuccessResponse(user!, "User fetched successfully."));
+        _logger.LogInformation("Get user request: {UserID}", id);
+
+        // Check agar khud apne aap ko dekh raha hai
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var currentUserId))
+        {
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
+        }
+
+        // TODO: Check agar Partner hai to sirf apne firm ke users dekh sakte ho
+        // Abhi sirf access check kar rahe ho
+
+        var user = await _mediator.Send(new GetUserByIdQuery(id));
+
+        if (user == null)
+        {
+            return NotFound(ApiResponse<UserDTO>.FailureResponse("User nahi mila"));
+        }
+
+        return Ok(ApiResponse<UserDTO>.SuccessResponse(
+            user,
+            "User successfully fetched"));
     }
 
-    // =========================
+    // =====================================================
     // UPDATE USER
-    // =========================
+    // =====================================================
+    /// <summary>
+    /// User update kare
+    /// Role-based: SuperAdmin, FirmAdmin only
+    /// </summary>
     [HttpPut("{id}")]
-    [Authorize(Roles = RoleNames.AdminOnly)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, [FromForm] UpdateUserCommand command)
     {
+        _logger.LogInformation("Update user request: {UserID}", id);
+
         if (id != command.UserID)
         {
-            return BadRequest(ApiResponse<bool>.FailureResponse("Route ID and UserID mismatch."));
+            return BadRequest(ApiResponse<bool>.FailureResponse(
+                "URL aur body mein user ID match nahi hain"));
         }
-        var result = await mediator.Send(command);
-        return Ok(ApiResponse<bool>.SuccessResponse(result, "User updated successfully."));
+
+        var result = await _mediator.Send(command);
+
+        return Ok(ApiResponse<bool>.SuccessResponse(
+            result,
+            "User successfully updated"));
     }
 
-    // =========================
-    // SOFT DELETE USER
-    // =========================
+    // =====================================================
+    // DELETE USER (Soft Delete)
+    // =====================================================
+    /// <summary>
+    /// User deactivate kare (soft delete)
+    /// Role-based: SuperAdmin, FirmAdmin only
+    /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = RoleNames.AdminOnly)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)
     {
-        var result = await mediator.Send(new DeleteUserCommand(id));
-        return Ok(ApiResponse<bool>.SuccessResponse(result, "User deactivated successfully."));
+        _logger.LogInformation("Delete user request: {UserID}", id);
+
+        var result = await _mediator.Send(new DeleteUserCommand(id));
+
+        return Ok(ApiResponse<bool>.SuccessResponse(
+            result,
+            "User successfully deactivated"));
+    }
+
+    // =====================================================
+    // GET MY PROFILE
+    // =====================================================
+    /// <summary>
+    /// Apna profile dekhe
+    /// Everyone can access
+    /// </summary>
+    [HttpGet("profile/me")]
+    public async Task<IActionResult> GetMyProfile()
+    {
+        _logger.LogInformation("Get my profile request");
+
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(ApiResponse<bool>.FailureResponse(
+                "Invalid or missing user identity"));
+        }
+
+        var user = await _mediator.Send(new GetUserByIdQuery(userId));
+
+        if (user == null)
+        {
+            return NotFound(ApiResponse<UserDTO>.FailureResponse("User nahi mila"));
+        }
+
+        return Ok(ApiResponse<UserDTO>.SuccessResponse(
+            user,
+            "Profile successfully fetched"));
     }
 }

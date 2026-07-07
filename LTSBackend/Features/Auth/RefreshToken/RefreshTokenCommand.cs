@@ -1,3 +1,3 @@
 ﻿using MediatR;
 namespace LTSBackend.Features.Auth.RefreshToken;
-public record RefreshTokenCommand(string RefreshToken) : IRequest<RefreshTokenResponseDTO>;
+public record RefreshTokenCommand() : IRequest<RefreshTokenResponseDTO>;

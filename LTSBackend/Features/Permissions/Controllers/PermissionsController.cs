@@ -12,26 +12,64 @@ namespace LTSBackend.Features.Permissions.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [HasPermission("ManageRoles")]
-public class PermissionsController(IMediator mediator): ControllerBase
+public class PermissionsController : ControllerBase
 {
+    private readonly IMediator _mediator;
+    private readonly ILogger<PermissionsController> _logger;
+
+    public PermissionsController(IMediator mediator, ILogger<PermissionsController> logger)
+    {
+        _mediator = mediator;
+        _logger = logger;
+    }
+
+    // =====================================================
+    // GET ALL PERMISSIONS
+    // =====================================================
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var permissions = await mediator.Send(new GetAllPermissionsQuery());
-        return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(permissions,"Permissions fetched successfully."));
+        _logger.LogInformation("Get all permissions request");
+
+        var permissions = await _mediator.Send(new GetAllPermissionsQuery());
+
+        return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(
+            permissions,
+            "Permissions fetched successfully."));
     }
+
+    // =====================================================
+    // GET ROLE PERMISSIONS
+    // =====================================================
 
     [HttpGet("role/{roleId}")]
     public async Task<IActionResult> GetRolePermissions(int roleId)
     {
-        var permissions = await mediator.Send(new GetRolePermissionsQuery(roleId));
-        return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(permissions,"Role permissions fetched successfully."));
+        _logger.LogInformation("Get role permissions request: {RoleID}", roleId);
+
+        var permissions = await _mediator.Send(new GetRolePermissionsQuery(roleId));
+
+        return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(
+            permissions,
+            "Role permissions fetched successfully."));
     }
 
+    // =====================================================
+    // ASSIGN PERMISSIONS TO ROLE
+    // =====================================================
+
     [HttpPut("assign")]
-    public async Task<IActionResult> AssignPermissions(AssignPermissionsCommand command)
+    public async Task<IActionResult> AssignPermissions([FromBody] AssignPermissionsCommand command)
     {
-        var result = await mediator.Send(command);
-        return Ok(ApiResponse<bool>.SuccessResponse(result,"Permissions assigned successfully."));
+        _logger.LogInformation(
+            "Assign permissions request for role: {RoleID}",
+            command.RoleID);
+
+        var result = await _mediator.Send(command);
+
+        return Ok(ApiResponse<bool>.SuccessResponse(
+            result,
+            "Permissions assigned successfully."));
     }
 }

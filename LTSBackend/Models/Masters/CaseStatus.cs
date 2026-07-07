@@ -1,0 +1,25 @@
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace LTSBackend.Models.Masters;
+
+[Table("CaseStatus")]
+public class CaseStatus
+{
+    [Key]
+    public int StatusID { get; set; }
+
+    [Required]
+    [MaxLength(100)]
+    public string StatusName { get; set; } = string.Empty;
+
+    [Required]
+    public int SequenceNo { get; set; }
+
+    [Required]
+    [MaxLength(10)]
+    public string ColorCode { get; set; } = string.Empty;
+
+    [Required]
+    public bool IsClosed { get; set; } = false;
+}

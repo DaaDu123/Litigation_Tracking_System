@@ -1,45 +1,74 @@
 ﻿using FluentValidation;
 using LTSBackend.Comman.Enum;
-using LTSBackend.Models;
+
 namespace LTSBackend.Features.Users.Commands.CreateUser;
+
 public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 {
     public CreateUserCommandValidator()
     {
         RuleFor(x => x.FullName)
             .NotEmpty()
-            .MaximumLength(150);
+            .WithMessage("Full name zaroori hai")
+            .MaximumLength(150)
+            .WithMessage("Full name 150 characters se zyada nahi ho sakta");
 
         RuleFor(x => x.Email)
             .NotEmpty()
-            .EmailAddress();
+            .WithMessage("Email zaroori hai")
+            .EmailAddress()
+            .WithMessage("Invalid email format")
+            .MaximumLength(150)
+            .WithMessage("Email 150 characters se zyada nahi ho sakta");
 
         RuleFor(x => x.Password)
             .NotEmpty()
+            .WithMessage("Password zaroori hai")
             .MinimumLength(6)
-            .Matches("[A-Z]").WithMessage("Password must contain at least one uppercase letter.")
-            .Matches("[0-9]").WithMessage("Password must contain at least one number.");
+            .WithMessage("Password minimum 6 characters ka hona chahiye")
+            .Matches("[A-Z]")
+            .WithMessage("Password mein kam az kam aik uppercase letter hona chahiye")
+            .Matches("[a-z]")
+            .WithMessage("Password mein kam az kam aik lowercase letter hona chahiye")
+            .Matches("[0-9]")
+            .WithMessage("Password mein kam az kam aik digit hona chahiye");
 
         RuleFor(x => x.Phone)
-            .MaximumLength(20);
+            .MaximumLength(20)
+            .WithMessage("Phone 20 characters se zyada nahi ho sakta")
+            .Matches(@"^\+?[0-9\-\(\)\s]*$")
+            .WithMessage("Phone format invalid hai")
+            .When(x => !string.IsNullOrWhiteSpace(x.Phone));
 
         RuleFor(x => x.Department)
-            .MaximumLength(100);
+            .MaximumLength(100)
+            .WithMessage("Department 100 characters se zyada nahi ho sakta");
 
         RuleFor(x => x.RoleID)
-            .NotNull().WithMessage("Role is required.")
+            .NotNull()
+            .WithMessage("Role zaroori hai")
+            .GreaterThan(0)
+            .WithMessage("Valid role zaroori hai")
             .Must(roleId => roleId.HasValue && Enum.IsDefined(typeof(UserRole), roleId.Value))
-            .WithMessage("RoleID must be a valid role (Admin=1, Lawyer=2, Clerk=3, Operator=4).");
+            .WithMessage("Invalid role");
 
         RuleFor(x => x.ProfileImage)
             .Must(file =>
             {
                 if (file == null)
                     return true;
-                var extensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-                return extensions.Contains(ext);
+
+                return file.Length <= 5 * 1024 * 1024; // 5MB max
             })
-            .WithMessage("Only jpg, jpeg, png and webp allowed.");
+            .WithMessage("Profile image 5 MB se zyada nahi ho sakta")
+            .Must(file =>
+            {
+                if (file == null)
+                    return true;
+
+                var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+                return allowed.Contains(Path.GetExtension(file.FileName).ToLowerInvariant());
+            })
+            .WithMessage("Sirf JPG, JPEG, PNG, aur WebP formats allowed hain");
     }
 }

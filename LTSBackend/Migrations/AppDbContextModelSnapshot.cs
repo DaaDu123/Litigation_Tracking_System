@@ -22,7 +22,7 @@ namespace LTSBackend.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("LTSBackend.Models.AuditLog", b =>
+            modelBuilder.Entity("LTSBackend.Models.Audit.AuditLog", b =>
                 {
                     b.Property<int>("LogID")
                         .ValueGeneratedOnAdd()
@@ -31,25 +31,94 @@ namespace LTSBackend.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LogID"));
 
                     b.Property<string>("Action")
+                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("IPAddress")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RecordID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TableName")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<int?>("UserID")
                         .HasColumnType("int");
 
                     b.HasKey("LogID");
 
-                    b.ToTable("AuditLogs");
+                    b.HasIndex("Timestamp")
+                        .IsDescending();
+
+                    b.HasIndex("UserID");
+
+                    b.HasIndex("UserID", "Timestamp");
+
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.Permission", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.LoginHistory", b =>
+                {
+                    b.Property<int>("LoginID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LoginID"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IPAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<bool>("IsLoggedOut")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LoginTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LogoutTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.HasKey("LoginID");
+
+                    b.HasIndex("UserID", "LoginTime")
+                        .IsDescending(false, true);
+
+                    b.ToTable("LoginHistories");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.Permission", b =>
                 {
                     b.Property<int>("PermissionID")
                         .ValueGeneratedOnAdd()
@@ -64,42 +133,13 @@ namespace LTSBackend.Migrations
 
                     b.HasKey("PermissionID");
 
-                    b.ToTable("Permissions");
+                    b.HasIndex("PermissionName")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            PermissionID = 1,
-                            PermissionName = "ViewUsers"
-                        },
-                        new
-                        {
-                            PermissionID = 2,
-                            PermissionName = "CreateUsers"
-                        },
-                        new
-                        {
-                            PermissionID = 3,
-                            PermissionName = "UpdateUsers"
-                        },
-                        new
-                        {
-                            PermissionID = 4,
-                            PermissionName = "DeleteUsers"
-                        },
-                        new
-                        {
-                            PermissionID = 5,
-                            PermissionName = "ManageRoles"
-                        },
-                        new
-                        {
-                            PermissionID = 6,
-                            PermissionName = "ViewAuditLogs"
-                        });
+                    b.ToTable("Permissions");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.RefreshToken", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.RefreshToken", b =>
                 {
                     b.Property<int>("RefreshTokenID")
                         .ValueGeneratedOnAdd()
@@ -130,7 +170,7 @@ namespace LTSBackend.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.Role", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.Role", b =>
                 {
                     b.Property<int>("RoleID")
                         .ValueGeneratedOnAdd()
@@ -149,36 +189,13 @@ namespace LTSBackend.Migrations
 
                     b.HasKey("RoleID");
 
-                    b.ToTable("Roles");
+                    b.HasIndex("RoleName")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            RoleID = 1,
-                            Description = "System Administrator",
-                            RoleName = "Admin"
-                        },
-                        new
-                        {
-                            RoleID = 2,
-                            Description = "Litigation Lawyer",
-                            RoleName = "Lawyer"
-                        },
-                        new
-                        {
-                            RoleID = 3,
-                            Description = "Case Clerk",
-                            RoleName = "Clerk"
-                        },
-                        new
-                        {
-                            RoleID = 4,
-                            Description = "System Operator",
-                            RoleName = "Operator"
-                        });
+                    b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.RolePermission", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.RolePermission", b =>
                 {
                     b.Property<int>("RoleID")
                         .HasColumnType("int");
@@ -186,71 +203,17 @@ namespace LTSBackend.Migrations
                     b.Property<int>("PermissionID")
                         .HasColumnType("int");
 
+                    b.Property<int>("RolePermissionID")
+                        .HasColumnType("int");
+
                     b.HasKey("RoleID", "PermissionID");
 
                     b.HasIndex("PermissionID");
 
                     b.ToTable("RolePermissions");
-
-                    b.HasData(
-                        new
-                        {
-                            RoleID = 1,
-                            PermissionID = 1
-                        },
-                        new
-                        {
-                            RoleID = 1,
-                            PermissionID = 2
-                        },
-                        new
-                        {
-                            RoleID = 1,
-                            PermissionID = 3
-                        },
-                        new
-                        {
-                            RoleID = 1,
-                            PermissionID = 4
-                        },
-                        new
-                        {
-                            RoleID = 1,
-                            PermissionID = 5
-                        },
-                        new
-                        {
-                            RoleID = 1,
-                            PermissionID = 6
-                        },
-                        new
-                        {
-                            RoleID = 2,
-                            PermissionID = 1
-                        },
-                        new
-                        {
-                            RoleID = 2,
-                            PermissionID = 3
-                        },
-                        new
-                        {
-                            RoleID = 3,
-                            PermissionID = 1
-                        },
-                        new
-                        {
-                            RoleID = 3,
-                            PermissionID = 2
-                        },
-                        new
-                        {
-                            RoleID = 4,
-                            PermissionID = 1
-                        });
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.User", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.User", b =>
                 {
                     b.Property<int>("UserID")
                         .ValueGeneratedOnAdd()
@@ -265,10 +228,19 @@ namespace LTSBackend.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Designation")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("EmployeeNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -277,6 +249,15 @@ namespace LTSBackend.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsExternal")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastLogin")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -288,8 +269,8 @@ namespace LTSBackend.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("ProfileImage")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int?>("RoleID")
                         .HasColumnType("int");
@@ -307,7 +288,7 @@ namespace LTSBackend.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.UserOtp", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.UserOtp", b =>
                 {
                     b.Property<int>("OtpID")
                         .ValueGeneratedOnAdd()
@@ -341,12 +322,35 @@ namespace LTSBackend.Migrations
 
                     b.HasIndex("UserID");
 
+                    b.HasIndex("Email", "OtpCode");
+
                     b.ToTable("UserOtps");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.RefreshToken", b =>
+            modelBuilder.Entity("LTSBackend.Models.Audit.AuditLog", b =>
                 {
-                    b.HasOne("LTSBackend.Models.User", "User")
+                    b.HasOne("LTSBackend.Models.Security.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.LoginHistory", b =>
+                {
+                    b.HasOne("LTSBackend.Models.Security.User", "User")
+                        .WithMany("LoginHistories")
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.RefreshToken", b =>
+                {
+                    b.HasOne("LTSBackend.Models.Security.User", "User")
                         .WithMany("RefreshTokens")
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -355,15 +359,15 @@ namespace LTSBackend.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.RolePermission", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.RolePermission", b =>
                 {
-                    b.HasOne("LTSBackend.Models.Permission", "Permission")
+                    b.HasOne("LTSBackend.Models.Security.Permission", "Permission")
                         .WithMany("RolePermissions")
                         .HasForeignKey("PermissionID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("LTSBackend.Models.Role", "Role")
+                    b.HasOne("LTSBackend.Models.Security.Role", "Role")
                         .WithMany("RolePermissions")
                         .HasForeignKey("RoleID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -374,40 +378,41 @@ namespace LTSBackend.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.User", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.User", b =>
                 {
-                    b.HasOne("LTSBackend.Models.Role", "Role")
+                    b.HasOne("LTSBackend.Models.Security.Role", "Role")
                         .WithMany("Users")
-                        .HasForeignKey("RoleID")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("RoleID");
 
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.UserOtp", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.UserOtp", b =>
                 {
-                    b.HasOne("LTSBackend.Models.User", "User")
+                    b.HasOne("LTSBackend.Models.Security.User", "User")
                         .WithMany("UserOtps")
                         .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.Permission", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.Permission", b =>
                 {
                     b.Navigation("RolePermissions");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.Role", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.Role", b =>
                 {
                     b.Navigation("RolePermissions");
 
                     b.Navigation("Users");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.User", b =>
+            modelBuilder.Entity("LTSBackend.Models.Security.User", b =>
                 {
+                    b.Navigation("LoginHistories");
+
                     b.Navigation("RefreshTokens");
 
                     b.Navigation("UserOtps");

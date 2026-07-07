@@ -1,5 +1,4 @@
 ﻿using FluentValidation;
-
 namespace LTSBackend.Features.Auth.ResendOtp;
 
 public class ResendOtpValidator : AbstractValidator<ResendOtpCommand>
@@ -8,6 +7,8 @@ public class ResendOtpValidator : AbstractValidator<ResendOtpCommand>
     {
         RuleFor(x => x.Email)
             .NotEmpty()
-            .EmailAddress();
+            .WithMessage("Email is required.")
+            .EmailAddress()
+            .WithMessage("Invalid email format.");
     }
 }

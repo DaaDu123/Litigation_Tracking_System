@@ -1,4 +1,5 @@
-﻿using LTSBackend.Features.Dashboard.DTOs;
+﻿using LTSBackend.Data;
+using LTSBackend.Features.Dashboard.DTOs;
 using MediatR;
 
 namespace LTSBackend.Features.Dashboard.Queries;

@@ -1,4 +1,5 @@
 ﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Profile.DTOs;
 using MediatR;
@@ -6,20 +7,37 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Profile.Queries;
 
-public class GetMyProfileHandler(AppDbContext context): IRequestHandler<GetMyProfileQuery, ProfileDTO>
+public class GetMyProfileHandler : IRequestHandler<GetMyProfileQuery, ProfileDTO>
 {
-    public async Task<ProfileDTO> Handle(GetMyProfileQuery request,CancellationToken cancellationToken)
+    private readonly AppDbContext _context;
+    private readonly ILogger<GetMyProfileHandler> _logger;
+
+    public GetMyProfileHandler(AppDbContext context, ILogger<GetMyProfileHandler> logger)
     {
-        var user = await context.Users
+        _context = context;
+        _logger = logger;
+    }
+
+    public async Task<ProfileDTO> Handle(
+        GetMyProfileQuery request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Fetching profile for user: {UserId}", request.UserID);
+
+        var user = await _context.Users
             .AsNoTracking()
             .Include(x => x.Role)
             .FirstOrDefaultAsync(
-                x => x.UserID == request.UserID,cancellationToken);
+                x => x.UserID == request.UserID,
+                cancellationToken);
 
         if (user == null)
+        {
+            _logger.LogWarning("Profile fetch failed: User not found: {UserId}", request.UserID);
             throw new NotFoundException("User not found.");
+        }
 
-        return new ProfileDTO
+        var profile = new ProfileDTO
         {
             UserID = user.UserID,
             FullName = user.FullName,
@@ -29,5 +47,9 @@ public class GetMyProfileHandler(AppDbContext context): IRequestHandler<GetMyPro
             ProfileImage = user.ProfileImage,
             RoleName = user.Role?.RoleName
         };
+
+        _logger.LogInformation("Profile fetched for user: {UserId}", request.UserID);
+
+        return profile;
     }
 }
