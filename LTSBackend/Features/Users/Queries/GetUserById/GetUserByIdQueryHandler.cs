@@ -1,18 +1,34 @@
-﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
+﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Users.DTOs;
-using LTSBackend.Comman.Exceptions;
+using LTSBackend.Features.Users.Queries.GetUserById;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 
-namespace LTSBackend.Features.Users.Queries.GetUserById;
-
-public class GetUserByIdQueryHandler(AppDbContext context) : IRequestHandler<GetUserByIdQuery, UserDTO?>
+public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDTO?>
 {
-    public async Task<UserDTO?> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
+    private readonly AppDbContext _context;
+    private readonly ILogger<GetUserByIdQueryHandler> _logger;
+
+    public GetUserByIdQueryHandler(
+        AppDbContext context,
+        ILogger<GetUserByIdQueryHandler> logger)
     {
-        var user = await context.Users
+        _context = context;
+        _logger = logger;
+    }
+
+    public async Task<UserDTO?> Handle(
+        GetUserByIdQuery request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Fetching user: {UserId}", request.UserID);
+
+        var user = await _context.Users
+            .AsNoTracking()
+            .Where(x => x.IsActive && !x.IsDeleted && x.UserID == request.UserID)
             .Include(x => x.Role)
-            .Where(x => x.IsActive && x.UserID == request.UserID)
             .Select(x => new UserDTO
             {
                 UserID = x.UserID,
@@ -26,10 +42,16 @@ public class GetUserByIdQueryHandler(AppDbContext context) : IRequestHandler<Get
                 IsActive = x.IsActive,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
-            }).FirstOrDefaultAsync(cancellationToken);
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (user == null)
-            throw new NotFoundException($"User {request.UserID} not found");
+        {
+            _logger.LogWarning("User not found or is inactive: {UserId}", request.UserID);
+            throw new NotFoundException($"User with ID {request.UserID} not found.");
+        }
+
+        _logger.LogInformation("User retrieved: {UserId}", request.UserID);
 
         return user;
     }

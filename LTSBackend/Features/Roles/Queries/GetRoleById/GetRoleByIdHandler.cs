@@ -1,25 +1,42 @@
 ﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Roles.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-
 namespace LTSBackend.Features.Roles.Queries.GetRoleById;
-
-public class GetRoleByIdHandler(AppDbContext context): IRequestHandler<GetRoleByIdQuery, RoleDTO>
+public class GetRoleByIdHandler : IRequestHandler<GetRoleByIdQuery, RoleDTO>
 {
-    public async Task<RoleDTO> Handle(GetRoleByIdQuery request,CancellationToken cancellationToken)
+    private readonly AppDbContext _context;
+    private readonly ILogger<GetRoleByIdHandler> _logger;
+
+    public GetRoleByIdHandler(AppDbContext context, ILogger<GetRoleByIdHandler> logger)
     {
-        var role = await context.Roles
+        _context = context;
+        _logger = logger;
+    }
+
+    public async Task<RoleDTO> Handle(
+        GetRoleByIdQuery request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Fetching role: {RoleID}", request.RoleID);
+
+        var role = await _context.Roles
             .AsNoTracking()
             .Include(x => x.RolePermissions)
             .ThenInclude(x => x.Permission)
-            .FirstOrDefaultAsync(x => x.RoleID == request.RoleID,cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.RoleID == request.RoleID,
+                cancellationToken);
 
         if (role == null)
+        {
+            _logger.LogWarning("Role not found: {RoleID}", request.RoleID);
             throw new NotFoundException("Role not found.");
+        }
 
-        return new RoleDTO
+        var roleDto = new RoleDTO
         {
             RoleID = role.RoleID,
             RoleName = role.RoleName,
@@ -29,7 +46,12 @@ public class GetRoleByIdHandler(AppDbContext context): IRequestHandler<GetRoleBy
                 {
                     PermissionID = rp.PermissionID,
                     PermissionName = rp.Permission!.PermissionName
-                }).ToList()
+                })
+                .ToList()
         };
+
+        _logger.LogInformation("Role retrieved: {RoleID}", request.RoleID);
+
+        return roleDto;
     }
 }

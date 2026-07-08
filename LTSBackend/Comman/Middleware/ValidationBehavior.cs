@@ -1,17 +1,20 @@
 ﻿using FluentValidation;
 using MediatR;
 
-namespace LTSBackend.Comman.Middleware;
-
-public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators) : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull
+namespace LTSBackend.Common.Middleware;
+public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {
-    public async Task<TResponse> Handle(
-        TRequest request,
-        RequestHandlerDelegate<TResponse> next,
-        CancellationToken cancellationToken)
+    private readonly IEnumerable<IValidator<TRequest>> _validators;
+    private readonly ILogger<ValidationBehavior<TRequest, TResponse>> _logger;
+
+    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators,ILogger<ValidationBehavior<TRequest, TResponse>> logger)
     {
-        if (!validators.Any())
+        _validators = validators;
+        _logger = logger;
+    }
+    public async Task<TResponse> Handle(TRequest request,RequestHandlerDelegate<TResponse> next,CancellationToken cancellationToken)
+    {
+        if (!_validators.Any())
         {
             return await next();
         }
@@ -19,7 +22,7 @@ public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TReq
         var context = new ValidationContext<TRequest>(request);
 
         var validationResults = await Task.WhenAll(
-            validators.Select(v => v.ValidateAsync(context, cancellationToken)));
+            _validators.Select(v => v.ValidateAsync(context, cancellationToken)));
 
         var failures = validationResults
             .SelectMany(r => r.Errors)
@@ -28,11 +31,13 @@ public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TReq
 
         if (failures.Count > 0)
         {
-            // `ValidationException` is ambiguous here — both `FluentValidation.ValidationException`
-            // (via `using FluentValidation;` above) and `LTSBackend.Comman.Exceptions.ValidationException`
-            // are in scope. Fully-qualifying removes the ambiguity regardless of using-directive order.
-            throw new LTSBackend.Comman.Exceptions.ValidationException(
-                failures.Select(x => x.ErrorMessage).ToList());
+            var errorMessages = failures.Select(x => x.ErrorMessage).ToList();
+
+            _logger.LogWarning(
+                "Validation failed for request {RequestType}. Errors: {Errors}",
+                typeof(TRequest).Name,
+                string.Join(", ", errorMessages));
+            throw new LTSBackend.Comman.Exceptions.ValidationException(errorMessages);
         }
 
         return await next();

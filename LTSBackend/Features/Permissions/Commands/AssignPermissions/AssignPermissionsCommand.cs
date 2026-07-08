@@ -2,7 +2,7 @@
 
 namespace LTSBackend.Features.Permissions.Commands.AssignPermissions;
 
-public record AssignPermissionsCommand(
+public sealed record AssignPermissionsCommand(
     int RoleID,
     List<int> PermissionIds
 ) : IRequest<bool>;

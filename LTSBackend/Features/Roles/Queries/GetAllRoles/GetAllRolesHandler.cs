@@ -4,11 +4,24 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 namespace LTSBackend.Features.Roles.Queries.GetAllRoles;
 
-public class GetAllRolesHandler(AppDbContext context): IRequestHandler<GetAllRolesQuery, List<RoleDTO>>
+public class GetAllRolesHandler : IRequestHandler<GetAllRolesQuery, List<RoleDTO>>
 {
-    public async Task<List<RoleDTO>> Handle(GetAllRolesQuery request,CancellationToken cancellationToken)
+    private readonly AppDbContext _context;
+    private readonly ILogger<GetAllRolesHandler> _logger;
+
+    public GetAllRolesHandler(AppDbContext context, ILogger<GetAllRolesHandler> logger)
     {
-        return await context.Roles
+        _context = context;
+        _logger = logger;
+    }
+
+    public async Task<List<RoleDTO>> Handle(
+        GetAllRolesQuery request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Fetching all roles");
+
+        var roles = await _context.Roles
             .AsNoTracking()
             .Include(x => x.RolePermissions)
             .ThenInclude(x => x.Permission)
@@ -22,7 +35,14 @@ public class GetAllRolesHandler(AppDbContext context): IRequestHandler<GetAllRol
                     {
                         PermissionID = rp.PermissionID,
                         PermissionName = rp.Permission!.PermissionName
-                    }).ToList()
-            }).ToListAsync(cancellationToken);
+                    })
+                    .ToList()
+            })
+            .OrderBy(x => x.RoleName)
+            .ToListAsync(cancellationToken);
+
+        _logger.LogInformation("Retrieved {Count} roles", roles.Count);
+
+        return roles;
     }
 }

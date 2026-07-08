@@ -1,5 +1,4 @@
-﻿namespace LTSBackend.Comman.Exceptions
-{
+﻿namespace LTSBackend.Comman.Exceptions;
     public class NotFoundException : Exception
     {
         public NotFoundException(string message)
@@ -7,4 +6,3 @@
         {
         }
     }
-}

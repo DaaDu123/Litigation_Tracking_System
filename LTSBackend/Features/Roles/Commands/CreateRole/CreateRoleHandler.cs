@@ -1,41 +1,67 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
-using LTSBackend.Models;
+using LTSBackend.Models.Security;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Roles.Commands.CreateRole;
 
-public class CreateRoleHandler(AppDbContext context): IRequestHandler<CreateRoleCommand, int>
+public sealed class CreateRoleHandler(AppDbContext _context) : IRequestHandler<CreateRoleCommand, int>
 {
-    public async Task<int> Handle(CreateRoleCommand request, CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateRoleCommand request,CancellationToken cancellationToken)
     {
-        bool exists = await context.Roles.AnyAsync(x => x.RoleName == request.RoleName,cancellationToken);
-
-        if (exists)
-            throw new ValidationException(["Role already exists."]);
-
-        var role = new Role
+        request = request with
         {
-            RoleName = request.RoleName,
-            Description = request.Description
+            RoleName = request.RoleName.Trim(),
+            PermissionIds = request.PermissionIds.Distinct().ToList()
         };
 
-        context.Roles.Add(role);
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        foreach (var permissionId in request.PermissionIds)
-        {
-            context.RolePermissions.Add(new RolePermission
+        bool exists = await _context.Roles.AnyAsync(x =>x.RoleName.ToLower() == request.RoleName.ToLower(),cancellationToken);
+        if (exists)
+            throw new ValidationException(new()
             {
-                RoleID = role.RoleID,
-                PermissionID = permissionId
+                "Role already exists."
             });
+
+        var validPermissions = await _context.Permissions
+            .Where(x => request.PermissionIds.Contains(x.PermissionID))
+            .Select(x => x.PermissionID)
+            .ToListAsync(cancellationToken);
+
+        if (validPermissions.Count != request.PermissionIds.Count)
+            throw new ValidationException(new()
+            {
+                "One or more permissions are invalid."
+            });
+
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var role = new Role
+            {
+                RoleName = request.RoleName,
+                Description = request.Description
+            };
+
+            _context.Roles.Add(role);
+            await _context.SaveChangesAsync(cancellationToken);
+            var rolePermissions = validPermissions.Select(permissionId => new RolePermission
+                {
+                    RoleID = role.RoleID,
+                    PermissionID = permissionId
+                });
+
+            await _context.RolePermissions.AddRangeAsync(rolePermissions,cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return role.RoleID;
         }
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        return role.RoleID;
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 }

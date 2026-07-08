@@ -1,23 +1,28 @@
 ﻿using LTSBackend.Comman.Responses;
-using System.Net;
-using System.Text.Json;
+using LTSBackend.Comman.Exceptions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-// Intentionally NOT using LTSBackend.Comman.Exceptions here — every exception type
-// below is fully-qualified. FluentValidation also defines a `ValidationException`,
-// so if a `using LTSBackend.Comman.Exceptions;` is ever added next to a
-// `using FluentValidation;` in this file, an unqualified `ValidationException` becomes
-// ambiguous and fails to compile. Fully-qualifying avoids that trap permanently.
+using System.Net;
 
-namespace LTSBackend.Comman.Middleware;
+using System.Text.Json;
 
-public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+namespace LTSBackend.Common.Middleware;
+
+public class GlobalExceptionMiddleware
 {
+    private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalExceptionMiddleware> _logger;
+
+    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+    {
+        _next = next;
+        _logger = logger;
+    }
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await next(context);
+            await _next(context);
         }
         catch (LTSBackend.Comman.Exceptions.ValidationException ex)
         {
@@ -37,7 +42,9 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
         }
     }
 
-    private static async Task HandleValidationException(HttpContext context, LTSBackend.Comman.Exceptions.ValidationException ex)
+    private static async Task HandleValidationException(
+        HttpContext context,
+        LTSBackend.Comman.Exceptions.ValidationException ex)
     {
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -48,10 +55,15 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             Message = ex.Message,
             Errors = ex.Errors
         };
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response), context.RequestAborted);
+
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(response),
+            context.RequestAborted);
     }
 
-    private static async Task HandleNotFoundException(HttpContext context, LTSBackend.Comman.Exceptions.NotFoundException ex)
+    private static async Task HandleNotFoundException(
+        HttpContext context,
+        LTSBackend.Comman.Exceptions.NotFoundException ex)
     {
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -61,10 +73,15 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             Success = false,
             Message = ex.Message
         };
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response), context.RequestAborted);
+
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(response),
+            context.RequestAborted);
     }
 
-    private static async Task HandleUnauthorizedException(HttpContext context, LTSBackend.Comman.Exceptions.UnauthorizedException ex)
+    private static async Task HandleUnauthorizedException(
+        HttpContext context,
+        LTSBackend.Comman.Exceptions.UnauthorizedException ex)
     {
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
@@ -74,21 +91,30 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
             Success = false,
             Message = ex.Message
         };
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response), context.RequestAborted);
+
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(response),
+            context.RequestAborted);
     }
 
     private async Task HandleGeneralException(HttpContext context, Exception ex)
     {
-        logger.LogError(ex, "Unhandled exception occurred while processing {Method} {Path}",
-            context.Request.Method, context.Request.Path);
+        _logger.LogError(ex,
+            "Unhandled exception occurred while processing {Method} {Path}",
+            context.Request.Method,
+            context.Request.Path);
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
         var response = new ApiResponse<object>
         {
             Success = false,
             Message = "An unexpected error occurred. Please try again later."
         };
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response), context.RequestAborted);
+
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(response),
+            context.RequestAborted);
     }
 }

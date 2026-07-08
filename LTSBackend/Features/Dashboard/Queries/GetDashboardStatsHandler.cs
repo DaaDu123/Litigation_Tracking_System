@@ -5,30 +5,50 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Dashboard.Queries;
 
-public class GetDashboardStatsHandler(AppDbContext context): IRequestHandler<GetDashboardStatsQuery, DashboardDTO>
+public class GetDashboardStatsHandler : IRequestHandler<GetDashboardStatsQuery, DashboardDTO>
 {
-    public async Task<DashboardDTO> Handle(GetDashboardStatsQuery request,CancellationToken cancellationToken)
+    private readonly AppDbContext _context;
+    private readonly ILogger<GetDashboardStatsHandler> _logger;
+
+    public GetDashboardStatsHandler(
+        AppDbContext context,
+        ILogger<GetDashboardStatsHandler> logger)
     {
+        _context = context;
+        _logger = logger;
+    }
+
+    public async Task<DashboardDTO> Handle(
+        GetDashboardStatsQuery request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Fetching dashboard statistics");
+
+        // ================================================
+        // Fetch all required statistics
+        // ================================================
         var dto = new DashboardDTO
         {
-            TotalUsers = await context.Users.CountAsync(cancellationToken),
-
-            ActiveUsers = await context.Users
-                .CountAsync(x => x.IsActive, cancellationToken),
-
-            TotalRoles = await context.Roles
+            TotalUsers = await _context.Users
                 .CountAsync(cancellationToken),
 
-            TotalPermissions = await context.Permissions
+            ActiveUsers = await _context.Users
+                .CountAsync(x => x.IsActive && !x.IsDeleted, cancellationToken),
+
+            TotalRoles = await _context.Roles
                 .CountAsync(cancellationToken),
 
-            TotalAuditLogs = await context.AuditLogs
+            TotalPermissions = await _context.Permissions
                 .CountAsync(cancellationToken),
 
-            TotalRefreshTokens = await context.RefreshTokens
+            TotalAuditLogs = await _context.AuditLogs
                 .CountAsync(cancellationToken),
 
-            RecentActivities = await context.AuditLogs
+            TotalRefreshTokens = await _context.RefreshTokens
+                .CountAsync(x => !x.IsRevoked, cancellationToken),
+
+            RecentActivities = await _context.AuditLogs
+                .AsNoTracking()
                 .OrderByDescending(x => x.Timestamp)
                 .Take(10)
                 .Select(x => new RecentActivityDTO
@@ -40,6 +60,13 @@ public class GetDashboardStatsHandler(AppDbContext context): IRequestHandler<Get
                 })
                 .ToListAsync(cancellationToken)
         };
+
+        _logger.LogInformation(
+            "Dashboard stats fetched: {TotalUsers} users, {ActiveUsers} active, {TotalRoles} roles, {TotalPermissions} permissions",
+            dto.TotalUsers,
+            dto.ActiveUsers,
+            dto.TotalRoles,
+            dto.TotalPermissions);
 
         return dto;
     }

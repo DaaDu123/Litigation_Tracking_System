@@ -1,55 +1,122 @@
 ﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
-using LTSBackend.Models;
+using LTSBackend.Models.Security;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Permissions.Commands.AssignPermissions;
 
-public class AssignPermissionsHandler(AppDbContext context)
-    : IRequestHandler<AssignPermissionsCommand, bool>
+public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand, bool>
 {
+    private readonly AppDbContext _context;
+    private readonly ILogger<AssignPermissionsHandler> _logger;
+
+    public AssignPermissionsHandler(AppDbContext context, ILogger<AssignPermissionsHandler> logger)
+    {
+        _context = context;
+        _logger = logger;
+    }
+
     public async Task<bool> Handle(
         AssignPermissionsCommand request,
         CancellationToken cancellationToken)
     {
-        var role = await context.Roles
+        _logger.LogInformation(
+            "Assigning {Count} permissions to role: {RoleID}",
+            request.PermissionIds.Count,
+            request.RoleID);
+
+        // ================================================
+        // 1. Normalize permission IDs (deduplicate)
+        // ================================================
+        var permissionIds = request.PermissionIds
+            .Distinct()
+            .ToList();
+
+        // ================================================
+        // 2. Find role with current permissions
+        // ================================================
+        var role = await _context.Roles
             .Include(x => x.RolePermissions)
             .FirstOrDefaultAsync(
                 x => x.RoleID == request.RoleID,
                 cancellationToken);
 
         if (role == null)
+        {
+            _logger.LogWarning("Assign permissions failed: Role not found: {RoleID}", request.RoleID);
             throw new NotFoundException("Role not found.");
+        }
 
-        var validPermissions = await context.Permissions
-            .Where(x => request.PermissionIds.Contains(x.PermissionID))
+        // ================================================
+        // 3. Validate all permissions exist
+        // ================================================
+        var validPermissionIds = await _context.Permissions
+            .Where(x => permissionIds.Contains(x.PermissionID))
             .Select(x => x.PermissionID)
             .ToListAsync(cancellationToken);
 
-        if (validPermissions.Count != request.PermissionIds.Count)
+        if (permissionIds.Count != validPermissionIds.Count)
+        {
+            _logger.LogWarning(
+                "Assign permissions failed: Invalid permissions for role: {RoleID}",
+                request.RoleID);
+
             throw new ValidationException(
-                new()
+                new List<string> { "One or more permissions are invalid." });
+        }
+
+        // ================================================
+        // 4. Begin transaction
+        // ================================================
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            // ================================================
+            // 5. Remove old permissions
+            // ================================================
+            _context.RolePermissions.RemoveRange(role.RolePermissions);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Removed {Count} old permissions for role: {RoleID}",
+                role.RolePermissions.Count, request.RoleID);
+
+            // ================================================
+            // 6. Assign new permissions
+            // ================================================
+            var rolePermissions = permissionIds
+                .Select(permissionId => new RolePermission
                 {
-                    "One or more permissions are invalid."
+                    RoleID = request.RoleID,
+                    PermissionID = permissionId
                 });
 
-        context.RolePermissions.RemoveRange(role.RolePermissions);
+            await _context.RolePermissions.AddRangeAsync(
+                rolePermissions,
+                cancellationToken);
 
-        var rolePermissions = request.PermissionIds
-            .Distinct()
-            .Select(permissionId => new RolePermission
-            {
-                RoleID = request.RoleID,
-                PermissionID = permissionId
-            });
+            await _context.SaveChangesAsync(cancellationToken);
 
-        await context.RolePermissions.AddRangeAsync(
-            rolePermissions,
-            cancellationToken);
+            _logger.LogInformation("Assigned {Count} new permissions to role: {RoleID}",
+                permissionIds.Count, request.RoleID);
 
-        await context.SaveChangesAsync(cancellationToken);
+            // ================================================
+            // 7. Commit transaction
+            // ================================================
+            await transaction.CommitAsync(cancellationToken);
 
-        return true;
+            _logger.LogInformation("Permissions assigned successfully to role: {RoleID}", request.RoleID);
+
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogError("Assign permissions failed - transaction rolled back");
+            throw;
+        }
     }
 }
