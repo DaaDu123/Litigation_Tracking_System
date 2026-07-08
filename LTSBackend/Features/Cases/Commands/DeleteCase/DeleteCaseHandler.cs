@@ -3,14 +3,44 @@ using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace LTSBackend.Features.Cases.Commands.DeleteCase;
 
-public class DeleteCaseHandler (AppDbContext _context, IAuditService _auditService, ILogger<DeleteCaseHandler> _logger) : IRequestHandler<DeleteCaseCommand, bool>
+public class DeleteCaseHandler : IRequestHandler<DeleteCaseCommand, bool>
 {
-    public async Task<bool> Handle(DeleteCaseCommand request,CancellationToken cancellationToken)
+    private readonly AppDbContext _context;
+    private readonly IAuditService _auditService;
+    private readonly ILogger<DeleteCaseHandler> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    private static readonly string[] ProtectedRoles =
+    {
+        "Admin",
+        "Administrator",
+        "SuperAdmin",
+        "System"
+    };
+
+    public DeleteCaseHandler(
+        AppDbContext context,
+        IAuditService auditService,
+        ILogger<DeleteCaseHandler> logger,
+        IHttpContextAccessor httpContextAccessor)
+    {
+        _context = context;
+        _auditService = auditService;
+        _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async Task<bool> Handle(
+        DeleteCaseCommand request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Case delete kia ja raha hai: {CaseID}", request.CaseID);
+
+        int currentUserId = GetCurrentUserId();
 
         // ================================================
         // 1. Find Case
@@ -49,8 +79,11 @@ public class DeleteCaseHandler (AppDbContext _context, IAuditService _auditServi
             // ================================================
             // 5. Create Audit Log
             // ================================================
-            _context.AuditLogs.Add(
-                _auditService.Create(1, $"Case Delete: {caseToDelete.CaseNumber}"));
+            var auditLog = _auditService.Create(
+                currentUserId,
+                $"Case Delete: {caseToDelete.CaseNumber}");
+
+            _context.AuditLogs.Add(auditLog);
 
             // ================================================
             // 6. Save changes
@@ -72,5 +105,26 @@ public class DeleteCaseHandler (AppDbContext _context, IAuditService _auditServi
             _logger.LogError(ex, "Case delete fail ho gya: {CaseID}", request.CaseID);
             throw;
         }
+    }
+    private int GetCurrentUserId()
+    {
+        int currentUserId = 1; // Default fallback
+        try
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userIdClaim) &&int.TryParse(userIdClaim, out var userId))
+                {
+                    currentUserId = userId;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get current user ID from context");
+        }
+        return currentUserId;
     }
 }

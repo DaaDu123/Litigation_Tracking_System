@@ -12,8 +12,8 @@ public class CaseStatusHistory
     [Required]
     public long CaseID { get; set; }
 
-    [Required]
-    public int OldStatusID { get; set; }
+    // OldStatusID nullable hai kyun ke pehli entry mein koi purana status nahi hota
+    public int? OldStatusID { get; set; }
 
     [Required]
     public int NewStatusID { get; set; }

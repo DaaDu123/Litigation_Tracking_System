@@ -1,33 +1,22 @@
 ﻿using LTSBackend.Comman.Exceptions;
-using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
+using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace LTSBackend.Features.Cases.Commands.UpdateCase;
 
-public class UpdateCaseHandler : IRequestHandler<UpdateCaseCommand, bool>
-{
-    private readonly AppDbContext _context;
-    private readonly IAuditService _auditService;
-    private readonly ILogger<UpdateCaseHandler> _logger;
-
-    public UpdateCaseHandler(
-        AppDbContext context,
-        IAuditService auditService,
-        ILogger<UpdateCaseHandler> logger)
-    {
-        _context = context;
-        _auditService = auditService;
-        _logger = logger;
-    }
-
+public class UpdateCaseHandler (AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseCommand, bool>
+{   
     public async Task<bool> Handle(
         UpdateCaseCommand request,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Case update kia ja raha hai: {CaseID}", request.CaseID);
+
+        int currentUserId = GetCurrentUserId();
 
         // ================================================
         // 1. Find Case
@@ -141,40 +130,56 @@ public class UpdateCaseHandler : IRequestHandler<UpdateCaseCommand, bool>
         }
 
         if (!string.IsNullOrEmpty(request.CaseTitle))
+        {
             caseToUpdate.CaseTitle = request.CaseTitle;
+        }
 
         if (!string.IsNullOrEmpty(request.CaseDescription))
+        {
             caseToUpdate.CaseDescription = request.CaseDescription;
+        }
 
         if (!string.IsNullOrEmpty(request.Priority))
+        {
             caseToUpdate.Priority = request.Priority;
+        }
 
         if (!string.IsNullOrEmpty(request.SubjectMatter))
+        {
             caseToUpdate.SubjectMatter = request.SubjectMatter;
+        }
 
         if (request.ExpectedDisposalDate.HasValue)
+        {
             caseToUpdate.ExpectedDisposalDate = request.ExpectedDisposalDate;
+        }
 
         if (request.ClaimedAmount.HasValue)
+        {
             caseToUpdate.ClaimedAmount = request.ClaimedAmount.Value;
+        }
 
         if (request.PotentialLiability.HasValue)
+        {
             caseToUpdate.PotentialLiability = request.PotentialLiability.Value;
+        }
 
         if (request.IsArchived.HasValue)
+        {
             caseToUpdate.IsArchived = request.IsArchived.Value;
+        }
 
         // ================================================
         // 7. Update timestamps
         // ================================================
-        caseToUpdate.ModifiedBy = 1; // TODO: Logged-in user se le na
+        caseToUpdate.ModifiedBy = currentUserId;
         caseToUpdate.ModifiedDate = DateTime.UtcNow;
 
         // ================================================
         // 8. Create Audit Log
         // ================================================
-        _context.AuditLogs.Add(
-            _auditService.Create(1, $"Case Update: {caseToUpdate.CaseNumber}"));
+        var auditLog = _auditService.Create(currentUserId,$"Case Update: {caseToUpdate.CaseNumber}");
+        _context.AuditLogs.Add(auditLog);
 
         // ================================================
         // 9. Save changes
@@ -184,5 +189,30 @@ public class UpdateCaseHandler : IRequestHandler<UpdateCaseCommand, bool>
         _logger.LogInformation("Case successfully updated: {CaseID}", request.CaseID);
 
         return true;
+    }
+    private int GetCurrentUserId()
+    {
+        int currentUserId = 1; // Default fallback
+        try
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                var userIdClaim = httpContext.User
+                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!string.IsNullOrEmpty(userIdClaim) &&
+                    int.TryParse(userIdClaim, out var userId))
+                {
+                    currentUserId = userId;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get current user ID from context");
+        }
+
+        return currentUserId;
     }
 }

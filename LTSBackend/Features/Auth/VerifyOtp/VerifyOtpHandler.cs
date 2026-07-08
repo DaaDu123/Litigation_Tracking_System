@@ -1,5 +1,5 @@
-﻿using LTSBackend.Comman.Exceptions;
-using LTSBackend.Comman.Middleware;
+﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.VerifyOtp;
 using LTSBackend.Services.Jwt;
@@ -37,6 +37,7 @@ public class VerifyOtpHandler : IRequestHandler<VerifyOtpCommand, VerifyOtpRespo
             .FirstOrDefaultAsync(x =>
                 x.Email == request.Email &&
                 x.OtpCode == request.OtpCode &&
+                x.Purpose == OtpPurpose.Registration &&
                 !x.IsUsed &&
                 x.ExpiresAt > DateTime.UtcNow,
                 cancellationToken);

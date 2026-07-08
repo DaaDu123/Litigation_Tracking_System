@@ -2,7 +2,6 @@
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
-using LTSBackend.Models;
 using LTSBackend.Models.Security;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
@@ -35,17 +34,17 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         }
 
         // ================================================
-        // 2. Get default role (Operator)
+        // 2. Get default role (InternParalegal)
         // ================================================
         var defaultRole = await _context.Roles
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                x => x.RoleID == (int)UserRole.Operator,
+                x => x.RoleID == (int)UserRole.InternParalegal,
                 cancellationToken);
 
         if (defaultRole == null)
         {
-            _logger.LogError("Default Operator role not found in database");
+            _logger.LogError("Default InternParalegal role not found in database");
             throw new NotFoundException("Default role not found. Please contact administrator.");
         }
 
@@ -61,6 +60,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             Department = request.Department,
             RoleID = defaultRole.RoleID,
             IsActive = false,  // Inactive until email verified
+            IsDeleted = false,
             CreatedAt = DateTime.UtcNow,
             EmployeeNo = GenerateEmployeeNo()
         };
@@ -77,6 +77,13 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             .Where(x => x.Email == request.Email && !x.IsUsed)
             .ToListAsync(cancellationToken);
 
+        // ================================================
+        // 4. Clean up old unused Registration OTPs
+        // ================================================
+        var oldOtps = await _context.UserOtps
+            .Where(x => x.Email == request.Email && !x.IsUsed && x.Purpose == OtpPurpose.Registration)
+            .ToListAsync(cancellationToken);
+
         if (oldOtps.Count > 0)
         {
             _context.UserOtps.RemoveRange(oldOtps);
@@ -91,12 +98,13 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         _logger.LogInformation("OTP generated for {Email}", request.Email);
 
         // ================================================
-        // 6. Save OTP with expiry
+        // 6. Save OTP with expiry (Purpose = Registration)
         // ================================================
         var userOtp = new UserOtp
         {
             Email = request.Email,
             OtpCode = otpCode,
+            Purpose = OtpPurpose.Registration,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
             IsUsed = false,
             UserID = user.UserID,

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-
+using LTSBackend.Comman.Enum;
 namespace LTSBackend.Models.Security;
 public class UserOtp
 {
@@ -13,6 +13,8 @@ public class UserOtp
     [Required]
     public DateTime ExpiresAt { get; set; }
     public bool IsUsed { get; set; } = false;
+    [Required]
+    public OtpPurpose Purpose { get; set; } = OtpPurpose.Registration;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? UserID { get; set; }
     // Foreign Key & Navigation Property

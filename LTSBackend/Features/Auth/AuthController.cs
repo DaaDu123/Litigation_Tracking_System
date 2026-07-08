@@ -1,5 +1,6 @@
 ﻿using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Auth.ChangePassword;
+using LTSBackend.Features.Auth.ForgotPassword; // ⚠️ NEW
 using LTSBackend.Features.Auth.Login;
 using LTSBackend.Features.Auth.Logout;
 using LTSBackend.Features.Auth.RefreshToken;
