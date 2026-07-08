@@ -1,4 +1,5 @@
-﻿using LTSBackend.Comman.Exceptions;
+﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Jwt;
 using MediatR;
@@ -20,6 +21,7 @@ public class VerifyOtpHandler(
             .FirstOrDefaultAsync(x =>
                 x.Email == request.Email &&
                 x.OtpCode == request.OtpCode &&
+                x.Purpose == OtpPurpose.Registration &&
                 !x.IsUsed &&
                 x.ExpiresAt > DateTime.UtcNow,
                 cancellationToken);

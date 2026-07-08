@@ -1,7 +1,7 @@
 ﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
-using LTSBackend.Models;
+using LTSBackend.Models.Security;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.Email;
@@ -28,15 +28,19 @@ public class RegisterHandler(AppDbContext context, IPasswordService passwordServ
             throw new ValidationException(new List<string> { "Email already exists." });
         }
 
-        // 2. Default Role (Operator)
-        var defaultRole = await context.Roles
+        // ================================================
+        // 2. Get default role (InternParalegal)
+        // ================================================
+        var defaultRole = await _context.Roles
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.RoleID == (int)UserRole.Operator, cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.RoleID == (int)UserRole.InternParalegal,
+                cancellationToken);
 
         if (defaultRole == null)
         {
-            logger.LogError("Default role not found in database");
-            throw new NotFoundException("Default role not found.");
+            _logger.LogError("Default InternParalegal role not found in database");
+            throw new NotFoundException("Default role not found. Please contact administrator.");
         }
 
         // 3. Create User
@@ -48,8 +52,10 @@ public class RegisterHandler(AppDbContext context, IPasswordService passwordServ
             Phone = request.Phone,
             Department = request.Department,
             RoleID = defaultRole.RoleID,
-            IsActive = false,
-            CreatedAt = DateTime.UtcNow
+            IsActive = false,  // Inactive until email verified
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow,
+            EmployeeNo = GenerateEmployeeNo()
         };
 
         context.Users.Add(user);
@@ -58,6 +64,13 @@ public class RegisterHandler(AppDbContext context, IPasswordService passwordServ
 
         // 4. Remove Old OTPs
         var oldOtps = await context.UserOtps.Where(x => x.Email == request.Email && !x.IsUsed).ToListAsync(cancellationToken);
+
+        // ================================================
+        // 4. Clean up old unused Registration OTPs
+        // ================================================
+        var oldOtps = await _context.UserOtps
+            .Where(x => x.Email == request.Email && !x.IsUsed && x.Purpose == OtpPurpose.Registration)
+            .ToListAsync(cancellationToken);
 
         if (oldOtps.Count > 0)
         {
@@ -71,11 +84,14 @@ public class RegisterHandler(AppDbContext context, IPasswordService passwordServ
         // SECURITY: never log the raw OTP value.
         logger.LogInformation("OTP generated for {Email}", request.Email);
 
-        // 6. Save OTP
+        // ================================================
+        // 6. Save OTP with expiry (Purpose = Registration)
+        // ================================================
         var userOtp = new UserOtp
         {
             Email = request.Email,
             OtpCode = otpCode,
+            Purpose = OtpPurpose.Registration,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
             IsUsed = false,
             UserID = user.UserID,

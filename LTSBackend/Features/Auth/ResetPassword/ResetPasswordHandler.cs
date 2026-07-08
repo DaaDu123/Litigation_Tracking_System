@@ -1,4 +1,5 @@
-﻿using LTSBackend.Comman.Exceptions;
+﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
@@ -21,6 +22,7 @@ public class ResetPasswordHandler(
             .FirstOrDefaultAsync(x =>
                 x.Email == request.Email &&
                 x.OtpCode == request.OtpCode &&
+                x.Purpose == OtpPurpose.PasswordReset &&
                 !x.IsUsed &&
                 x.ExpiresAt > DateTime.UtcNow,
                 cancellationToken);
