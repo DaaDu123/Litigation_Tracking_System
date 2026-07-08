@@ -1,6 +1,5 @@
 ﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
-using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Models.Security;
 using LTSBackend.Services;
@@ -69,13 +68,6 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("User created successfully with ID: {UserId}", user.UserID);
-
-        // ================================================
-        // 4. Clean up old unused OTPs
-        // ================================================
-        var oldOtps = await _context.UserOtps
-            .Where(x => x.Email == request.Email && !x.IsUsed)
-            .ToListAsync(cancellationToken);
 
         // ================================================
         // 4. Clean up old unused Registration OTPs

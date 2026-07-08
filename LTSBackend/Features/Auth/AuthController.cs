@@ -117,6 +117,14 @@ public class AuthController : ControllerBase
         var result = await _mediator.Send(commandWithUserId);
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Password changed successfully!"));
     }
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordCommand command)
+    {
+        _logger.LogInformation("Forgot password request for email: {Email}", command.Email);
+        var result = await _mediator.Send(command);
+        return Ok(ApiResponse<ForgotPasswordResponseDTO>.SuccessResponse(result, result.Message));
+    }
 
     [HttpPost("reset-password")]
     [AllowAnonymous]

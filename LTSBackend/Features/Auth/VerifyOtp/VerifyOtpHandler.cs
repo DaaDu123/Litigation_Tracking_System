@@ -1,5 +1,6 @@
 ﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.VerifyOtp;
 using LTSBackend.Services.Jwt;
@@ -31,7 +32,7 @@ public class VerifyOtpHandler : IRequestHandler<VerifyOtpCommand, VerifyOtpRespo
         _logger.LogInformation("OTP verification attempt for email: {Email}", request.Email);
 
         // ================================================
-        // 1. Find and validate OTP
+        // 1. Find and validate OTP (Purpose = Registration zaroori hai)
         // ================================================
         var otp = await _context.UserOtps
             .FirstOrDefaultAsync(x =>
