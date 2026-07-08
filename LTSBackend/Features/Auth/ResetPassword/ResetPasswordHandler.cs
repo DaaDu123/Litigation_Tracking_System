@@ -1,7 +1,6 @@
 ﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
-using LTSBackend.Features.Auth.ResetPassword;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
 using MediatR;
@@ -35,7 +34,7 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         _logger.LogInformation("Password reset attempt for email: {Email}", request.Email);
 
         // ================================================
-        // 1. Find and validate OTP
+        // 1. Find and validate OTP (PURPOSE = PasswordReset zaroori hai)
         // ================================================
         var otp = await _context.UserOtps
             .FirstOrDefaultAsync(x =>
@@ -71,6 +70,7 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         // 3. Update password
         // ================================================
         user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
 
         // ================================================
         // 4. Mark OTP as used
@@ -78,13 +78,31 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         otp.IsUsed = true;
 
         // ================================================
-        // 5. Create audit log
+        // 5. NEW: Saare active refresh tokens revoke kare
+        //    (password change hone par purane sessions khatam)
+        // ================================================
+        var activeTokens = await _context.RefreshTokens
+            .Where(x => x.UserID == user.UserID && !x.IsRevoked)
+            .ToListAsync(cancellationToken);
+
+        foreach (var token in activeTokens)
+        {
+            token.IsRevoked = true;
+        }
+
+        _logger.LogInformation(
+            "Revoked {Count} active sessions for user {UserId} after password reset",
+            activeTokens.Count,
+            user.UserID);
+
+        // ================================================
+        // 6. Create audit log
         // ================================================
         _context.AuditLogs.Add(
             _auditService.Create(user.UserID, "Password Reset via OTP"));
 
         // ================================================
-        // 6. Save changes
+        // 7. Save changes
         // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 

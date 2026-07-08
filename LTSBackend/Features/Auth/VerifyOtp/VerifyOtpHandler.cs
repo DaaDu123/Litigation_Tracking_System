@@ -53,7 +53,7 @@ public class VerifyOtpHandler : IRequestHandler<VerifyOtpCommand, VerifyOtpRespo
         // ================================================
         // 2. Find user and load role
         // ================================================
-        var user = await _context.Users.Include(x => x.Role).FirstOrDefaultAsync(x => x.Email == request.Email,cancellationToken);
+        var user = await _context.Users.Include(x => x.Role).FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         if (user == null)
         {
