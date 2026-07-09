@@ -1,10 +1,4 @@
-﻿using FluentValidation;
-using LTSBackend.Comman.Enum;
-using LTSBackend.Comman.Exceptions;
-using LTSBackend.Data;
-using LTSBackend.Services.ProfileService;
-using MediatR;
-using Microsoft.AspNetCore.Http;
+﻿using MediatR;
 namespace LTSBackend.Features.Users.Commands.UpdateUser;
 
 public record UpdateUserCommand(
@@ -17,13 +11,3 @@ public record UpdateUserCommand(
     bool IsActive,
     IFormFile? ProfileImage
 ) : IRequest<bool>;
-
-/// <summary>
-/// Validator for update user command.
-/// </summary>
-
-
-/// <summary>
-/// Handler for updating user information.
-/// Can change role, contact info, profile image, and active status.
-/// </summary>
