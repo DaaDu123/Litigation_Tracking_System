@@ -1,12 +1,14 @@
 using FluentValidation;
+using LTSBackend.Comman.Middleware;
 using LTSBackend.Common.Behaviors;
 using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
-using Microsoft.Net.Http.Headers;
+using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Authorization;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.BackgroundServices;
+using LTSBackend.Services.DocumentPermissions;  // ✅ NEW - Document permissions service
 using LTSBackend.Services.Email;
 using LTSBackend.Services.Jwt;
 using LTSBackend.Services.LoginHistory;
@@ -17,12 +19,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-using LTSBackend.Comman.Middleware;
 using System.Text;
-using LTSBackend.Features.Auth.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,7 +112,10 @@ builder.Services.AddScoped<CookieHelper>();
 // Email & File Services
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFileService, FileService>();
-builder.Services.AddScoped<CookieHelper>();
+
+// ✅ NEW - Document Permission Service (FOR MOHARRIR BLIND UPLOAD)
+builder.Services.AddScoped<IDocumentPermissionService, DocumentPermissionService>();
+
 // Audit & Logging Services
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
@@ -172,7 +177,11 @@ builder.Services.AddAuthorization(options =>
         "ViewAuditLogs",
         "ViewDashboard",
         "ViewLoginHistory",
-        "DeleteLoginHistory"
+        "DeleteLoginHistory",
+        "UploadDocuments",           // ✅ NEW - Document upload permission
+        "ViewDocuments",             // ✅ NEW - Document view permission
+        "DownloadDocuments",         // ✅ NEW - Document download permission
+        "DeleteDocuments"            // ✅ NEW - Document delete permission
     };
 
     foreach (var permission in permissions)
@@ -207,7 +216,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Litigation Tracking System API",
         Version = "v1",
-        Description = "LTS Backend API - User Management, Authentication & Authorization",
+        Description = "LTS Backend API - User Management, Case Management, Document Management & Authorization",
         Contact = new OpenApiContact
         {
             Name = "Development Team",

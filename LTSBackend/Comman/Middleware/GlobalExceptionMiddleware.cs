@@ -5,7 +5,7 @@ using System.Net;
 
 using System.Text.Json;
 
-namespace LTSBackend.Common.Middleware;
+namespace LTSBackend.Comman.Middleware;
 
 public class GlobalExceptionMiddleware
 {

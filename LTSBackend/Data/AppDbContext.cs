@@ -6,15 +6,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Data;
 
+/// <summary>
+/// ✅ AppDbContext: Main Database Context
+/// 
+/// Tamam tables ka configuration EF Core ke through
+/// Isme sab DbSets, relationships, aur constraints define hain
+/// </summary>
 public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
 
-    // =============================================
-    // SECURITY MODELS
-    // =============================================
+    // ================================================================
+    // ✅ SECURITY MODELS (User, Role, Permission)
+    // ================================================================
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Role> Roles { get; set; } = null!;
     public DbSet<Permission> Permissions { get; set; } = null!;
@@ -23,14 +29,14 @@ public class AppDbContext : DbContext
     public DbSet<UserOtp> UserOtps { get; set; } = null!;
     public DbSet<LoginHistory> LoginHistories { get; set; } = null!;
 
-    // =============================================
-    // AUDIT MODELS
-    // =============================================
+    // ================================================================
+    // ✅ AUDIT MODELS
+    // ================================================================
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
-    // =============================================
-    // MASTER TABLES
-    // =============================================
+    // ================================================================
+    // ✅ MASTER TABLES (Court, Category, Status, Stage, etc.)
+    // ================================================================
     public DbSet<Department> Departments { get; set; } = null!;
     public DbSet<Court> Courts { get; set; } = null!;
     public DbSet<CaseCategory> CaseCategories { get; set; } = null!;
@@ -38,41 +44,44 @@ public class AppDbContext : DbContext
     public DbSet<CaseStage> CaseStages { get; set; } = null!;
     public DbSet<DocumentType> DocumentTypes { get; set; } = null!;
 
-    // =============================================
-    // CORE CASE MANAGEMENT
-    // =============================================
+    // ================================================================
+    // ✅ CORE CASE MANAGEMENT (Cases, Parties, Assignments)
+    // ================================================================
     public DbSet<Case> Cases { get; set; } = null!;
     public DbSet<CaseParty> CaseParties { get; set; } = null!;
     public DbSet<CaseAssignment> CaseAssignments { get; set; } = null!;
     public DbSet<CaseStatusHistory> CaseStatusHistories { get; set; } = null!;
     public DbSet<CaseMilestone> CaseMilestones { get; set; } = null!;
 
-    // =============================================
-    // HEARINGS & DEADLINES
-    // =============================================
+    // ================================================================
+    // ✅ HEARINGS & DEADLINES
+    // ================================================================
     public DbSet<Hearing> Hearings { get; set; } = null!;
     public DbSet<HearingAttendance> HearingAttendances { get; set; } = null!;
     public DbSet<Deadline> Deadlines { get; set; } = null!;
 
-    // =============================================
-    // DOCUMENTS & NOTES
-    // =============================================
+    // ================================================================
+    // ✅ DOCUMENTS & NOTES (NEW - Document Management)
+    // ================================================================
     public DbSet<Document> Documents { get; set; } = null!;
     public DbSet<DocumentPermission> DocumentPermissions { get; set; } = null!;
     public DbSet<CaseNote> CaseNotes { get; set; } = null!;
 
-    // =============================================
-    // NOTIFICATIONS
-    // =============================================
+    // ================================================================
+    // ✅ NOTIFICATIONS
+    // ================================================================
     public DbSet<Notification> Notifications { get; set; } = null!;
 
+    /// <summary>
+    /// ✅ OnModelCreating: Tamam entities ka configuration
+    /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // =============================================
-        // USER CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ USER ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.UserID);
@@ -80,14 +89,15 @@ public class AppDbContext : DbContext
             entity.Property(e => e.FullName).IsRequired();
             entity.Property(e => e.PasswordHash).IsRequired();
             entity.HasIndex(e => e.Email).IsUnique();
+            // Relationships
             entity.HasMany(e => e.RefreshTokens).WithOne(r => r.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.UserOtps).WithOne(o => o.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.LoginHistories).WithOne(l => l.User).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // ROLE CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ ROLE ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<Role>(entity =>
         {
             entity.HasKey(e => e.RoleID);
@@ -96,9 +106,9 @@ public class AppDbContext : DbContext
             entity.HasMany(e => e.RolePermissions).WithOne(rp => rp.Role).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // PERMISSION CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ PERMISSION ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<Permission>(entity =>
         {
             entity.HasKey(e => e.PermissionID);
@@ -106,9 +116,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.PermissionName).IsUnique();
         });
 
-        // =============================================
-        // ROLEPERMISSION CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ ROLEPERMISSION ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<RolePermission>(entity =>
         {
             entity.HasKey(x => new { x.RoleID, x.PermissionID });
@@ -116,9 +126,9 @@ public class AppDbContext : DbContext
             entity.HasOne(x => x.Permission).WithMany(p => p.RolePermissions).HasForeignKey(x => x.PermissionID);
         });
 
-        // =============================================
-        // REFRESHTOKEN CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ REFRESHTOKEN ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.HasKey(e => e.RefreshTokenID);
@@ -127,9 +137,9 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.User).WithMany(u => u.RefreshTokens).HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // USEROTP CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ USEROTP ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<UserOtp>(entity =>
         {
             entity.HasKey(e => e.OtpID);
@@ -139,9 +149,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => new { e.Email, e.OtpCode });
         });
 
-        // =============================================
-        // LOGINHISTORY CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ LOGINHISTORY ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<LoginHistory>(entity =>
         {
             entity.HasKey(e => e.LoginID);
@@ -151,9 +161,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => new { e.UserID, e.LoginTime }).IsDescending(false, true);
         });
 
-        // =============================================
-        // AUDITLOG CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ AUDITLOG ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.HasKey(e => e.LogID);
@@ -163,9 +173,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.UserID);
         });
 
-        // =============================================
-        // CASE CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ CASE ENTITY CONFIGURATION (Main Case Table)
+        // ================================================================
         modelBuilder.Entity<Case>(entity =>
         {
             entity.HasKey(e => e.CaseID);
@@ -184,16 +194,16 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Department).WithMany().HasForeignKey(e => e.ResponsibleDepartmentID);
             entity.HasOne(e => e.LegalOfficer).WithMany().HasForeignKey(e => e.CurrentLegalOfficerID).OnDelete(DeleteBehavior.Restrict);
 
-            // Relationships
+            // Relationships (One Case -> Many Children)
             entity.HasMany(e => e.CaseParties).WithOne(p => p.Case).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.Hearings).WithOne(h => h.Case).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.Deadlines).WithOne(d => d.Case).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.CaseAssignments).WithOne(a => a.Case).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // CASE PARTIES CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ CASE PARTIES ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<CaseParty>(entity =>
         {
             entity.HasKey(e => e.PartyID);
@@ -202,9 +212,9 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Case).WithMany(c => c.CaseParties).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // CASE ASSIGNMENTS CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ CASE ASSIGNMENTS ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<CaseAssignment>(entity =>
         {
             entity.HasKey(e => e.AssignmentID);
@@ -213,27 +223,27 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
         });
 
-        // =============================================
-        // CASE STATUS HISTORY CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ CASE STATUS HISTORY ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<CaseStatusHistory>(entity =>
         {
             entity.HasKey(e => e.HistoryID);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // CASE MILESTONES CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ CASE MILESTONES ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<CaseMilestone>(entity =>
         {
             entity.HasKey(e => e.MilestoneID);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // HEARINGS CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ HEARINGS ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<Hearing>(entity =>
         {
             entity.HasKey(e => e.HearingID);
@@ -242,9 +252,9 @@ public class AppDbContext : DbContext
             entity.HasMany(e => e.HearingAttendances).WithOne(ha => ha.Hearing).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // HEARING ATTENDANCE CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ HEARING ATTENDANCE ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<HearingAttendance>(entity =>
         {
             entity.HasKey(e => e.AttendanceID);
@@ -252,29 +262,31 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID);
         });
 
-        // =============================================
-        // DEADLINES CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ DEADLINES ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<Deadline>(entity =>
         {
             entity.HasKey(e => e.DeadlineID);
             entity.HasOne(e => e.Case).WithMany(c => c.Deadlines).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // DOCUMENTS CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ DOCUMENTS ENTITY CONFIGURATION (NEW)
+        // ================================================================
         modelBuilder.Entity<Document>(entity =>
         {
             entity.HasKey(e => e.DocumentID);
+            // Foreign Keys
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.DocumentType).WithMany().HasForeignKey(e => e.DocumentTypeID);
+            // Relationships
             entity.HasMany(e => e.DocumentPermissions).WithOne(dp => dp.Document).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =============================================
-        // DOCUMENT PERMISSIONS CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ DOCUMENT PERMISSIONS ENTITY CONFIGURATION (NEW)
+        // ================================================================
         modelBuilder.Entity<DocumentPermission>(entity =>
         {
             entity.HasKey(e => e.PermissionID);
@@ -282,9 +294,9 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Role).WithMany().HasForeignKey(e => e.RoleID);
         });
 
-        // =============================================
-        // CASE NOTES CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ CASE NOTES ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<CaseNote>(entity =>
         {
             entity.HasKey(e => e.NoteID);
@@ -292,9 +304,9 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID);
         });
 
-        // =============================================
-        // NOTIFICATIONS CONFIGURATION
-        // =============================================
+        // ================================================================
+        // ✅ NOTIFICATIONS ENTITY CONFIGURATION
+        // ================================================================
         modelBuilder.Entity<Notification>(entity =>
         {
             entity.HasKey(e => e.NotificationID);
