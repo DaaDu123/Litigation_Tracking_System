@@ -8,7 +8,7 @@ using LTSBackend.Features.Authorization;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.BackgroundServices;
-using LTSBackend.Services.DocumentPermissions;  // ✅ NEW - Document permissions service
+using LTSBackend.Services.DocumentPermissions;
 using LTSBackend.Services.Email;
 using LTSBackend.Services.Jwt;
 using LTSBackend.Services.LoginHistory;
@@ -178,10 +178,10 @@ builder.Services.AddAuthorization(options =>
         "ViewDashboard",
         "ViewLoginHistory",
         "DeleteLoginHistory",
-        "UploadDocuments",           // ✅ NEW - Document upload permission
-        "ViewDocuments",             // ✅ NEW - Document view permission
-        "DownloadDocuments",         // ✅ NEW - Document download permission
-        "DeleteDocuments"            // ✅ NEW - Document delete permission
+        "UploadDocuments",
+        "ViewDocuments",
+        "DownloadDocuments",
+        "DeleteDocuments"
     };
 
     foreach (var permission in permissions)
@@ -208,35 +208,42 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 #endregion
 
-#region Swagger/OpenAPI Configuration
+#region Swagger/OpenAPI Configuration - 🔴 CRITICAL FIX
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Litigation Tracking System API",
-        Version = "v1",
-        Description = "LTS Backend API - User Management, Case Management, Document Management & Authorization",
+        Version = "v1.0.0",
+        Description = "Complete Case Management System with Role-Based Access Control, Document Management, and Audit Logging",
+        TermsOfService = new Uri("https://example.com/terms"),
         Contact = new OpenApiContact
         {
-            Name = "Development Team",
+            Name = "LTS Support Team",
             Email = "support@lts.local"
+        },
+        License = new OpenApiLicense
+        {
+            Name = "MIT License"
         }
     });
 
+    // 🔴 CRITICAL: Enable annotations
     c.EnableAnnotations();
 
-    // JWT Bearer scheme
+    // JWT Bearer Authentication Scheme
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Name = "Authorization",
         Type = SecuritySchemeType.Http,
-        Scheme = "Bearer",
+        Scheme = "bearer",
         BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter JWT token as: Bearer {token}"
+        Description = "JWT Authorization header using the Bearer scheme.\r\n\r\nEnter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header
     });
 
+    // Add JWT to all endpoints
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -246,72 +253,80 @@ builder.Services.AddSwaggerGen(c =>
                 {
                     Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
-                }
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header
             },
-            Array.Empty<string>()
+            new List<string>()
         }
     });
 
-    // XML documentation comments
+    // Include XML documentation comments
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
     {
         c.IncludeXmlComments(xmlPath);
     }
+
+    // Sort endpoints alphabetically
+    c.OrderActionsBy(x => x.HttpMethod);
 });
 #endregion
 
 var app = builder.Build();
 
-#region Middleware Pipeline
-// Exception handling (custom middleware)
+#region Middleware Pipeline - 🔴 CRITICAL: ORDER MATTERS
+// 1. Exception handling (must be first)
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-// Forwarded headers (for proxies like nginx)
+// 2. Forwarded headers (for proxies)
 app.UseForwardedHeaders();
 
-// HTTPS & Security Headers
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHsts();
-}
-
-// Swagger documentation
+// 3. Swagger (before HTTPS redirect for development)
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
+    app.UseSwagger(c =>
+    {
+        c.RouteTemplate = "swagger/{documentName}/swagger.json";
+    });
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "LTS API v1");
-        c.RoutePrefix = string.Empty;
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "LTS API v1.0.0");
+        c.RoutePrefix = ""; // Root path for Swagger UI
+        c.DefaultModelsExpandDepth(2);
+        c.DefaultModelExpandDepth(2);
+        c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
+        //c.DisplayOperationIds();
     });
 }
 
-// Security headers
+// 4. HTTPS Redirect
+app.UseHttpsRedirection();
+
+// 5. Static files
+app.UseStaticFiles();
+
+// 6. CORS
+app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");
+
+// 7. Security headers
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Frame-Options"] = "DENY";
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     context.Response.Headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
     await next();
 });
 
-// Static files
-app.UseStaticFiles();
-
-// CORS
-app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");
-
-// HTTPS Redirection
-app.UseHttpsRedirection();
-
-// Authentication & Authorization
+// 8. Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Routes
+// 9. Routing
 app.MapControllers();
 app.MapHealthChecks("/health");
 
@@ -322,6 +337,7 @@ var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("========================================");
 logger.LogInformation("Litigation Tracking System API Starting");
 logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+logger.LogInformation("Swagger UI: https://localhost:5001");
 logger.LogInformation("========================================");
 
 app.Run();

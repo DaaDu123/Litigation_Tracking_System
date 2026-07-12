@@ -1,5 +1,4 @@
-﻿
-using LTSBackend.Comman.Exceptions;
+﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Users.Commands.DeleteUser;

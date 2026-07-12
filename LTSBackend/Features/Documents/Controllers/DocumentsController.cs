@@ -31,28 +31,25 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
     /// Role-based: Partner, Associate, Moharrir, InternParalegal can upload
     /// </summary>
     [HttpPost("upload")]
+    [Consumes("multipart/form-data")]
     [Authorize(Roles = RoleNames.CanViewDocuments + "," + RoleNames.InternParalegal)]
     public async Task<IActionResult> UploadDocument(
-        [FromForm] long caseId,
-        [FromForm] int documentTypeId,
-        [FromForm] string documentName,
-        [FromForm] IFormFile file,
-        [FromForm] string? remarks = null)
+        [FromForm] UploadDocumentRequest request)
     {
         _logger.LogInformation("Upload document request - Case: {CaseId}, Type: {TypeId}, File: {FileName}",
-            caseId,
-            documentTypeId,
-            file?.FileName);
+            request.CaseID,
+            request.DocumentTypeID,
+            request.File?.FileName);
 
         // ================================================
         // Validate file
         // ================================================
-        if (file == null || file.Length == 0)
+        if (request.File == null || request.File.Length == 0)
         {
             return BadRequest(ApiResponse<bool>.FailureResponse("File is required"));
         }
 
-        if (file.Length > 50 * 1024 * 1024) // 50MB max
+        if (request.File.Length > 50 * 1024 * 1024) // 50MB max
         {
             return BadRequest(ApiResponse<bool>.FailureResponse("File size cannot exceed 50MB"));
         }
@@ -69,7 +66,7 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
         // ================================================
         // Create upload command
         // ================================================
-        var command = new UploadDocumentCommand(caseId, documentTypeId, documentName, file, remarks)
+        var command = new UploadDocumentCommand(request.CaseID, request.DocumentTypeID, request.DocumentName, request.File, request.Remarks)
         {
             UserID = userId
         };
@@ -86,8 +83,8 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             var response = new UploadDocumentResponseDTO
             {
                 DocumentID = documentId,
-                CaseID = caseId,
-                DocumentName = documentName,
+                CaseID = request.CaseID,
+                DocumentName = request.DocumentName,
                 Message = "Document uploaded successfully"
             };
 

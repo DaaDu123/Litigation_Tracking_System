@@ -1,5 +1,4 @@
-﻿
-using LTSBackend.Data;
+﻿using LTSBackend.Data;
 using LTSBackend.Features.Users.DTOs;
 using LTSBackend.Features.Users.Queries.GetAllUsers;
 using MediatR;
