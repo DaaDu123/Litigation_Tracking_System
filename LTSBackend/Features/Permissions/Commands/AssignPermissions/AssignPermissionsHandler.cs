@@ -12,6 +12,12 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
     private readonly AppDbContext _context;
     private readonly ILogger<AssignPermissionsHandler> _logger;
 
+    private static readonly string[] ProtectedRoles =
+    {
+        RoleNames.SuperAdmin,
+        RoleNames.FirmAdmin
+    };
+
     public AssignPermissionsHandler(AppDbContext context, ILogger<AssignPermissionsHandler> logger)
     {
         _context = context;
@@ -47,6 +53,19 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
         {
             _logger.LogWarning("Assign permissions failed: Role not found: {RoleID}", request.RoleID);
             throw new NotFoundException("Role not found.");
+        }
+
+        // ================================================
+        // ✅ FIX: Protected system roles ki permissions modify na hone dein
+        // ================================================
+        if (ProtectedRoles.Contains(role.RoleName, StringComparer.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Assign permissions blocked: {RoleName} is a protected system role: {RoleID}",role.RoleName, request.RoleID);
+            throw new ValidationException(
+                new List<string>
+                {
+                    $"Permissions for system role '{role.RoleName}' cannot be modified through this endpoint."
+                });
         }
 
         // ================================================

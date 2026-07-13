@@ -12,6 +12,11 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
     private readonly AppDbContext _context;
     private readonly ILogger<UpdateRoleHandler> _logger;
 
+ private static readonly string[] ProtectedRoles =
+    {
+        RoleNames.SuperAdmin,
+        RoleNames.FirmAdmin
+    };
     public UpdateRoleHandler(AppDbContext context, ILogger<UpdateRoleHandler> logger)
     {
         _context = context;
@@ -64,6 +69,16 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
             _logger.LogWarning("Update failed: Role name already exists: {RoleName}", request.RoleName);
             throw new ValidationException(
                 new List<string> { $"Role '{request.RoleName}' already exists." });
+        }
+
+        if (ProtectedRoles.Contains(role.RoleName, StringComparer.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Update blocked: {RoleName} is a protected system role: {RoleID}",role.RoleName, request.RoleID);
+            throw new ValidationException(
+                new List<string>
+                {
+                    $"System role '{role.RoleName}' cannot be updated through this endpoint."
+                });
         }
 
         // ================================================

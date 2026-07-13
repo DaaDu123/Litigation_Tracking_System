@@ -125,7 +125,7 @@ builder.Services.AddScoped<ILoginHistoryService, LoginHistoryService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 // Authorization Handler
-builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 #endregion
 
 #region Background Services
@@ -307,6 +307,7 @@ app.UseHttpsRedirection();
 
 // 5. Static files
 app.UseStaticFiles();
+app.UseRouting();   // ✅ ADD THIS — routing decision yahan explicitly ho jati hai
 
 // 6. CORS
 app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");

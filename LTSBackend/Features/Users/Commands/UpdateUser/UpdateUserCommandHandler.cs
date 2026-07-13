@@ -2,7 +2,7 @@
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
-using LTSBackend.Models;
+using LTSBackend.Models.Security;   // ✅ FIX: pehle "LTSBackend.Models" tha (galat/unused namespace),
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.ProfileService;

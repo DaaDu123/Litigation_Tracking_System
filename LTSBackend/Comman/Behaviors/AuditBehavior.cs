@@ -1,9 +1,9 @@
 ﻿using LTSBackend.Services.Audit;
 using MediatR;
-using System.Reflection;
 
 namespace LTSBackend.Common.Behaviors;
-public class AuditBehavior<TRequest, TResponse> (IAuditService _auditService, ILogger<AuditBehavior<TRequest, TResponse>> _logger) : IPipelineBehavior<TRequest, TResponse>
+public class AuditBehavior<TRequest, TResponse>(IAuditService _auditService,IAuditLogService _auditLogService,   // ✅ FIX: DB me save karne ke liye ye service add ki
+    ILogger<AuditBehavior<TRequest, TResponse>> _logger) : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
     public async Task<TResponse> Handle(TRequest request,RequestHandlerDelegate<TResponse> next,CancellationToken cancellationToken)
@@ -22,6 +22,9 @@ public class AuditBehavior<TRequest, TResponse> (IAuditService _auditService, IL
             {
                 var commandName = typeof(TRequest).Name;
                 var auditLog = _auditService.Create(null, $"Command executed: {commandName}");
+                // ✅ FIX: pehle sirf object bana raha tha, save nahi kar raha tha
+                // ab actually DB me persist ho raha hai
+                await _auditLogService.LogAsync(auditLog);
                 _logger.LogDebug("Audit logged for command: {CommandName}", commandName);
             }
             return response;

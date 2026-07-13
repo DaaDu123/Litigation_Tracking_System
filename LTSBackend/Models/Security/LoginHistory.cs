@@ -26,7 +26,6 @@ public class LoginHistory
 
     public bool IsLoggedOut { get; set; } = false;
 
-    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     // Foreign Key & Navigation Property
     [ForeignKey(nameof(UserID))]

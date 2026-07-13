@@ -30,36 +30,50 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
                 return false;
             }
 
+            var role = user.GetRole();
             // ================================================
             // 2. Super Admin ko sab kuch access hai
             // ================================================
-            if (user.GetRole() == UserRole.SuperAdmin)
+            if (role == UserRole.SuperAdmin)
             {
                 _logger.LogDebug("Super Admin - full access to document {DocumentId} action {Action}", documentId, action);
                 return true;
             }
 
             // ================================================
-            // 3. Partner, Associate, InternParalegal ko full access
+            // 3. FirmAdmin and Partner have full access (View/Download/Upload/Delete)
             // ================================================
-            var role = user.GetRole();
-            if (role == UserRole.Partner || role == UserRole.AssociateLawyer || role == UserRole.InternParalegal)
+            if (role == UserRole.FirmAdmin || role == UserRole.Partner)
             {
                 _logger.LogDebug("Role {Role} has full document access", role);
                 return true;
             }
 
             // ================================================
-            // 4. FirmAdmin ko full access
+            // 4. AssociateLawyer -> ReadWrite (View + Download + Upload)
+            // ✅ FIX: Previously allowed full access;
+            // now restricted based on the access-level enum (GetUserDocumentAccessLevelAsync).
             // ================================================
-            if (role == UserRole.FirmAdmin)
+            if (role == UserRole.AssociateLawyer)
             {
-                _logger.LogDebug("FirmAdmin has full document access");
-                return true;
+                bool allowed = action == "View" || action == "Download" || action == "Upload";
+                _logger.LogDebug("AssociateLawyer {UserId} - {Action} allowed: {Allowed}", userId, action, allowed);
+                return allowed;
             }
 
             // ================================================
-            // 5. Moharrir - special handling (blind upload feature)
+            // 5. InternParalegal -> ReadOnly (sirf View)
+            //    ✅ FIX: pehle Upload/Download bhi allow ho raha tha, ab sirf View
+            // ================================================
+            if (role == UserRole.InternParalegal)
+            {
+                bool allowed = action == "View";
+                _logger.LogDebug("InternParalegal {UserId} - {Action} allowed: {Allowed}", userId, action, allowed);
+                return allowed;
+            }
+
+            // ================================================
+            // 6. Moharrir - special handling (blind upload feature)
             // ================================================
             if (role == UserRole.Moharrir)
             {
@@ -94,7 +108,7 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
 
         if (isElevated)
         {
-            // Elevated mode: view + download allowed
+            // Elevated mode: view + download + upload allowed
             if (action == "View" || action == "Download" || action == "Upload")
             {
                 _logger.LogDebug("Moharrir {UserId} elevated mode - {Action} allowed", userId, action);

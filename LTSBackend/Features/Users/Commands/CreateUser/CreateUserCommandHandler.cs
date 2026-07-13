@@ -156,14 +156,12 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
             newUser.UserID, role?.RoleName);
 
         // ================================================
-        // 9. Create Audit Log
+        // ✅ FIX: Manual audit log yahan se hata diya.
+        // AuditBehavior (MediatR pipeline) already har "*Command" ke liye
+        // audit row automatically bana raha hai — is manual insert se
+        // pehle DUPLICATE (2x) audit rows ban rahi thin CreateUser ke liye,
+        // jabke UpdateUser/DeleteUser me sirf 1 row banti thi. Ab consistent hai.
         // ================================================
-        _context.AuditLogs.Add(
-            _auditService.Create(newUser.UserID, $"User Created: {newUser.Email}"));
-
-        await _context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Audit log created for new user: {UserID}", newUser.UserID);
 
         return newUser.UserID;
     }

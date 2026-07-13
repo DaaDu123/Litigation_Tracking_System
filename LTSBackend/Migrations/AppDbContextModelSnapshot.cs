@@ -1062,7 +1062,7 @@ namespace LTSBackend.Migrations
                     b.HasOne("LTSBackend.Models.Masters.Court", "Court")
                         .WithMany()
                         .HasForeignKey("CourtID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("LTSBackend.Models.Security.User", "LegalOfficer")

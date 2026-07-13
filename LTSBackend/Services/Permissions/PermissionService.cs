@@ -116,12 +116,20 @@ public class PermissionService (AppDbContext _context, ILogger<PermissionService
     {
         try
         {
-            var userRole = await _context.Users
+            // ✅ FIX: RoleID pehle DB se nikalo (primitive type - EF translate kar sakta hai)
+            // phir memory me enum conversion karo (GetRole() SQL translate nahi ho sakta)
+            var roleId = await _context.Users
                 .AsNoTracking()
                 .Where(x => x.UserID == userId)
-                .Select(x => x.GetRole())
+                .Select(x => x.RoleID)
                 .FirstOrDefaultAsync(cancellationToken);
 
+            if (!roleId.HasValue || !Enum.IsDefined(typeof(UserRole), roleId.Value))
+            {
+                return false;
+            }
+
+            var userRole = (UserRole)roleId.Value;
             return userRole == role;
         }
         catch (Exception ex)
@@ -140,13 +148,19 @@ public class PermissionService (AppDbContext _context, ILogger<PermissionService
     {
         try
         {
-            var role = await _context.Users
+            // ✅ FIX: RoleID pehle DB se nikalo, phir memory me enum conversion karo
+            var roleId = await _context.Users
                 .AsNoTracking()
                 .Where(x => x.UserID == userId)
-                .Select(x => x.GetRole())
+                .Select(x => x.RoleID)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            return role;
+            if (!roleId.HasValue || !Enum.IsDefined(typeof(UserRole), roleId.Value))
+            {
+                return null;
+            }
+
+            return (UserRole)roleId.Value;
         }
         catch (Exception ex)
         {

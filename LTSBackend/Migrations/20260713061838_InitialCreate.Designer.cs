@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LTSBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260711080330_AddDocumentTables")]
-    partial class AddDocumentTables
+    [Migration("20260713061838_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1065,7 +1065,7 @@ namespace LTSBackend.Migrations
                     b.HasOne("LTSBackend.Models.Masters.Court", "Court")
                         .WithMany()
                         .HasForeignKey("CourtID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("LTSBackend.Models.Security.User", "LegalOfficer")

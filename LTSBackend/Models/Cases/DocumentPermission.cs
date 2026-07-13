@@ -13,16 +13,22 @@ public class DocumentPermission
     [Required]
     public long DocumentID { get; set; }
 
-    [Required]
-    public int RoleID { get; set; }
+    // 🔴 MODIFIED: Role-based OR User-based permissions
+    public int? RoleID { get; set; }
+    public int? UserID { get; set; }
 
     public bool CanView { get; set; } = true;
     public bool CanDownload { get; set; } = false;
     public bool CanUpload { get; set; } = false;
 
+    public DateTime? GrantedDate { get; set; } = DateTime.UtcNow;
+
     [ForeignKey(nameof(DocumentID))]
     public Document Document { get; set; } = null!;
 
     [ForeignKey(nameof(RoleID))]
-    public Role Role { get; set; } = null!;
+    public Role? Role { get; set; }
+
+    [ForeignKey(nameof(UserID))]
+    public User? User { get; set; }
 }

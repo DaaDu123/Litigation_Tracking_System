@@ -2,6 +2,7 @@
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Roles.Commands.DeleteRole;
+using LTSBackend.Models.Security;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,13 +11,10 @@ public class DeleteRoleHandler : IRequestHandler<DeleteRoleCommand, bool>
     private readonly AppDbContext _context;
     private readonly ILogger<DeleteRoleHandler> _logger;
 
-    // System roles that cannot be deleted
     private static readonly string[] ProtectedRoles =
     {
-        "Admin",
-        "Administrator",
-        "SuperAdmin",
-        "System"
+        RoleNames.SuperAdmin,
+        RoleNames.FirmAdmin
     };
 
     public DeleteRoleHandler(AppDbContext context, ILogger<DeleteRoleHandler> logger)

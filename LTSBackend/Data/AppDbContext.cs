@@ -187,7 +187,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.SubjectMatter).IsRequired().HasMaxLength(255);
 
             // Foreign Keys
-            entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID);
+            entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryID);
             entity.HasOne(e => e.Status).WithMany().HasForeignKey(e => e.StatusID);
             entity.HasOne(e => e.Stage).WithMany().HasForeignKey(e => e.StageID);

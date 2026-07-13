@@ -75,8 +75,10 @@ public class UsersController : ControllerBase
     // GET USER BY ID
     // =====================================================
     /// <summary>
-    /// Aik specific user fetch kare
-    /// Role-based: FirmAdmin, Partner, ya apne aap ko hi dekh sakte ho
+    /// Aik specific user fetch kare.
+    /// Role-based: sirf PartnerAndAbove roles access kar sakte hain.
+    /// Self-view ke liye separate "/profile/me" endpoint use karo —
+    /// ye endpoint self-access exception nahi deta.
     /// </summary>
     [HttpGet("{id}")]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
@@ -84,15 +86,12 @@ public class UsersController : ControllerBase
     {
         _logger.LogInformation("Get user request: {UserID}", id);
 
-        // Check agar khud apne aap ko dekh raha hai
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!int.TryParse(userIdClaim, out var currentUserId))
-        {
-            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
-        }
-
-        // TODO: Check agar Partner hai to sirf apne firm ke users dekh sakte ho
-        // Abhi sirf access check kar rahe ho
+        // ✅ FIX: pehle yahan currentUserId nikal ke discard ho raha tha
+        // (dead code) — comment kehta tha "self-view allowed" lekin
+        // [Authorize(Roles=PartnerAndAbove)] pehle hi non-partner roles
+        // ko block kar deta hai, is liye wo code kabhi meaningful nahi tha.
+        // TODO: Partner role ko sirf apne firm ke users tak restrict
+        // karna hai jab multi-tenant support add ho.
 
         var user = await _mediator.Send(new GetUserByIdQuery(id));
 

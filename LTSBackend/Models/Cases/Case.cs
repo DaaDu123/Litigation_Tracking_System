@@ -35,6 +35,10 @@ public class Case
     public DateTime RegistrationDate { get; set; }
     [Column(TypeName = "date")]
     public DateTime? ExpectedDisposalDate { get; set; }
+    [Column(TypeName = "date")]
+    public DateTime? NextHearingDate { get; set; }
+    [Column(TypeName = "date")]
+    public DateTime? UpcomingDeadline { get; set; }
     [Column(TypeName = "decimal(18,2)")]
     public decimal ClaimedAmount { get; set; }
     [Column(TypeName = "decimal(18,2)")]
@@ -48,6 +52,8 @@ public class Case
     public int? ModifiedBy { get; set; }
     public DateTime? ModifiedDate { get; set; }
     public bool IsArchived { get; set; } = false;
+    public bool IsClosed { get; set; } = false;
+    public DateTime? ClosureDate { get; set; }
     // Foreign Key Relationships
     [ForeignKey(nameof(CourtID))]
     public Court Court { get; set; } = null!;
