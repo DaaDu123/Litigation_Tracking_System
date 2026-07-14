@@ -1,18 +1,6 @@
-﻿using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-
-namespace LTSBackend.Services.ProfileService;
-public class FileService : IFileService
+﻿namespace LTSBackend.Services.ProfileService;
+public class FileService(IWebHostEnvironment _environment, ILogger<FileService> _logger) : IFileService
 {
-    private readonly IWebHostEnvironment _environment;
-    private readonly ILogger<FileService> _logger;
-
-    public FileService(IWebHostEnvironment environment, ILogger<FileService> logger)
-    {
-        _environment = environment;
-        _logger = logger;
-    }
-
     public async Task<string> SaveFileAsync(IFormFile file, string folderName)
     {
         if (file == null || file.Length == 0)

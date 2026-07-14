@@ -1,6 +1,5 @@
-﻿
+﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
-using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.ResendOtp;
 using LTSBackend.Models.Security;
@@ -9,16 +8,17 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 
-public class ResendOtpHandler (AppDbContext _context, IEmailService _emailService, ILogger<ResendOtpHandler> _logger) : IRequestHandler<ResendOtpCommand, ResendOtpResponseDTO>
+namespace LTSBackend.Features.Auth.ResendOtp;
+public class ResendOtpHandler(AppDbContext _context, IEmailService _emailService, ILogger<ResendOtpHandler> _logger) : IRequestHandler<ResendOtpCommand, ResendOtpResponseDTO>
 {
-    public async Task<ResendOtpResponseDTO> Handle(ResendOtpCommand request,CancellationToken cancellationToken)
+    public async Task<ResendOtpResponseDTO> Handle(ResendOtpCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Resend OTP requested for email: {Email}", request.Email);
 
         // ================================================
         // 1. Find user by email
         // ================================================
-        var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email,cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         if (user == null)
         {
@@ -28,14 +28,20 @@ public class ResendOtpHandler (AppDbContext _context, IEmailService _emailServic
 
         // ================================================
         // 2. Remove old unused OTPs
+        //    FIX: This endpoint is exclusively for the Registration flow
+        //    (grouped under "REGISTRATION & EMAIL VERIFICATION" in the
+        //    controller). Previously it removed ALL unused OTPs for the
+        //    email regardless of Purpose — if the user had also
+        //    requested a password-reset OTP, this would silently wipe
+        //    it out. Now scoped to Purpose == Registration only.
         // ================================================
-        var oldOtps = await _context.UserOtps.Where(x => x.Email == request.Email && !x.IsUsed).ToListAsync(cancellationToken);
+        var oldOtps = await _context.UserOtps.Where(x => x.Email == request.Email && !x.IsUsed && x.Purpose == OtpPurpose.Registration).ToListAsync(cancellationToken);
 
         if (oldOtps.Count > 0)
         {
             _context.UserOtps.RemoveRange(oldOtps);
             await _context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Removed {Count} old OTPs for resend", oldOtps.Count);
+            _logger.LogInformation("Removed {Count} old registration OTPs for resend", oldOtps.Count);
         }
 
         // ================================================
@@ -46,11 +52,15 @@ public class ResendOtpHandler (AppDbContext _context, IEmailService _emailServic
 
         // ================================================
         // 4. Save new OTP
+        //    FIX: Purpose was previously never set, so VerifyOtpHandler's
+        //    filter (Purpose == OtpPurpose.Registration) could fail to
+        //    find this OTP depending on the enum's default value.
         // ================================================
         _context.UserOtps.Add(new UserOtp
         {
             Email = request.Email,
             OtpCode = otpCode,
+            Purpose = OtpPurpose.Registration,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
             IsUsed = false,
             UserID = user.UserID,

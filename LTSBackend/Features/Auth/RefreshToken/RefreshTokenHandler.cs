@@ -2,13 +2,16 @@
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Auth.RefreshToken;
+using LTSBackend.Services.Audit;
 using LTSBackend.Services.Jwt;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-public class RefreshTokenHandler (AppDbContext _context, IJwtService _jwtService, IHttpContextAccessor _httpContextAccessor, IAuditService _auditService, CookieHelper _cookieHelper, ILogger<RefreshTokenHandler> _logger) : IRequestHandler<RefreshTokenCommand, RefreshTokenResponseDTO>
+namespace LTSBackend.Features.Auth.RefreshToken;
+public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService, IHttpContextAccessor _httpContextAccessor, IAuditService _auditService, CookieHelper _cookieHelper, ILogger<RefreshTokenHandler> _logger) : IRequestHandler<RefreshTokenCommand, RefreshTokenResponseDTO>
 {
-    public async Task<RefreshTokenResponseDTO> Handle(RefreshTokenCommand request,CancellationToken cancellationToken)
+    public async Task<RefreshTokenResponseDTO> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Token refresh attempt");
 

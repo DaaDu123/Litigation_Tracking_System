@@ -2,9 +2,12 @@
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Auth.Logout;
+using LTSBackend.Services.Audit;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
+namespace LTSBackend.Features.Auth.Logout;
 public class LogoutHandler (AppDbContext _context, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, IAuditService _auditService, ILogger<LogoutHandler> _logger) : IRequestHandler<LogoutCommand, bool>
 {
     public async Task<bool> Handle(

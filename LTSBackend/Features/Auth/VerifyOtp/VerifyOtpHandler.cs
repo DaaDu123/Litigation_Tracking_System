@@ -1,29 +1,18 @@
 ﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
-using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
+using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Auth.VerifyOtp;
+using LTSBackend.Services.Audit;
 using LTSBackend.Services.Jwt;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using RefreshTokenEntity = LTSBackend.Models.Security.RefreshToken;
 
 namespace LTSBackend.Features.Auth.VerifyOtp;
-public class VerifyOtpHandler : IRequestHandler<VerifyOtpCommand, VerifyOtpResponseDTO>
+public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<VerifyOtpHandler> _logger) : IRequestHandler<VerifyOtpCommand, VerifyOtpResponseDTO>
 {
-    private readonly AppDbContext _context;
-    private readonly IJwtService _jwtService;
-    private readonly ILogger<VerifyOtpHandler> _logger;
-
-    public VerifyOtpHandler(
-        AppDbContext context,
-        IJwtService jwtService,
-        ILogger<VerifyOtpHandler> logger)
-    {
-        _context = context;
-        _jwtService = jwtService;
-        _logger = logger;
-    }
 
     public async Task<VerifyOtpResponseDTO> Handle(
         VerifyOtpCommand request,
@@ -75,18 +64,43 @@ public class VerifyOtpHandler : IRequestHandler<VerifyOtpCommand, VerifyOtpRespo
 
         // ================================================
         // 5. Save refresh token
+        //    FIX: expiry was hardcoded to 7 days here, inconsistent
+        //    with Login/RefreshToken handlers which use the configured
+        //    JwtSettings.RefreshTokenDays via GetRefreshTokenExpiry().
         // ================================================
         _context.RefreshTokens.Add(new RefreshTokenEntity
         {
             UserID = user.UserID,
             Token = refreshToken,
-            ExpiryDate = DateTime.UtcNow.AddDays(7)
+            ExpiryDate = _jwtService.GetRefreshTokenExpiry(),
+            IsRevoked = false
         });
 
         // ================================================
-        // 6. Save all changes
+        // 6. Create audit log
+        //    FIX: every other significant auth action (Login, Logout,
+        //    Register, ResetPassword, ChangePassword, RefreshToken)
+        //    writes an audit entry — this was missing here.
+        // ================================================
+        _context.AuditLogs.Add(_auditService.Create(user.UserID, "Email Verified via OTP"));
+
+        // ================================================
+        // 7. Save all changes
         // ================================================
         await _context.SaveChangesAsync(cancellationToken);
+
+        // ================================================
+        // 8. Set refresh token cookie
+        //    FIX: previously the refresh token was generated and saved
+        //    to the DB but never actually sent to the client (no cookie,
+        //    not in the response body) — the user would verify their
+        //    email, get an access token, but have no way to refresh
+        //    their session once it expired.
+        // ================================================
+        if (_httpContextAccessor.HttpContext != null)
+        {
+            _cookieHelper.SetRefreshToken(_httpContextAccessor.HttpContext.Response, refreshToken);
+        }
 
         _logger.LogInformation("OTP verified successfully for user: {UserId}", user.UserID);
 

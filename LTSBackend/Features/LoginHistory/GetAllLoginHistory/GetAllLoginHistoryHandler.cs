@@ -6,15 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.LoginHistory.Queries.GetAllLoginHistory;
 
-public class GetAllLoginHistoryHandler(AppDbContext context)
-    : IRequestHandler<GetAllLoginHistoryQuery, PagedResult<LoginHistoryDTO>>
+public class GetAllLoginHistoryHandler(AppDbContext context): IRequestHandler<GetAllLoginHistoryQuery, PagedResult<LoginHistoryDTO>>
 {
     public async Task<PagedResult<LoginHistoryDTO>> Handle(GetAllLoginHistoryQuery request,CancellationToken cancellationToken)
     {
-        var query = context.LoginHistories
-            .AsNoTracking()
-            .Include(x => x.User)
-            .AsQueryable();
+        var query = context.LoginHistories.AsNoTracking().Include(x => x.User).AsQueryable();
 
         //----------------------------------------
         // Search
@@ -23,8 +19,7 @@ public class GetAllLoginHistoryHandler(AppDbContext context)
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
-
-            query = query.Where(x =>x.User.FullName.Contains(search) ||x.User.Email.Contains(search));
+            query = query.Where(x =>x.User.FullName.Contains(search) || x.User.Email.Contains(search));
         }
 
         //----------------------------------------
@@ -33,12 +28,12 @@ public class GetAllLoginHistoryHandler(AppDbContext context)
 
         if (request.FromDate.HasValue)
         {
-            query = query.Where(x =>x.LoginTime >= request.FromDate.Value);
+            query = query.Where(x => x.LoginTime >= request.FromDate.Value);
         }
 
         if (request.ToDate.HasValue)
         {
-            query = query.Where(x =>x.LoginTime <= request.ToDate.Value);
+            query = query.Where(x => x.LoginTime <= request.ToDate.Value);
         }
 
         //----------------------------------------
@@ -47,7 +42,7 @@ public class GetAllLoginHistoryHandler(AppDbContext context)
 
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
-            query = query.Where(x =>x.Status == request.Status);
+            query = query.Where(x => x.Status == request.Status);
         }
 
         //----------------------------------------
@@ -58,6 +53,11 @@ public class GetAllLoginHistoryHandler(AppDbContext context)
 
         //----------------------------------------
         // Data
+        //    FIX: LoginHistory model has no CreatedDate column — the
+        //    record is created at login time, so LoginTime is the
+        //    closest equivalent. Mapped here instead of a non-existent
+        //    x.CreatedDate (which was a compile error: 'LoginHistory'
+        //    does not contain a definition for 'CreatedDate').
         //----------------------------------------
 
         var items = await query
@@ -76,9 +76,8 @@ public class GetAllLoginHistoryHandler(AppDbContext context)
                 UserAgent = x.UserAgent,
                 Status = x.Status,
                 IsLoggedOut = x.IsLoggedOut,
-                CreatedDate = x.CreatedDate
-            })
-            .ToListAsync(cancellationToken);
+                CreatedDate = x.LoginTime
+            }).ToListAsync(cancellationToken);
 
         return new PagedResult<LoginHistoryDTO>
         {

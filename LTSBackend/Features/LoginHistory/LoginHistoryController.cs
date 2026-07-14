@@ -25,15 +25,22 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10)
     {
-        var result = await mediator.Send(
-            new GetAllLoginHistoryQuery(search,fromDate,toDate,status,pageNumber,pageSize));
+        var result = await mediator.Send(new GetAllLoginHistoryQuery(search, fromDate, toDate, status, pageNumber, pageSize));
         return Ok(ApiResponse<PagedResult<LoginHistoryDTO>>.SuccessResponse(result, "Login history fetched successfully."));
     }
 
     [HttpGet("my")]
     public async Task<IActionResult> MyHistory()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        // FIX: previously used `User.FindFirstValue(ClaimTypes.NameIdentifier)!`
+        // which suppresses the null warning but throws an unhandled
+        // ArgumentNullException at runtime (500 error) if the claim is
+        // ever missing. Now handled gracefully with a proper 401.
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
+        }
 
         var result = await mediator.Send(new GetMyLoginHistoryQuery(userId));
 
