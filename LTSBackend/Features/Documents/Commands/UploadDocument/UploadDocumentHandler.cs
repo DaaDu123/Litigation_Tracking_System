@@ -15,9 +15,9 @@ namespace LTSBackend.Features.Documents.Commands.UploadDocument;
 /// Upload document handler with Moharrir blind upload (write-only) feature
 /// </summary>
 public class UploadDocumentHandler (AppDbContext _context, IFileService _fileService, IDocumentPermissionService _permissionService, IAuditService _auditService,
-    IHttpContextAccessor _httpContextAccessor, ILogger<UploadDocumentHandler> _logger) : IRequestHandler<UploadDocumentCommand, long>
-{   
-    public async Task<long> Handle(UploadDocumentCommand request,CancellationToken cancellationToken)
+    IHttpContextAccessor _httpContextAccessor, ILogger<UploadDocumentHandler> _logger) : IRequestHandler<UploadDocumentCommand, UploadDocumentResult>
+{
+    public async Task<UploadDocumentResult> Handle(UploadDocumentCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Document upload started for case {CaseId} by user {UserId}",request.CaseID,request.UserID);
 
@@ -160,6 +160,10 @@ public class UploadDocumentHandler (AppDbContext _context, IFileService _fileSer
         _logger.LogInformation("Document upload completed - ID: {DocumentId}, User: {UserId}, Case: {CaseId}",
             document.DocumentID,request.UserID,request.CaseID);
 
-        return document.DocumentID;
+        // ================================================
+        // 9. Return DocumentID + restricted flag so the controller
+        //    can inform the client whether this was a blind upload
+        // ================================================
+        return new UploadDocumentResult(document.DocumentID, isMohallirRestricted);
     }
 }

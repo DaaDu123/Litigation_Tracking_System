@@ -1,4 +1,5 @@
-﻿using LTSBackend.Comman.Responses;
+﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Authorization;
 using LTSBackend.Features.Documents.Commands.DeleteDocument;
 using LTSBackend.Features.Documents.Commands.DownloadDocument;
@@ -76,21 +77,35 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
         // ================================================
         try
         {
-            var documentId = await _mediator.Send(command);
+            var result = await _mediator.Send(command);
 
-            _logger.LogInformation("Document uploaded successfully - ID: {DocumentId}", documentId);
+            _logger.LogInformation("Document uploaded successfully - ID: {DocumentId}, Restricted: {Restricted}",
+                result.DocumentID, result.IsRestrictedMohallirUpload);
 
             var response = new UploadDocumentResponseDTO
             {
-                DocumentID = documentId,
+                DocumentID = result.DocumentID,
                 CaseID = request.CaseID,
                 DocumentName = request.DocumentName,
-                Message = "Document uploaded successfully"
+                IsRestrictedMohallirUpload = result.IsRestrictedMohallirUpload,
+                Message = result.IsRestrictedMohallirUpload
+                    ? "Document uploaded successfully (restricted - you cannot view/download this file)"
+                    : "Document uploaded successfully"
             };
 
             return Ok(ApiResponse<UploadDocumentResponseDTO>.SuccessResponse(
                 response,
-                "Document uploaded successfully"));
+                response.Message));
+        }
+        catch (UnauthorizedException ex)
+        {
+            _logger.LogWarning(ex, "Upload unauthorized for user {UserId}", userId);
+            return Forbid();
+        }
+        catch (NotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Upload failed - resource not found");
+            return NotFound(ApiResponse<bool>.FailureResponse(ex.Message));
         }
         catch (Exception ex)
         {
@@ -135,10 +150,15 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             // Return file for download
             return File(downloadData.FileBytes,downloadData.ContentType,downloadData.FileName);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedException ex)
         {
             _logger.LogWarning(ex, "Download unauthorized for user {UserId} document {DocumentId}", userId, documentId);
             return Forbid();
+        }
+        catch (NotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Download failed - document not found {DocumentId}", documentId);
+            return NotFound(ApiResponse<bool>.FailureResponse(ex.Message));
         }
         catch (Exception ex)
         {
@@ -187,10 +207,15 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
 
             return Ok(ApiResponse<DocumentDetailDTO>.SuccessResponse(document,"Document retrieved successfully"));
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedException ex)
         {
             _logger.LogWarning(ex, "View unauthorized for user {UserId} document {DocumentId}", userId, documentId);
             return Forbid();
+        }
+        catch (NotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Get document failed - not found {DocumentId}", documentId);
+            return NotFound(ApiResponse<bool>.FailureResponse(ex.Message));
         }
         catch (Exception ex)
         {
@@ -203,7 +228,7 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
     // DELETE DOCUMENT
     // =====================================================
     /// <summary>
-    /// Delete document (soft delete)
+    /// Delete document (hard delete)
     /// Role-based: Partner and FirmAdmin only
     /// 
     /// Also deletes associated file from disk
@@ -233,6 +258,11 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             var result = await _mediator.Send(command);
 
             return Ok(ApiResponse<bool>.SuccessResponse(result,"Document deleted successfully"));
+        }
+        catch (NotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Delete failed - document not found {DocumentId}", documentId);
+            return NotFound(ApiResponse<bool>.FailureResponse(ex.Message));
         }
         catch (Exception ex)
         {

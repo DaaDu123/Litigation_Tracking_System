@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace LTSBackend.Features.Cases.Commands.CreateCase;
 
 public class CreateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<CreateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateCaseCommand, long>
-{ 
+{
     public async Task<long> Handle(CreateCaseCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Naya Case create kia ja raha hai: {CaseNumber}", request.CaseNumber);
@@ -119,8 +119,13 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         // ================================================
         // 8. Generate unique Internal Reference Number
+        //    FIX: previously used `new Random()` per call, which can
+        //    produce colliding sequences under concurrent requests
+        //    (time-based seeding). Now uses Random.Shared (thread-safe)
+        //    plus a DB uniqueness retry loop, since InternalReferenceNo
+        //    has a UNIQUE constraint at the database level.
         // ================================================
-        string internalRefNo = GenerateInternalReferenceNo();
+        string internalRefNo = await GenerateUniqueInternalReferenceNoAsync(cancellationToken);
 
         // ================================================
         // 9. Create new Case
@@ -208,6 +213,36 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         return currentUserId;
     }
+
+    /// <summary>
+    /// Generates an InternalReferenceNo and verifies against the DB that
+    /// it isn't already taken, retrying a few times before giving up.
+    /// InternalReferenceNo is UNIQUE at the DB level, so a collision here
+    /// would otherwise surface as an unhandled DbUpdateException.
+    /// </summary>
+    private async Task<string> GenerateUniqueInternalReferenceNoAsync(CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 5;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var candidate = GenerateInternalReferenceNo();
+
+            bool alreadyExists = await _context.Cases
+                .AsNoTracking()
+                .AnyAsync(x => x.InternalReferenceNo == candidate, cancellationToken);
+
+            if (!alreadyExists)
+            {
+                return candidate;
+            }
+
+            _logger.LogWarning("InternalReferenceNo collision detected on attempt {Attempt}: {Candidate}", attempt, candidate);
+        }
+
+        // Extremely unlikely fallback: append a GUID fragment to guarantee uniqueness
+        return $"CASE-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..24];
+    }
     private static string GenerateInternalReferenceNo()
     {
         var now = DateTime.UtcNow;
@@ -218,9 +253,11 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
     private static string GenerateRandomString(int length)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        var random = new Random();
+        // FIX: Random.Shared is thread-safe and avoids the identical-seed
+        // collision risk of creating `new Random()` on every call under
+        // concurrent requests.
         return new string(Enumerable.Range(0, length)
-            .Select(_ => chars[random.Next(chars.Length)])
+            .Select(_ => chars[Random.Shared.Next(chars.Length)])
             .ToArray());
     }
 }

@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace LTSBackend.Features.Cases.Commands.UpdateCaseStatus;
 
 public class UpdateCaseStatusHandler (AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseStatusHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseStatusCommand, bool>
-{  
+{
     public async Task<bool> Handle(UpdateCaseStatusCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Case status update kia ja raha hai: {CaseID}", request.CaseID);
@@ -60,8 +60,25 @@ public class UpdateCaseStatusHandler (AppDbContext _context, IAuditService _audi
 
         // ================================================
         // 5. Update case status
+        //    FIX: sync IsClosed / ClosureDate with the new status.
+        //    Previously the Case.IsClosed flag (used by vw_ActiveCases /
+        //    vw_ClosedCases) was never updated here, so a case could
+        //    move to a "Closed" status yet still show up as active.
         // ================================================
         caseToUpdate.StatusID = request.NewStatusID;
+        caseToUpdate.IsClosed = newStatus.IsClosed;
+
+        if (newStatus.IsClosed)
+        {
+            // Only stamp ClosureDate the first time it becomes closed
+            caseToUpdate.ClosureDate ??= DateTime.UtcNow.Date;
+        }
+        else
+        {
+            // Case re-opened (moved to a non-closed status) - clear closure date
+            caseToUpdate.ClosureDate = null;
+        }
+
         caseToUpdate.ModifiedBy = currentUserId;
         caseToUpdate.ModifiedDate = DateTime.UtcNow;
 

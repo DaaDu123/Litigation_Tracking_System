@@ -33,6 +33,8 @@ public class GetCaseByIdHandler(AppDbContext _context, ILogger<GetCaseByIdHandle
 
         // ================================================
         // 2. Map to DTO
+        //    FIX: Department / LegalOfficer are nullable FKs (per schema),
+        //    accessed with null-conditional to avoid NullReferenceException.
         // ================================================
         var caseDto = new CaseDTO
         {
@@ -45,8 +47,8 @@ public class GetCaseByIdHandler(AppDbContext _context, ILogger<GetCaseByIdHandle
             CategoryName = caseRecord.Category.CategoryName,
             StatusName = caseRecord.Status.StatusName,
             StageName = caseRecord.Stage.StageName,
-            DepartmentName = caseRecord.Department.DepartmentName,
-            LegalOfficerName = caseRecord.LegalOfficer.FullName,
+            DepartmentName = caseRecord.Department?.DepartmentName ?? "Not Assigned",
+            LegalOfficerName = caseRecord.LegalOfficer?.FullName ?? "Not Assigned",
             Priority = caseRecord.Priority,
             SubjectMatter = caseRecord.SubjectMatter,
             FilingDate = caseRecord.FilingDate,

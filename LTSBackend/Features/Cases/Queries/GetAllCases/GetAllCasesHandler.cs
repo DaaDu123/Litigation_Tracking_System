@@ -82,6 +82,9 @@ public class GetAllCasesHandler (AppDbContext _context, ILogger<GetAllCasesHandl
 
         // ================================================
         // 8. Apply pagination
+        //    FIX: ResponsibleDepartmentID / CurrentLegalOfficerID are
+        //    nullable FKs (per schema), so Department / LegalOfficer can
+        //    be null. Guard against NullReferenceException here.
         // ================================================
         var cases = await query
             .OrderByDescending(x => x.CreatedDate)
@@ -98,8 +101,8 @@ public class GetAllCasesHandler (AppDbContext _context, ILogger<GetAllCasesHandl
                 CategoryName = x.Category.CategoryName,
                 StatusName = x.Status.StatusName,
                 StageName = x.Stage.StageName,
-                DepartmentName = x.Department.DepartmentName,
-                LegalOfficerName = x.LegalOfficer.FullName,
+                DepartmentName = x.Department != null ? x.Department.DepartmentName : "Not Assigned",
+                LegalOfficerName = x.LegalOfficer != null ? x.LegalOfficer.FullName : "Not Assigned",
                 Priority = x.Priority,
                 SubjectMatter = x.SubjectMatter,
                 FilingDate = x.FilingDate,

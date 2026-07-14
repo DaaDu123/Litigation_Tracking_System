@@ -1,5 +1,6 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
+using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -7,36 +8,9 @@ using System.Security.Claims;
 
 namespace LTSBackend.Features.Cases.Commands.DeleteCase;
 
-public class DeleteCaseHandler : IRequestHandler<DeleteCaseCommand, bool>
+public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<DeleteCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<DeleteCaseCommand, bool>
 {
-    private readonly AppDbContext _context;
-    private readonly IAuditService _auditService;
-    private readonly ILogger<DeleteCaseHandler> _logger;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-    private static readonly string[] ProtectedRoles =
-    {
-        "Admin",
-        "Administrator",
-        "SuperAdmin",
-        "System"
-    };
-
-    public DeleteCaseHandler(
-        AppDbContext context,
-        IAuditService auditService,
-        ILogger<DeleteCaseHandler> logger,
-        IHttpContextAccessor httpContextAccessor)
-    {
-        _context = context;
-        _auditService = auditService;
-        _logger = logger;
-        _httpContextAccessor = httpContextAccessor;
-    }
-
-    public async Task<bool> Handle(
-        DeleteCaseCommand request,
-        CancellationToken cancellationToken)
+    public async Task<bool> Handle(DeleteCaseCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Case delete kia ja raha hai: {CaseID}", request.CaseID);
 
@@ -59,10 +33,9 @@ public class DeleteCaseHandler : IRequestHandler<DeleteCaseCommand, bool>
         if (caseToDelete.IsArchived)
         {
             _logger.LogWarning("Archived case delete nahi ho sakta: {CaseID}", request.CaseID);
-            throw new ValidationException(new List<string>
-            {
+            throw new ValidationException([
                 "Archived cases delete nahi ho sakte. Pehle unarchive kare"
-            });
+            ]);
         }
 
         // ================================================
@@ -72,26 +45,95 @@ public class DeleteCaseHandler : IRequestHandler<DeleteCaseCommand, bool>
         try
         {
             // ================================================
-            // 4. Delete related records (cascade handle karega EF Core)
+            // 4. Delete related child records FIRST (FK-safe order,
+            //    grandchildren before children).
+            //    FIX: use _context.Set<HearingAttendance>() instead of
+            //    a named DbSet property — AppDbContext doesn't expose
+            //    one called "HearingAttendance". Set<T>() works as long
+            //    as the entity is part of the EF model, regardless of
+            //    whether a convenience DbSet property was declared.
+            // ================================================
+            // 4a. Hearing attendance -> Hearings
+            var hearingIds = await _context.Hearings.Where(x => x.CaseID == request.CaseID).Select(x => x.HearingID).ToListAsync(cancellationToken);
+
+            if (hearingIds.Count > 0)
+            {
+                var attendance = await _context.Set<HearingAttendance>().Where(x => hearingIds.Contains(x.HearingID)).ToListAsync(cancellationToken);
+
+                if (attendance.Count > 0)
+                {
+                    _context.Set<HearingAttendance>().RemoveRange(attendance);
+                }
+            }
+
+            var hearings = await _context.Hearings.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (hearings.Count > 0)
+            {
+                _context.Hearings.RemoveRange(hearings);
+            }
+
+            // 4b. Document permissions -> Documents
+            var documentIds = await _context.Documents.Where(x => x.CaseID == request.CaseID).Select(x => x.DocumentID).ToListAsync(cancellationToken);
+
+            if (documentIds.Count > 0)
+            {
+                var docPermissions = await _context.DocumentPermissions.Where(x => documentIds.Contains(x.DocumentID)).ToListAsync(cancellationToken);
+
+                if (docPermissions.Count > 0)
+                {
+                    _context.DocumentPermissions.RemoveRange(docPermissions);
+                }
+            }
+
+            var documents = await _context.Documents.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (documents.Count > 0)
+            {
+                _context.Documents.RemoveRange(documents);
+            }
+
+            // 4c. Remaining direct children of Case
+            var parties = await _context.CaseParties.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (parties.Count > 0) _context.CaseParties.RemoveRange(parties);
+
+            var assignments = await _context.CaseAssignments.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (assignments.Count > 0) _context.CaseAssignments.RemoveRange(assignments);
+
+            var deadlines = await _context.Deadlines.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (deadlines.Count > 0) _context.Deadlines.RemoveRange(deadlines);
+
+            var milestones = await _context.CaseMilestones.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (milestones.Count > 0) _context.CaseMilestones.RemoveRange(milestones);
+
+            var statusHistories = await _context.CaseStatusHistories.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (statusHistories.Count > 0) _context.CaseStatusHistories.RemoveRange(statusHistories);
+
+            var notes = await _context.CaseNotes.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (notes.Count > 0) _context.CaseNotes.RemoveRange(notes);
+
+            var notifications = await _context.Notifications.Where(x => x.CaseID == request.CaseID).ToListAsync(cancellationToken);
+            if (notifications.Count > 0) _context.Notifications.RemoveRange(notifications);
+
+            // Persist child deletions before removing the parent
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // ================================================
+            // 5. Delete the case itself — now FK-safe
             // ================================================
             _context.Cases.Remove(caseToDelete);
 
             // ================================================
-            // 5. Create Audit Log
+            // 6. Create Audit Log
             // ================================================
-            var auditLog = _auditService.Create(
-                currentUserId,
-                $"Case Delete: {caseToDelete.CaseNumber}");
-
+            var auditLog = _auditService.Create(currentUserId, $"Case Delete: {caseToDelete.CaseNumber}");
             _context.AuditLogs.Add(auditLog);
 
             // ================================================
-            // 6. Save changes
+            // 7. Save changes
             // ================================================
             await _context.SaveChangesAsync(cancellationToken);
 
             // ================================================
-            // 7. Commit transaction
+            // 8. Commit transaction
             // ================================================
             await transaction.CommitAsync(cancellationToken);
 
@@ -115,7 +157,7 @@ public class DeleteCaseHandler : IRequestHandler<DeleteCaseCommand, bool>
             if (httpContext != null)
             {
                 var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!string.IsNullOrEmpty(userIdClaim) &&int.TryParse(userIdClaim, out var userId))
+                if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var userId))
                 {
                     currentUserId = userId;
                 }

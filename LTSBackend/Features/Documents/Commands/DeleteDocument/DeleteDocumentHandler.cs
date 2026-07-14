@@ -9,7 +9,7 @@ namespace LTSBackend.Features.Documents.Commands.DeleteDocument;
 
 /// <summary>
 /// Delete document handler
-/// Soft delete - mark as inactive instead of hard delete
+/// Hard delete - permissions removed first (FK-safe order), then document row, then file on disk
 /// Role-based: Partner and FirmAdmin only
 /// </summary>
 public class DeleteDocumentHandler (AppDbContext _context, IFileService _fileService, IAuditService _auditService, ILogger<DeleteDocumentHandler> _logger) : IRequestHandler<DeleteDocumentCommand, bool>
@@ -30,7 +30,28 @@ public class DeleteDocumentHandler (AppDbContext _context, IFileService _fileSer
         }
 
         // ================================================
-        // 2. Delete file from disk
+        // 2. Remove document permissions FIRST (child rows before parent,
+        //    avoids FK_DocPermission_Document violation)
+        // ================================================
+        var permissions = await _context.DocumentPermissions.Where(x => x.DocumentID == request.DocumentID).ToListAsync(cancellationToken);
+        if (permissions.Any())
+        {
+            _context.DocumentPermissions.RemoveRange(permissions);
+            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Removed {Count} permissions for document {DocumentId}", permissions.Count, request.DocumentID);
+        }
+
+        // ================================================
+        // 3. Remove document from database (hard delete) — now safe
+        // ================================================
+        _context.Documents.Remove(document);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Document deleted successfully: {DocumentId}", request.DocumentID);
+
+        // ================================================
+        // 4. Delete file from disk (last, since DB is source of truth —
+        //    if this fails, DB is already consistent and cleanup can be retried)
         // ================================================
         try
         {
@@ -40,27 +61,7 @@ public class DeleteDocumentHandler (AppDbContext _context, IFileService _fileSer
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to delete file from disk: {FilePath}", document.FilePath);
-            // Don't throw - continue with database deletion
-        }
-
-        // ================================================
-        // 3. Remove document from database (hard delete for documents)
-        // ================================================
-        _context.Documents.Remove(document);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Document deleted successfully: {DocumentId}", request.DocumentID);
-
-        // ================================================
-        // 4. Remove document permissions
-        // ================================================
-        var permissions = await _context.DocumentPermissions.Where(x => x.DocumentID == request.DocumentID).ToListAsync(cancellationToken);
-
-        if (permissions.Any())
-        {
-            _context.DocumentPermissions.RemoveRange(permissions);
-            await _context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Removed {Count} permissions for deleted document", permissions.Count);
+            // Don't throw - DB record already removed, file cleanup can be retried later
         }
 
         // ================================================
