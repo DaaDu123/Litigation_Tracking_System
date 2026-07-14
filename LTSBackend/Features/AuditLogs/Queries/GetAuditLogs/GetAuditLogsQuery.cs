@@ -1,9 +1,6 @@
-﻿using FluentValidation;
-using LTSBackend.Comman.Responses;
-using LTSBackend.Data;
+﻿using LTSBackend.Comman.Responses;
 using LTSBackend.Features.AuditLogs.DTOs;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.AuditLogs.Queries.GetAuditLogs;
 
@@ -12,6 +9,6 @@ public record GetAuditLogsQuery(
     DateTime? FromDate,
     DateTime? ToDate,
     string? Action,
-    int PageNumber,
-    int PageSize
+    int PageNumber = 1,
+    int PageSize = 10
 ) : IRequest<PagedResult<AuditLogDTO>>;

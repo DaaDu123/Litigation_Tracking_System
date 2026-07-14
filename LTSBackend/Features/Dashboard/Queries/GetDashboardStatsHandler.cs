@@ -44,8 +44,17 @@ public class GetDashboardStatsHandler : IRequestHandler<GetDashboardStatsQuery, 
             TotalAuditLogs = await _context.AuditLogs
                 .CountAsync(cancellationToken),
 
+            // ================================================
+            // FIX: previously only checked !IsRevoked, which also
+            // counts tokens that have naturally expired but were
+            // never explicitly revoked (nothing in the codebase
+            // flips IsRevoked on natural expiry — only explicit
+            // logout / refresh-rotation / password-reset do that).
+            // Added ExpiryDate check so this reflects genuinely
+            // active sessions.
+            // ================================================
             TotalRefreshTokens = await _context.RefreshTokens
-                .CountAsync(x => !x.IsRevoked, cancellationToken),
+                .CountAsync(x => !x.IsRevoked && x.ExpiryDate > DateTime.UtcNow, cancellationToken),
 
             RecentActivities = await _context.AuditLogs
                 .AsNoTracking()
