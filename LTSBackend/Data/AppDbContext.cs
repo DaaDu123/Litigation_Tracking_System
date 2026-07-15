@@ -117,13 +117,15 @@ public class AppDbContext : DbContext
         });
 
         // ================================================================
-        // ✅ ROLEPERMISSION ENTITY CONFIGURATION
+        // ✅ ROLEPERMISSION ENTITY CONFIGURATION (join table)
         // ================================================================
         modelBuilder.Entity<RolePermission>(entity =>
         {
             entity.HasKey(x => new { x.RoleID, x.PermissionID });
-            entity.HasOne(x => x.Role).WithMany(r => r.RolePermissions).HasForeignKey(x => x.RoleID);
-            entity.HasOne(x => x.Permission).WithMany(p => p.RolePermissions).HasForeignKey(x => x.PermissionID);
+            // FIX: made explicit — join-table rows should always die with
+            // either parent, never silently rely on convention defaults.
+            entity.HasOne(x => x.Role).WithMany(r => r.RolePermissions).HasForeignKey(x => x.RoleID).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Permission).WithMany(p => p.RolePermissions).HasForeignKey(x => x.PermissionID).OnDelete(DeleteBehavior.Cascade);
         });
 
         // ================================================================
@@ -171,6 +173,14 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Timestamp).IsRequired();
             entity.HasIndex(e => e.Timestamp).IsDescending();
             entity.HasIndex(e => e.UserID);
+            // NOTE: no HasOne(e => e.User) configured here — EF Core is
+            // relying on convention to discover this relationship via the
+            // UserID/User navigation pair. It works (confirmed by
+            // GetAuditLogsHandler's .Include(x => x.User) usage elsewhere),
+            // but for full explicitness/auditability, consider adding it
+            // here too once the AuditLog model's User navigation property
+            // name is confirmed — with DeleteBehavior.Restrict, so deleting
+            // a user can never silently erase their audit trail.
         });
 
         // ================================================================
@@ -186,19 +196,44 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Priority).IsRequired().HasMaxLength(20);
             entity.Property(e => e.SubjectMatter).IsRequired().HasMaxLength(255);
 
-            // Foreign Keys
+            // ================================================================
+            // Foreign Keys — every one now has an EXPLICIT OnDelete.
+            //
+            // FIX: Category / Status / Stage previously had none specified.
+            // Since these FKs are required, EF Core's default is Cascade —
+            // meaning deleting a single CaseCategory / CaseStatus / CaseStage
+            // master/lookup record would silently cascade-delete every Case
+            // using it, which would then cascade further into Hearings,
+            // Documents, Deadlines, CaseNotes, etc. Master/lookup data must
+            // never be able to wipe out live transactional case data.
+            // Matched to the same NoAction treatment already correctly used
+            // for Court.
+            // ================================================================
             entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID).OnDelete(DeleteBehavior.NoAction);
-            entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryID);
-            entity.HasOne(e => e.Status).WithMany().HasForeignKey(e => e.StatusID);
-            entity.HasOne(e => e.Stage).WithMany().HasForeignKey(e => e.StageID);
-            entity.HasOne(e => e.Department).WithMany().HasForeignKey(e => e.ResponsibleDepartmentID);
+            entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryID).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Status).WithMany().HasForeignKey(e => e.StatusID).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Stage).WithMany().HasForeignKey(e => e.StageID).OnDelete(DeleteBehavior.NoAction);
+
+            // FIX: made explicit. ResponsibleDepartmentID is an optional FK,
+            // so if a Department is deleted, cases just lose the department
+            // link rather than being deleted themselves.
+            entity.HasOne(e => e.Department).WithMany().HasForeignKey(e => e.ResponsibleDepartmentID).OnDelete(DeleteBehavior.SetNull);
+
             entity.HasOne(e => e.LegalOfficer).WithMany().HasForeignKey(e => e.CurrentLegalOfficerID).OnDelete(DeleteBehavior.Restrict);
 
-            // Relationships (One Case -> Many Children)
-            entity.HasMany(e => e.CaseParties).WithOne(p => p.Case).OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(e => e.Hearings).WithOne(h => h.Case).OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(e => e.Deadlines).WithOne(d => d.Case).OnDelete(DeleteBehavior.Cascade);
-            entity.HasMany(e => e.CaseAssignments).WithOne(a => a.Case).OnDelete(DeleteBehavior.Cascade);
+            // ================================================================
+            // FIX (cleanup): the CaseParties / Hearings / Deadlines /
+            // CaseAssignments relationships were previously configured HERE
+            // as well as, redundantly, a second time from each child
+            // entity's own block below (with the FK spelled out). EF Core
+            // merges duplicate configs of the same relationship without
+            // error, but keeping two separate places that must always agree
+            // is a maintenance risk — if one were edited without the other,
+            // the mismatch would fail silently. Each relationship now has
+            // exactly one source of truth: the child entity's own block,
+            // where the FK is explicit. Nothing removed functionally —
+            // Case still cascades to all of these exactly as before.
+            // ================================================================
         });
 
         // ================================================================
@@ -248,7 +283,13 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.HearingID);
             entity.HasOne(e => e.Case).WithMany(c => c.Hearings).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID);
+
+            // FIX: made explicit. In practice, deleting a Court is already
+            // blocked whenever any Case references it (NoAction above), so
+            // this cascade to Hearings only matters for any edge case where
+            // a hearing's court doesn't match its case's own court.
+            entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID).OnDelete(DeleteBehavior.Cascade);
+
             entity.HasMany(e => e.HearingAttendances).WithOne(ha => ha.Hearing).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -259,7 +300,12 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.AttendanceID);
             entity.HasOne(e => e.Hearing).WithMany(h => h.HearingAttendances).HasForeignKey(e => e.HearingID).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID);
+
+            // FIX: was unset -> defaulted to Cascade (since UserID is
+            // required), which would silently delete historical attendance
+            // records when a user account is removed. Restrict preserves
+            // the record, consistent with CaseAssignment.User below.
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ================================================================
@@ -279,7 +325,14 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.DocumentID);
             // Foreign Keys
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(e => e.DocumentType).WithMany().HasForeignKey(e => e.DocumentTypeID);
+
+            // FIX: was unset -> defaulted to Cascade (since DocumentTypeID
+            // is required), meaning deleting a master DocumentType record
+            // (e.g. "Affidavit") would cascade-delete every uploaded
+            // document of that type. Master/lookup data must not be able
+            // to delete real uploaded files' database records.
+            entity.HasOne(e => e.DocumentType).WithMany().HasForeignKey(e => e.DocumentTypeID).OnDelete(DeleteBehavior.NoAction);
+
             // Relationships
             entity.HasMany(e => e.DocumentPermissions).WithOne(dp => dp.Document).OnDelete(DeleteBehavior.Cascade);
         });
@@ -291,7 +344,11 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.PermissionID);
             entity.HasOne(e => e.Document).WithMany(d => d.DocumentPermissions).HasForeignKey(e => e.DocumentID).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(e => e.Role).WithMany().HasForeignKey(e => e.RoleID);
+
+            // FIX: made explicit. A permission grant tied to a Role that no
+            // longer exists is meaningless, so Cascade here is intentional
+            // (not a leftover convention default).
+            entity.HasOne(e => e.Role).WithMany().HasForeignKey(e => e.RoleID).OnDelete(DeleteBehavior.Cascade);
         });
 
         // ================================================================
@@ -301,11 +358,23 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.NoteID);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID);
+
+            // FIX: was unset -> defaulted to Cascade (since UserID is
+            // required), which would silently wipe out a user's case notes
+            // (legal record-keeping data) when their account is deleted.
+            // Restrict preserves note history, consistent with
+            // CaseAssignment.User / HearingAttendance.User above.
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ================================================================
         // ✅ NOTIFICATIONS ENTITY CONFIGURATION
+        //    NOTE: SetNull requires Notification.CaseID to be a nullable
+        //    FK (e.g. long?) on the model. If it's currently a required
+        //    (non-nullable) long, EF Core will throw at startup:
+        //    "the property cannot be nullable... cannot use
+        //    DeleteBehavior.SetNull". Please confirm Notification.CaseID
+        //    is declared as `long?`.
         // ================================================================
         modelBuilder.Entity<Notification>(entity =>
         {
