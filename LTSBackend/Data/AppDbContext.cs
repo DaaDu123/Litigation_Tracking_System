@@ -3,6 +3,8 @@ using LTSBackend.Models.Cases;
 using LTSBackend.Models.Masters;
 using LTSBackend.Models.Security;
 using Microsoft.EntityFrameworkCore;
+using PermissionEnum = LTSBackend.Comman.Enum.Permission;   // ✅ enum, aliased to avoid clash with entity class Permission
+using UserRole = LTSBackend.Comman.Enum.UserRole;            // ✅ explicit alias (blanket "using Comman.Enum" removed on purpose)
 
 namespace LTSBackend.Data;
 
@@ -10,7 +12,7 @@ namespace LTSBackend.Data;
 /// ✅ AppDbContext: Main Database Context
 /// 
 /// Tamam tables ka configuration EF Core ke through
-/// Isme sab DbSets, relationships, aur constraints define hain
+/// Isme sab DbSets, relationships, constraints aur seed data define hain
 /// </summary>
 public class AppDbContext : DbContext
 {
@@ -24,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Role> Roles { get; set; } = null!;
     public DbSet<Permission> Permissions { get; set; } = null!;
+    public DbSet<NotificationType> NotificationTypes { get; set; } = null!;
     public DbSet<RolePermission> RolePermissions { get; set; } = null!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<UserOtp> UserOtps { get; set; } = null!;
@@ -61,7 +64,7 @@ public class AppDbContext : DbContext
     public DbSet<Deadline> Deadlines { get; set; } = null!;
 
     // ================================================================
-    // ✅ DOCUMENTS & NOTES (NEW - Document Management)
+    // ✅ DOCUMENTS & NOTES
     // ================================================================
     public DbSet<Document> Documents { get; set; } = null!;
     public DbSet<DocumentPermission> DocumentPermissions { get; set; } = null!;
@@ -72,9 +75,6 @@ public class AppDbContext : DbContext
     // ================================================================
     public DbSet<Notification> Notifications { get; set; } = null!;
 
-    /// <summary>
-    /// ✅ OnModelCreating: Tamam entities ka configuration
-    /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -89,7 +89,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.FullName).IsRequired();
             entity.Property(e => e.PasswordHash).IsRequired();
             entity.HasIndex(e => e.Email).IsUnique();
-            // Relationships
             entity.HasMany(e => e.RefreshTokens).WithOne(r => r.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.UserOtps).WithOne(o => o.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.LoginHistories).WithOne(l => l.User).OnDelete(DeleteBehavior.Cascade);
@@ -121,9 +120,8 @@ public class AppDbContext : DbContext
         // ================================================================
         modelBuilder.Entity<RolePermission>(entity =>
         {
-            entity.HasKey(x => new { x.RoleID, x.PermissionID });
-            // FIX: made explicit — join-table rows should always die with
-            // either parent, never silently rely on convention defaults.
+            entity.HasKey(x => x.RolePermissionID);
+            entity.HasIndex(x => new { x.RoleID, x.PermissionID }).IsUnique();
             entity.HasOne(x => x.Role).WithMany(r => r.RolePermissions).HasForeignKey(x => x.RoleID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Permission).WithMany(p => p.RolePermissions).HasForeignKey(x => x.PermissionID).OnDelete(DeleteBehavior.Cascade);
         });
@@ -173,18 +171,10 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Timestamp).IsRequired();
             entity.HasIndex(e => e.Timestamp).IsDescending();
             entity.HasIndex(e => e.UserID);
-            // NOTE: no HasOne(e => e.User) configured here — EF Core is
-            // relying on convention to discover this relationship via the
-            // UserID/User navigation pair. It works (confirmed by
-            // GetAuditLogsHandler's .Include(x => x.User) usage elsewhere),
-            // but for full explicitness/auditability, consider adding it
-            // here too once the AuditLog model's User navigation property
-            // name is confirmed — with DeleteBehavior.Restrict, so deleting
-            // a user can never silently erase their audit trail.
         });
 
         // ================================================================
-        // ✅ CASE ENTITY CONFIGURATION (Main Case Table)
+        // ✅ CASE ENTITY CONFIGURATION
         // ================================================================
         modelBuilder.Entity<Case>(entity =>
         {
@@ -196,44 +186,12 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Priority).IsRequired().HasMaxLength(20);
             entity.Property(e => e.SubjectMatter).IsRequired().HasMaxLength(255);
 
-            // ================================================================
-            // Foreign Keys — every one now has an EXPLICIT OnDelete.
-            //
-            // FIX: Category / Status / Stage previously had none specified.
-            // Since these FKs are required, EF Core's default is Cascade —
-            // meaning deleting a single CaseCategory / CaseStatus / CaseStage
-            // master/lookup record would silently cascade-delete every Case
-            // using it, which would then cascade further into Hearings,
-            // Documents, Deadlines, CaseNotes, etc. Master/lookup data must
-            // never be able to wipe out live transactional case data.
-            // Matched to the same NoAction treatment already correctly used
-            // for Court.
-            // ================================================================
             entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.Status).WithMany().HasForeignKey(e => e.StatusID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.Stage).WithMany().HasForeignKey(e => e.StageID).OnDelete(DeleteBehavior.NoAction);
-
-            // FIX: made explicit. ResponsibleDepartmentID is an optional FK,
-            // so if a Department is deleted, cases just lose the department
-            // link rather than being deleted themselves.
-            entity.HasOne(e => e.Department).WithMany().HasForeignKey(e => e.ResponsibleDepartmentID).OnDelete(DeleteBehavior.SetNull);
-
+            entity.HasOne(e => e.Department).WithMany().HasForeignKey(e => e.ResponsibleDepartmentID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.LegalOfficer).WithMany().HasForeignKey(e => e.CurrentLegalOfficerID).OnDelete(DeleteBehavior.Restrict);
-
-            // ================================================================
-            // FIX (cleanup): the CaseParties / Hearings / Deadlines /
-            // CaseAssignments relationships were previously configured HERE
-            // as well as, redundantly, a second time from each child
-            // entity's own block below (with the FK spelled out). EF Core
-            // merges duplicate configs of the same relationship without
-            // error, but keeping two separate places that must always agree
-            // is a maintenance risk — if one were edited without the other,
-            // the mismatch would fail silently. Each relationship now has
-            // exactly one source of truth: the child entity's own block,
-            // where the FK is explicit. Nothing removed functionally —
-            // Case still cascades to all of these exactly as before.
-            // ================================================================
         });
 
         // ================================================================
@@ -254,6 +212,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.AssignmentID);
             entity.Property(e => e.AssignmentType).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.LeadCounsel).HasColumnName("IsLeadCounsel");
             entity.HasOne(e => e.Case).WithMany(c => c.CaseAssignments).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
         });
@@ -283,13 +242,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.HearingID);
             entity.HasOne(e => e.Case).WithMany(c => c.Hearings).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
-
-            // FIX: made explicit. In practice, deleting a Court is already
-            // blocked whenever any Case references it (NoAction above), so
-            // this cascade to Hearings only matters for any edge case where
-            // a hearing's court doesn't match its case's own court.
             entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID).OnDelete(DeleteBehavior.Cascade);
-
             entity.HasMany(e => e.HearingAttendances).WithOne(ha => ha.Hearing).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -300,11 +253,6 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.AttendanceID);
             entity.HasOne(e => e.Hearing).WithMany(h => h.HearingAttendances).HasForeignKey(e => e.HearingID).OnDelete(DeleteBehavior.Cascade);
-
-            // FIX: was unset -> defaulted to Cascade (since UserID is
-            // required), which would silently delete historical attendance
-            // records when a user account is removed. Restrict preserves
-            // the record, consistent with CaseAssignment.User below.
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -318,37 +266,27 @@ public class AppDbContext : DbContext
         });
 
         // ================================================================
-        // ✅ DOCUMENTS ENTITY CONFIGURATION (NEW)
+        // ✅ DOCUMENTS ENTITY CONFIGURATION
         // ================================================================
         modelBuilder.Entity<Document>(entity =>
         {
             entity.HasKey(e => e.DocumentID);
-            // Foreign Keys
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
-
-            // FIX: was unset -> defaulted to Cascade (since DocumentTypeID
-            // is required), meaning deleting a master DocumentType record
-            // (e.g. "Affidavit") would cascade-delete every uploaded
-            // document of that type. Master/lookup data must not be able
-            // to delete real uploaded files' database records.
             entity.HasOne(e => e.DocumentType).WithMany().HasForeignKey(e => e.DocumentTypeID).OnDelete(DeleteBehavior.NoAction);
-
-            // Relationships
             entity.HasMany(e => e.DocumentPermissions).WithOne(dp => dp.Document).OnDelete(DeleteBehavior.Cascade);
         });
 
         // ================================================================
-        // ✅ DOCUMENT PERMISSIONS ENTITY CONFIGURATION (NEW)
+        // ✅ DOCUMENT PERMISSIONS ENTITY CONFIGURATION
         // ================================================================
         modelBuilder.Entity<DocumentPermission>(entity =>
         {
             entity.HasKey(e => e.PermissionID);
             entity.HasOne(e => e.Document).WithMany(d => d.DocumentPermissions).HasForeignKey(e => e.DocumentID).OnDelete(DeleteBehavior.Cascade);
-
-            // FIX: made explicit. A permission grant tied to a Role that no
-            // longer exists is meaningless, so Cascade here is intentional
-            // (not a leftover convention default).
-            entity.HasOne(e => e.Role).WithMany().HasForeignKey(e => e.RoleID).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Role).WithMany().HasForeignKey(e => e.RoleID).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.DocumentID, e.RoleID });
+            entity.HasIndex(e => new { e.DocumentID, e.UserID });
         });
 
         // ================================================================
@@ -358,28 +296,229 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.NoteID);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
-
-            // FIX: was unset -> defaulted to Cascade (since UserID is
-            // required), which would silently wipe out a user's case notes
-            // (legal record-keeping data) when their account is deleted.
-            // Restrict preserves note history, consistent with
-            // CaseAssignment.User / HearingAttendance.User above.
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ================================================================
+        // ✅ NOTIFICATION TYPE ENTITY CONFIGURATION
+        // ================================================================
+        modelBuilder.Entity<NotificationType>(entity =>
+        {
+            entity.HasKey(e => e.NotificationTypeID);
+            entity.Property(e => e.TypeName).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.TypeName).IsUnique();
+        });
+
+        // ================================================================
         // ✅ NOTIFICATIONS ENTITY CONFIGURATION
-        //    NOTE: SetNull requires Notification.CaseID to be a nullable
-        //    FK (e.g. long?) on the model. If it's currently a required
-        //    (non-nullable) long, EF Core will throw at startup:
-        //    "the property cannot be nullable... cannot use
-        //    DeleteBehavior.SetNull". Please confirm Notification.CaseID
-        //    is declared as `long?`.
         // ================================================================
         modelBuilder.Entity<Notification>(entity =>
         {
             entity.HasKey(e => e.NotificationID);
-            entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.NotificationType).WithMany(t => t.Notifications).HasForeignKey(e => e.NotificationTypeID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.NoAction);
+            entity.Property(e => e.Priority).HasMaxLength(20);
         });
+
+        // ================================================================================
+        // ✅✅✅ SEED DATA ================================================================
+        // ================================================================================
+        SeedRoles(modelBuilder);
+        SeedPermissions(modelBuilder);
+        SeedRolePermissions(modelBuilder);
+        SeedNotificationTypes(modelBuilder);
+    }
+
+    // ====================================================================================
+    // ROLES — UserRole enum ke exact values ke sath (1-6)
+    // ====================================================================================
+    private static void SeedRoles(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Role>().HasData(
+            new Role { RoleID = (int)UserRole.SuperAdmin, RoleName = nameof(UserRole.SuperAdmin), Description = "System-wide management and data custody" },
+            new Role { RoleID = (int)UserRole.FirmAdmin, RoleName = nameof(UserRole.FirmAdmin), Description = "Workspace owner - manages specific law firm" },
+            new Role { RoleID = (int)UserRole.Partner, RoleName = nameof(UserRole.Partner), Description = "Senior lawyer - supervises case teams" },
+            new Role { RoleID = (int)UserRole.AssociateLawyer, RoleName = nameof(UserRole.AssociateLawyer), Description = "Day-to-day legal work" },
+            new Role { RoleID = (int)UserRole.Moharrir, RoleName = nameof(UserRole.Moharrir), Description = "Legal clerk / Data entry operator" },
+            new Role { RoleID = (int)UserRole.InternParalegal, RoleName = nameof(UserRole.InternParalegal), Description = "Temporary staff / Junior assistant" }
+        );
+    }
+
+    // ====================================================================================
+    // PERMISSIONS — entity rows, IDs Comman.Enum.Permission (aliased as PermissionEnum)
+    // ke exact values se liye gaye hain
+    // ====================================================================================
+    private static void SeedPermissions(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Permission>().HasData(
+            // Super Admin
+            new Permission { PermissionID = (int)PermissionEnum.ManageFirms, PermissionName = nameof(PermissionEnum.ManageFirms) },
+            new Permission { PermissionID = (int)PermissionEnum.ViewSystemAuditLogs, PermissionName = nameof(PermissionEnum.ViewSystemAuditLogs) },
+            new Permission { PermissionID = (int)PermissionEnum.ManageDataMigration, PermissionName = nameof(PermissionEnum.ManageDataMigration) },
+            new Permission { PermissionID = (int)PermissionEnum.ManageSystemUsers, PermissionName = nameof(PermissionEnum.ManageSystemUsers) },
+
+            // Firm Admin
+            new Permission { PermissionID = (int)PermissionEnum.ManageFirmUsers, PermissionName = nameof(PermissionEnum.ManageFirmUsers) },
+            new Permission { PermissionID = (int)PermissionEnum.ViewFirmCaseDirectory, PermissionName = nameof(PermissionEnum.ViewFirmCaseDirectory) },
+            new Permission { PermissionID = (int)PermissionEnum.AssignLawyersToCases, PermissionName = nameof(PermissionEnum.AssignLawyersToCases) },
+            new Permission { PermissionID = (int)PermissionEnum.ManageFirmSettings, PermissionName = nameof(PermissionEnum.ManageFirmSettings) },
+            new Permission { PermissionID = (int)PermissionEnum.DeleteCases, PermissionName = nameof(PermissionEnum.DeleteCases) },
+
+            // Partner / Senior Lawyer
+            new Permission { PermissionID = (int)PermissionEnum.ViewFirmCases, PermissionName = nameof(PermissionEnum.ViewFirmCases) },
+            new Permission { PermissionID = (int)PermissionEnum.CreateCases, PermissionName = nameof(PermissionEnum.CreateCases) },
+            new Permission { PermissionID = (int)PermissionEnum.UpdateCases, PermissionName = nameof(PermissionEnum.UpdateCases) },
+            new Permission { PermissionID = (int)PermissionEnum.AssignCases, PermissionName = nameof(PermissionEnum.AssignCases) },
+            new Permission { PermissionID = (int)PermissionEnum.ViewAllDocuments, PermissionName = nameof(PermissionEnum.ViewAllDocuments) },
+            new Permission { PermissionID = (int)PermissionEnum.DownloadDocuments, PermissionName = nameof(PermissionEnum.DownloadDocuments) },
+            new Permission { PermissionID = (int)PermissionEnum.ApproveFilings, PermissionName = nameof(PermissionEnum.ApproveFilings) },
+            new Permission { PermissionID = (int)PermissionEnum.ViewFirmAnalytics, PermissionName = nameof(PermissionEnum.ViewFirmAnalytics) },
+
+            // Associate Lawyer
+            new Permission { PermissionID = (int)PermissionEnum.ViewAssignedCases, PermissionName = nameof(PermissionEnum.ViewAssignedCases) },
+            new Permission { PermissionID = (int)PermissionEnum.UploadDocuments, PermissionName = nameof(PermissionEnum.UploadDocuments) },
+            new Permission { PermissionID = (int)PermissionEnum.DownloadAssignedDocuments, PermissionName = nameof(PermissionEnum.DownloadAssignedDocuments) },
+            new Permission { PermissionID = (int)PermissionEnum.AddCaseNotes, PermissionName = nameof(PermissionEnum.AddCaseNotes) },
+            new Permission { PermissionID = (int)PermissionEnum.TrackDeadlines, PermissionName = nameof(PermissionEnum.TrackDeadlines) },
+            new Permission { PermissionID = (int)PermissionEnum.LogBillableHours, PermissionName = nameof(PermissionEnum.LogBillableHours) },
+
+            // Moharrir
+            new Permission { PermissionID = (int)PermissionEnum.EnterCaseData, PermissionName = nameof(PermissionEnum.EnterCaseData) },
+            new Permission { PermissionID = (int)PermissionEnum.UploadCaseDocuments, PermissionName = nameof(PermissionEnum.UploadCaseDocuments) },
+            new Permission { PermissionID = (int)PermissionEnum.ViewDocumentsIfPermitted, PermissionName = nameof(PermissionEnum.ViewDocumentsIfPermitted) },
+            new Permission { PermissionID = (int)PermissionEnum.DownloadDocumentsIfPermitted, PermissionName = nameof(PermissionEnum.DownloadDocumentsIfPermitted) },
+            new Permission { PermissionID = (int)PermissionEnum.MaintainCaseRecords, PermissionName = nameof(PermissionEnum.MaintainCaseRecords) },
+
+            // Intern / Paralegal
+            new Permission { PermissionID = (int)PermissionEnum.ViewDocumentsReadOnly, PermissionName = nameof(PermissionEnum.ViewDocumentsReadOnly) },
+            new Permission { PermissionID = (int)PermissionEnum.DraftDocuments, PermissionName = nameof(PermissionEnum.DraftDocuments) },
+            new Permission { PermissionID = (int)PermissionEnum.PerformResearch, PermissionName = nameof(PermissionEnum.PerformResearch) }
+        );
+    }
+
+    // ====================================================================================
+    // ROLE-PERMISSIONS — role matrix (Image 2) ke mutabiq
+    // ====================================================================================
+    private static void SeedRolePermissions(ModelBuilder modelBuilder)
+    {
+        var rolePermissions = new List<RolePermission>();
+        int id = 1;
+
+        void Map(UserRole role, params PermissionEnum[] permissions)
+        {
+            foreach (var p in permissions)
+            {
+                rolePermissions.Add(new RolePermission
+                {
+                    RolePermissionID = id++,
+                    RoleID = (int)role,
+                    PermissionID = (int)p
+                });
+            }
+        }
+
+        Map(UserRole.SuperAdmin,
+            PermissionEnum.ManageFirms,
+            PermissionEnum.ViewSystemAuditLogs,
+            PermissionEnum.ManageDataMigration,
+            PermissionEnum.ManageSystemUsers);
+
+        Map(UserRole.FirmAdmin,
+            PermissionEnum.ManageFirmUsers,
+            PermissionEnum.ViewFirmCaseDirectory,
+            PermissionEnum.AssignLawyersToCases,
+            PermissionEnum.ManageFirmSettings,
+            PermissionEnum.DeleteCases,
+            PermissionEnum.ViewFirmCases,
+            PermissionEnum.CreateCases,
+            PermissionEnum.UpdateCases,
+            PermissionEnum.ViewAllDocuments,
+            PermissionEnum.DownloadDocuments,
+            PermissionEnum.UploadDocuments,
+            PermissionEnum.ViewFirmAnalytics);
+
+        Map(UserRole.Partner,
+            PermissionEnum.ViewFirmCaseDirectory,
+            PermissionEnum.AssignLawyersToCases,
+            PermissionEnum.AssignCases,
+            PermissionEnum.DeleteCases,
+            PermissionEnum.ViewFirmCases,
+            PermissionEnum.CreateCases,
+            PermissionEnum.UpdateCases,
+            PermissionEnum.ViewAllDocuments,
+            PermissionEnum.DownloadDocuments,
+            PermissionEnum.UploadDocuments,
+            PermissionEnum.ApproveFilings,
+            PermissionEnum.ViewFirmAnalytics);
+
+        Map(UserRole.AssociateLawyer,
+            PermissionEnum.ViewAssignedCases,
+            PermissionEnum.UploadDocuments,
+            PermissionEnum.DownloadAssignedDocuments,
+            PermissionEnum.AddCaseNotes,
+            PermissionEnum.TrackDeadlines,
+            PermissionEnum.LogBillableHours);
+
+        Map(UserRole.Moharrir,
+            PermissionEnum.EnterCaseData,
+            PermissionEnum.UploadCaseDocuments,
+            PermissionEnum.MaintainCaseRecords);
+
+        Map(UserRole.InternParalegal,
+            PermissionEnum.ViewDocumentsReadOnly,
+            PermissionEnum.DraftDocuments,
+            PermissionEnum.PerformResearch);
+
+        modelBuilder.Entity<RolePermission>().HasData(rolePermissions);
+    }
+
+    // ====================================================================================
+    // NOTIFICATION TYPES — ReminderService in dono types ko use karta hai
+    // ====================================================================================
+    private static void SeedNotificationTypes(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<NotificationType>().HasData(
+            new NotificationType
+            {
+                NotificationTypeID = 1,
+                TypeName = "DeadlineAlert",
+                Description = "Reminder for an approaching case deadline",
+                IsEmail = true,
+                IsSMS = false,
+                IsInApp = true,
+                IsActive = true
+            },
+            new NotificationType
+            {
+                NotificationTypeID = 2,
+                TypeName = "HearingReminder",
+                Description = "Reminder for an upcoming court hearing",
+                IsEmail = true,
+                IsSMS = false,
+                IsInApp = true,
+                IsActive = true
+            },
+            new NotificationType
+            {
+                NotificationTypeID = 3,
+                TypeName = "CaseAssignment",
+                Description = "Notification when a case is assigned to a user",
+                IsEmail = true,
+                IsSMS = false,
+                IsInApp = true,
+                IsActive = true
+            },
+            new NotificationType
+            {
+                NotificationTypeID = 4,
+                TypeName = "DocumentUploaded",
+                Description = "Notification when a new document is uploaded to a case",
+                IsEmail = false,
+                IsSMS = false,
+                IsInApp = true,
+                IsActive = true
+            }
+        );
     }
 }

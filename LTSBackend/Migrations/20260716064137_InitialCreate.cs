@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace LTSBackend.Migrations
 {
     /// <inheritdoc />
@@ -98,6 +100,24 @@ namespace LTSBackend.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "NotificationTypes",
+                columns: table => new
+                {
+                    NotificationTypeID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TypeName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsEmail = table.Column<bool>(type: "bit", nullable: false),
+                    IsSMS = table.Column<bool>(type: "bit", nullable: false),
+                    IsInApp = table.Column<bool>(type: "bit", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NotificationTypes", x => x.NotificationTypeID);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Permissions",
                 columns: table => new
                 {
@@ -128,13 +148,14 @@ namespace LTSBackend.Migrations
                 name: "RolePermissions",
                 columns: table => new
                 {
-                    RoleID = table.Column<int>(type: "int", nullable: false),
-                    PermissionID = table.Column<int>(type: "int", nullable: false),
                     RolePermissionID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoleID = table.Column<int>(type: "int", nullable: false),
+                    PermissionID = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RolePermissions", x => new { x.RoleID, x.PermissionID });
+                    table.PrimaryKey("PK_RolePermissions", x => x.RolePermissionID);
                     table.ForeignKey(
                         name: "FK_RolePermissions_Permissions_PermissionID",
                         column: x => x.PermissionID,
@@ -168,6 +189,8 @@ namespace LTSBackend.Migrations
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FailedLoginAttempts = table.Column<int>(type: "int", nullable: false),
+                    PasswordChangedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -227,6 +250,8 @@ namespace LTSBackend.Migrations
                     InstitutionDate = table.Column<DateTime>(type: "date", nullable: false),
                     RegistrationDate = table.Column<DateTime>(type: "date", nullable: false),
                     ExpectedDisposalDate = table.Column<DateTime>(type: "date", nullable: true),
+                    NextHearingDate = table.Column<DateTime>(type: "date", nullable: true),
+                    UpcomingDeadline = table.Column<DateTime>(type: "date", nullable: true),
                     ClaimedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PotentialLiability = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     FinancialImplication = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
@@ -236,7 +261,9 @@ namespace LTSBackend.Migrations
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ModifiedBy = table.Column<int>(type: "int", nullable: true),
                     ModifiedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsArchived = table.Column<bool>(type: "bit", nullable: false)
+                    IsArchived = table.Column<bool>(type: "bit", nullable: false),
+                    IsClosed = table.Column<bool>(type: "bit", nullable: false),
+                    ClosureDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -245,20 +272,17 @@ namespace LTSBackend.Migrations
                         name: "FK_Cases_CaseCategories_CategoryID",
                         column: x => x.CategoryID,
                         principalTable: "CaseCategories",
-                        principalColumn: "CategoryID",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "CategoryID");
                     table.ForeignKey(
                         name: "FK_Cases_CaseStages_StageID",
                         column: x => x.StageID,
                         principalTable: "CaseStages",
-                        principalColumn: "StageID",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "StageID");
                     table.ForeignKey(
                         name: "FK_Cases_CaseStatus_StatusID",
                         column: x => x.StatusID,
                         principalTable: "CaseStatus",
-                        principalColumn: "StatusID",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "StatusID");
                     table.ForeignKey(
                         name: "FK_Cases_Courts_CourtID",
                         column: x => x.CourtID,
@@ -268,8 +292,7 @@ namespace LTSBackend.Migrations
                         name: "FK_Cases_Departments_ResponsibleDepartmentID",
                         column: x => x.ResponsibleDepartmentID,
                         principalTable: "Departments",
-                        principalColumn: "DepartmentID",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "DepartmentID");
                     table.ForeignKey(
                         name: "FK_Cases_Users_CurrentLegalOfficerID",
                         column: x => x.CurrentLegalOfficerID,
@@ -290,8 +313,7 @@ namespace LTSBackend.Migrations
                     IPAddress = table.Column<string>(type: "nvarchar(45)", maxLength: 45, nullable: true),
                     UserAgent = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    IsLoggedOut = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    IsLoggedOut = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -361,7 +383,7 @@ namespace LTSBackend.Migrations
                     CaseID = table.Column<long>(type: "bigint", nullable: false),
                     UserID = table.Column<int>(type: "int", nullable: false),
                     AssignmentType = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    LeadCounsel = table.Column<bool>(type: "bit", nullable: false),
+                    IsLeadCounsel = table.Column<bool>(type: "bit", nullable: false),
                     AssignedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     AssignedBy = table.Column<int>(type: "int", nullable: false),
                     EndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -434,7 +456,7 @@ namespace LTSBackend.Migrations
                         column: x => x.UserID,
                         principalTable: "Users",
                         principalColumn: "UserID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -546,8 +568,7 @@ namespace LTSBackend.Migrations
                         name: "FK_Documents_DocumentTypes_DocumentTypeID",
                         column: x => x.DocumentTypeID,
                         principalTable: "DocumentTypes",
-                        principalColumn: "DocumentTypeID",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "DocumentTypeID");
                 });
 
             migrationBuilder.CreateTable(
@@ -591,12 +612,16 @@ namespace LTSBackend.Migrations
                 {
                     NotificationID = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    NotificationTypeID = table.Column<int>(type: "int", nullable: false),
                     UserID = table.Column<int>(type: "int", nullable: false),
                     CaseID = table.Column<long>(type: "bigint", nullable: true),
-                    NotificationType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Subject = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Subject = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsRead = table.Column<bool>(type: "bit", nullable: false),
+                    ReadDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsSent = table.Column<bool>(type: "bit", nullable: false),
+                    SentDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Priority = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -606,8 +631,19 @@ namespace LTSBackend.Migrations
                         name: "FK_Notifications_Cases_CaseID",
                         column: x => x.CaseID,
                         principalTable: "Cases",
-                        principalColumn: "CaseID",
-                        onDelete: ReferentialAction.SetNull);
+                        principalColumn: "CaseID");
+                    table.ForeignKey(
+                        name: "FK_Notifications_NotificationTypes_NotificationTypeID",
+                        column: x => x.NotificationTypeID,
+                        principalTable: "NotificationTypes",
+                        principalColumn: "NotificationTypeID",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Notifications_Users_UserID",
+                        column: x => x.UserID,
+                        principalTable: "Users",
+                        principalColumn: "UserID",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -617,10 +653,12 @@ namespace LTSBackend.Migrations
                     PermissionID = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     DocumentID = table.Column<long>(type: "bigint", nullable: false),
-                    RoleID = table.Column<int>(type: "int", nullable: false),
+                    RoleID = table.Column<int>(type: "int", nullable: true),
+                    UserID = table.Column<int>(type: "int", nullable: true),
                     CanView = table.Column<bool>(type: "bit", nullable: false),
                     CanDownload = table.Column<bool>(type: "bit", nullable: false),
-                    CanUpload = table.Column<bool>(type: "bit", nullable: false)
+                    CanUpload = table.Column<bool>(type: "bit", nullable: false),
+                    GrantedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -636,7 +674,13 @@ namespace LTSBackend.Migrations
                         column: x => x.RoleID,
                         principalTable: "Roles",
                         principalColumn: "RoleID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_DocumentPermissions_Users_UserID",
+                        column: x => x.UserID,
+                        principalTable: "Users",
+                        principalColumn: "UserID",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -664,7 +708,116 @@ namespace LTSBackend.Migrations
                         column: x => x.UserID,
                         principalTable: "Users",
                         principalColumn: "UserID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.InsertData(
+                table: "NotificationTypes",
+                columns: new[] { "NotificationTypeID", "Description", "IsActive", "IsEmail", "IsInApp", "IsSMS", "TypeName" },
+                values: new object[,]
+                {
+                    { 1, "Reminder for an approaching case deadline", true, true, true, false, "DeadlineAlert" },
+                    { 2, "Reminder for an upcoming court hearing", true, true, true, false, "HearingReminder" },
+                    { 3, "Notification when a case is assigned to a user", true, true, true, false, "CaseAssignment" },
+                    { 4, "Notification when a new document is uploaded to a case", true, false, true, false, "DocumentUploaded" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Permissions",
+                columns: new[] { "PermissionID", "PermissionName" },
+                values: new object[,]
+                {
+                    { 101, "ManageFirms" },
+                    { 102, "ViewSystemAuditLogs" },
+                    { 103, "ManageDataMigration" },
+                    { 104, "ManageSystemUsers" },
+                    { 201, "ManageFirmUsers" },
+                    { 202, "ViewFirmCaseDirectory" },
+                    { 203, "AssignLawyersToCases" },
+                    { 204, "ManageFirmSettings" },
+                    { 205, "DeleteCases" },
+                    { 301, "ViewFirmCases" },
+                    { 302, "CreateCases" },
+                    { 303, "UpdateCases" },
+                    { 304, "AssignCases" },
+                    { 305, "ViewAllDocuments" },
+                    { 306, "DownloadDocuments" },
+                    { 307, "ApproveFilings" },
+                    { 308, "ViewFirmAnalytics" },
+                    { 401, "ViewAssignedCases" },
+                    { 402, "UploadDocuments" },
+                    { 403, "DownloadAssignedDocuments" },
+                    { 404, "AddCaseNotes" },
+                    { 405, "TrackDeadlines" },
+                    { 406, "LogBillableHours" },
+                    { 501, "EnterCaseData" },
+                    { 502, "UploadCaseDocuments" },
+                    { 503, "ViewDocumentsIfPermitted" },
+                    { 504, "DownloadDocumentsIfPermitted" },
+                    { 505, "MaintainCaseRecords" },
+                    { 601, "ViewDocumentsReadOnly" },
+                    { 602, "DraftDocuments" },
+                    { 603, "PerformResearch" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Roles",
+                columns: new[] { "RoleID", "Description", "RoleName" },
+                values: new object[,]
+                {
+                    { 1, "System-wide management and data custody", "SuperAdmin" },
+                    { 2, "Workspace owner - manages specific law firm", "FirmAdmin" },
+                    { 3, "Senior lawyer - supervises case teams", "Partner" },
+                    { 4, "Day-to-day legal work", "AssociateLawyer" },
+                    { 5, "Legal clerk / Data entry operator", "Moharrir" },
+                    { 6, "Temporary staff / Junior assistant", "InternParalegal" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "RolePermissions",
+                columns: new[] { "RolePermissionID", "PermissionID", "RoleID" },
+                values: new object[,]
+                {
+                    { 1, 101, 1 },
+                    { 2, 102, 1 },
+                    { 3, 103, 1 },
+                    { 4, 104, 1 },
+                    { 5, 201, 2 },
+                    { 6, 202, 2 },
+                    { 7, 203, 2 },
+                    { 8, 204, 2 },
+                    { 9, 205, 2 },
+                    { 10, 301, 2 },
+                    { 11, 302, 2 },
+                    { 12, 303, 2 },
+                    { 13, 305, 2 },
+                    { 14, 306, 2 },
+                    { 15, 402, 2 },
+                    { 16, 308, 2 },
+                    { 17, 202, 3 },
+                    { 18, 203, 3 },
+                    { 19, 304, 3 },
+                    { 20, 205, 3 },
+                    { 21, 301, 3 },
+                    { 22, 302, 3 },
+                    { 23, 303, 3 },
+                    { 24, 305, 3 },
+                    { 25, 306, 3 },
+                    { 26, 402, 3 },
+                    { 27, 307, 3 },
+                    { 28, 308, 3 },
+                    { 29, 401, 4 },
+                    { 30, 402, 4 },
+                    { 31, 403, 4 },
+                    { 32, 404, 4 },
+                    { 33, 405, 4 },
+                    { 34, 406, 4 },
+                    { 35, 501, 5 },
+                    { 36, 502, 5 },
+                    { 37, 505, 5 },
+                    { 38, 601, 6 },
+                    { 39, 602, 6 },
+                    { 40, 603, 6 }
                 });
 
             migrationBuilder.CreateIndex(
@@ -755,14 +908,24 @@ namespace LTSBackend.Migrations
                 column: "CaseID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_DocumentPermissions_DocumentID",
+                name: "IX_DocumentPermissions_DocumentID_RoleID",
                 table: "DocumentPermissions",
-                column: "DocumentID");
+                columns: new[] { "DocumentID", "RoleID" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DocumentPermissions_DocumentID_UserID",
+                table: "DocumentPermissions",
+                columns: new[] { "DocumentID", "UserID" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_DocumentPermissions_RoleID",
                 table: "DocumentPermissions",
                 column: "RoleID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DocumentPermissions_UserID",
+                table: "DocumentPermissions",
+                column: "UserID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Documents_CaseID",
@@ -806,6 +969,22 @@ namespace LTSBackend.Migrations
                 column: "CaseID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Notifications_NotificationTypeID",
+                table: "Notifications",
+                column: "NotificationTypeID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_UserID",
+                table: "Notifications",
+                column: "UserID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NotificationTypes_TypeName",
+                table: "NotificationTypes",
+                column: "TypeName",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Permissions_PermissionName",
                 table: "Permissions",
                 column: "PermissionName",
@@ -820,6 +999,12 @@ namespace LTSBackend.Migrations
                 name: "IX_RolePermissions_PermissionID",
                 table: "RolePermissions",
                 column: "PermissionID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RolePermissions_RoleID_PermissionID",
+                table: "RolePermissions",
+                columns: new[] { "RoleID", "PermissionID" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Roles_RoleName",
@@ -899,6 +1084,9 @@ namespace LTSBackend.Migrations
 
             migrationBuilder.DropTable(
                 name: "Hearings");
+
+            migrationBuilder.DropTable(
+                name: "NotificationTypes");
 
             migrationBuilder.DropTable(
                 name: "Permissions");

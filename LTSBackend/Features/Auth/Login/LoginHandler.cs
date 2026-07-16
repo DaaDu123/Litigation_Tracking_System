@@ -13,9 +13,8 @@ using CookieHelper = LTSBackend.Features.Auth.Helpers.CookieHelper;
 namespace LTSBackend.Features.Auth.Login;
 public class LoginHandler (AppDbContext _context, IPasswordService _passwordService, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<LoginHandler> _logger) : IRequestHandler<LoginCommand, LoginResponseDTO>
 {
-    public async Task<LoginResponseDTO> Handle(
-        LoginCommand request,
-        CancellationToken cancellationToken)
+    private const int MaxFailedAttempts = 5;
+    public async Task<LoginResponseDTO> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Login attempt for email: {Email}", request.Email);
 
@@ -24,9 +23,7 @@ public class LoginHandler (AppDbContext _context, IPasswordService _passwordServ
         // ================================================
         var user = await _context.Users
             .Include(x => x.Role)
-            .FirstOrDefaultAsync(
-                x => x.Email == request.Email,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         if (user == null)
         {
@@ -35,11 +32,18 @@ public class LoginHandler (AppDbContext _context, IPasswordService _passwordServ
         }
 
         // ================================================
-        // 2. Verify password
+        // 2. Verify password (+ track failed attempts / auto-lock)
         // ================================================
         bool passwordValid = _passwordService.VerifyPassword(request.Password, user.PasswordHash);
         if (!passwordValid)
         {
+            user.FailedLoginAttempts += 1;
+            if (user.FailedLoginAttempts >= MaxFailedAttempts)
+            {
+                user.IsActive = false;
+                _logger.LogWarning("User {UserId} locked out after {Count} failed attempts", user.UserID, user.FailedLoginAttempts);
+            }
+            await _context.SaveChangesAsync(cancellationToken);
             _logger.LogWarning("Login failed: Invalid password for user: {UserId}", user.UserID);
             throw new UnauthorizedException("Invalid credentials.");
         }
@@ -59,13 +63,13 @@ public class LoginHandler (AppDbContext _context, IPasswordService _passwordServ
         if (!user.IsActive)
         {
             _logger.LogWarning("Login failed: Account is inactive for user: {UserId}", user.UserID);
-            throw new ValidationException(
-                new List<string> { "Please verify your email address before logging in." });
+            throw new ValidationException(["Please verify your email address before logging in, or contact your administrator if your account was locked."]);
         }
 
         // ================================================
-        // 5. Update last login time
+        // 5. Reset failed attempts + update last login time
         // ================================================
+        user.FailedLoginAttempts = 0;
         user.LastLogin = DateTime.UtcNow;
 
         // ================================================
@@ -110,8 +114,7 @@ public class LoginHandler (AppDbContext _context, IPasswordService _passwordServ
         // ================================================
         // 10. Create audit log
         // ================================================
-        _context.AuditLogs.Add(
-            _auditService.Create(user.UserID, "User Login"));
+        _context.AuditLogs.Add(_auditService.Create(user.UserID, "User Login"));
 
         // ================================================
         // 11. Save all changes
@@ -121,9 +124,7 @@ public class LoginHandler (AppDbContext _context, IPasswordService _passwordServ
         // ================================================
         // 12. Set refresh token in HTTP cookie
         // ================================================
-        _cookieHelper.SetRefreshToken(
-            _httpContextAccessor.HttpContext!.Response,
-            refreshToken);
+        _cookieHelper.SetRefreshToken(_httpContextAccessor.HttpContext!.Response, refreshToken);
 
         _logger.LogInformation("User {UserId} logged in successfully", user.UserID);
 

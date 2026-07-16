@@ -1,18 +1,20 @@
-﻿using LTSBackend.Services.Audit;
+﻿using System.Security.Claims;
+using LTSBackend.Services.Audit;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 
-namespace LTSBackend.Common.Behaviors;
-public class AuditBehavior<TRequest, TResponse>(IAuditService _auditService,IAuditLogService _auditLogService,   // ✅ FIX: DB me save karne ke liye ye service add ki
-    ILogger<AuditBehavior<TRequest, TResponse>> _logger) : IPipelineBehavior<TRequest, TResponse>
+namespace LTSBackend.Comman.Behaviors;
+
+public class AuditBehavior<TRequest, TResponse>(IAuditService _auditService,IAuditLogService _auditLogService,IHttpContextAccessor httpContextAccessor,
+        ILogger<AuditBehavior<TRequest, TResponse>> _logger) : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
-    public async Task<TResponse> Handle(TRequest request,RequestHandlerDelegate<TResponse> next,CancellationToken cancellationToken)
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
-        // Only log commands, not queries
         bool isCommand = typeof(TRequest).Name.EndsWith("Command");
+        var commandName = typeof(TRequest).Name;
         if (isCommand)
         {
-            var commandName = typeof(TRequest).Name;
             _logger.LogDebug("Executing command: {CommandName}", commandName);
         }
         try
@@ -20,12 +22,15 @@ public class AuditBehavior<TRequest, TResponse>(IAuditService _auditService,IAud
             var response = await next();
             if (isCommand)
             {
-                var commandName = typeof(TRequest).Name;
-                var auditLog = _auditService.Create(null, $"Command executed: {commandName}");
-                // ✅ FIX: pehle sirf object bana raha tha, save nahi kar raha tha
-                // ab actually DB me persist ho raha hai
+                int? actingUserId = null;
+                var claim = httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier);
+                if (claim != null && int.TryParse(claim.Value, out var uid))
+                {
+                    actingUserId = uid;
+                }
+                var auditLog = _auditService.Create(actingUserId, $"Command executed: {commandName}");
                 await _auditLogService.LogAsync(auditLog);
-                _logger.LogDebug("Audit logged for command: {CommandName}", commandName);
+                _logger.LogDebug("Audit logged for command: {CommandName} by user {UserId}", commandName, actingUserId);
             }
             return response;
         }
@@ -33,7 +38,6 @@ public class AuditBehavior<TRequest, TResponse>(IAuditService _auditService,IAud
         {
             if (isCommand)
             {
-                var commandName = typeof(TRequest).Name;
                 _logger.LogError(ex, "Command failed: {CommandName}", commandName);
             }
             throw;

@@ -8,13 +8,12 @@ using LTSBackend.Services.Audit;
 using LTSBackend.Services.ProfileService;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
 
 namespace LTSBackend.Features.Users.Commands.CreateUser;
 
 public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _passwordService, IFileService _fileService, IAuditService _auditService, ILogger<CreateUserCommandHandler> _logger) : IRequestHandler<CreateUserCommand, int>
 {
-    public async Task<int> Handle(CreateUserCommand request,CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Create user request for email: {Email}", request.Email);
 
@@ -28,10 +27,7 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
         if (emailExists)
         {
             _logger.LogWarning("User creation failed: Email already exists: {Email}", request.Email);
-            throw new ValidationException(new List<string>
-            {
-                $"Email '{request.Email}' pehle se exist karta hai"
-            });
+            throw new ValidationException(["$\"Email '{request.Email}' pehle se exist karta hai\""]);
         }
 
         // ================================================
@@ -40,23 +36,15 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
         if (!request.RoleID.HasValue || request.RoleID <= 0)
         {
             _logger.LogWarning("User creation failed: Invalid RoleID");
-            throw new ValidationException(new List<string>
-            {
-                "Valid Role zaroori hai"
-            });
+            throw new ValidationException(["Valid Role zaroori hai"]);
         }
 
-        // Enum mein check kare
-        if (!Enum.IsDefined(typeof(UserRole), request.RoleID.Value))
+        if (!System.Enum.IsDefined(typeof(UserRole), request.RoleID.Value))
         {
             _logger.LogWarning("User creation failed: Invalid RoleID: {RoleID}", request.RoleID);
-            throw new ValidationException(new List<string>
-            {
-                $"Invalid role. Role ID {request.RoleID} exist nahi karta"
-            });
+            throw new ValidationException([$"Invalid role. Role ID {request.RoleID} exist nahi karta"]);
         }
 
-        // Database mein verify kare ke Role exist karta hai
         bool roleExists = await _context.Roles
             .AsNoTracking()
             .AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
@@ -67,6 +55,17 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
             throw new NotFoundException($"Role ID {request.RoleID} nahi mila");
         }
 
+        // ================================================
+        // 2b. Enforce role hierarchy — acting user apne se
+        // upar ya SuperAdmin assign nahi kar sakta
+        // ================================================
+        var actingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserID == request.ActingUserID, cancellationToken);
+        var actingRole = actingUser?.GetRole();
+        if (actingRole == null || !RoleHierarchy.CanAssignRole(actingRole.Value, request.RoleID.Value))
+        {
+            _logger.LogWarning("User {ActingUserId} with role {ActingRole} attempted to assign disallowed role {TargetRoleId}",request.ActingUserID, actingRole, request.RoleID);
+            throw new ValidationException(["Aap ye role assign karne ke authorized nahi hain."]);
+        }
         // ================================================
         // 3. Get role details
         // ================================================
@@ -87,8 +86,6 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
 
             if (!deptExists)
             {
-                _logger.LogWarning("Department not found: {Department}", request.Department);
-                // Department auto-create na kare, sirf warning de
                 _logger.LogInformation("Department nahi mila, user bena department ke banayega");
             }
         }
@@ -97,27 +94,21 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
         // 5. Hash the password
         // ================================================
         string passwordHash = _passwordService.HashPassword(request.Password);
-        _logger.LogInformation("Password hashed for email: {Email}", request.Email);
 
         // ================================================
         // 6. Handle profile image upload
         // ================================================
         string? profileImagePath = null;
-        if (request.ProfileImage != null && request.ProfileImage.Length > 0)
+        if (request.ProfileImage is { Length: > 0 })
         {
             try
             {
-                profileImagePath = await _fileService.SaveFileAsync(
-                    request.ProfileImage,
-                    "profile_pictures");
-
+                profileImagePath = await _fileService.SaveFileAsync(request.ProfileImage, "profile_pictures");
                 _logger.LogInformation("Profile image uploaded for: {Email}", request.Email);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to upload profile image for: {Email}", request.Email);
-                // Profile image fail ho to user creation fail na kare
-                // Sirf warning de aur continue kare
             }
         }
 
@@ -125,7 +116,6 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
         // 7. Generate Employee Number
         // ================================================
         string employeeNo = GenerateEmployeeNo();
-        _logger.LogInformation("Generated employee number: {EmployeeNo}", employeeNo);
 
         // ================================================
         // 8. Create new User
@@ -138,11 +128,11 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
             PasswordHash = passwordHash,
             Phone = request.Phone,
             Department = request.Department,
-            Designation = null, // TODO: Add designation se request
+            Designation = null,
             ProfileImage = profileImagePath,
             RoleID = request.RoleID.Value,
             IsExternal = false,
-            IsActive = true, // Default active
+            IsActive = true,
             IsDeleted = false,
             LastLogin = null,
             CreatedAt = DateTime.UtcNow,
@@ -152,24 +142,13 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
         _context.Users.Add(newUser);
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("User created successfully with ID: {UserID} and Role: {RoleName}",
-            newUser.UserID, role?.RoleName);
+        _logger.LogInformation("User created successfully with ID: {UserID} and Role: {RoleName}", newUser.UserID, role?.RoleName);
 
-        // ================================================
-        // ✅ FIX: Manual audit log yahan se hata diya.
-        // AuditBehavior (MediatR pipeline) already har "*Command" ke liye
-        // audit row automatically bana raha hai — is manual insert se
-        // pehle DUPLICATE (2x) audit rows ban rahi thin CreateUser ke liye,
-        // jabke UpdateUser/DeleteUser me sirf 1 row banti thi. Ab consistent hai.
-        // ================================================
+        // Manual audit log yahan nahi — AuditBehavior pipeline already isay handle karta hai.
 
         return newUser.UserID;
     }
 
-    /// <summary>
-    /// Generate unique Employee Number
-    /// Format: EMP-20240115-5D8K
-    /// </summary>
     private static string GenerateEmployeeNo()
     {
         var now = DateTime.UtcNow;
@@ -177,15 +156,10 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
         return $"EMP-{now:yyyyMMdd}-{randomPart}";
     }
 
-    /// <summary>
-    /// Generate random alphanumeric string
-    /// </summary>
     private static string GenerateRandomString(int length)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         var random = new Random();
-        return new string(Enumerable.Range(0, length)
-            .Select(_ => chars[random.Next(chars.Length)])
-            .ToArray());
+        return new string(Enumerable.Range(0, length).Select(_ => chars[random.Next(chars.Length)]).ToArray());
     }
 }

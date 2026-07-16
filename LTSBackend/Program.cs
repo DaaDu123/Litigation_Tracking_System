@@ -1,6 +1,6 @@
 using FluentValidation;
 using LTSBackend.Comman.Middleware;
-using LTSBackend.Common.Behaviors;
+using LTSBackend.Comman.Behaviors;
 using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.Helpers;
@@ -100,7 +100,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 #endregion
-
+builder.Services.AddHostedService<ReminderService>();
 #region Service Registration
 builder.Services.AddHttpContextAccessor();
 

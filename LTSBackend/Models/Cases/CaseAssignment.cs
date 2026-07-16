@@ -13,7 +13,8 @@ public class CaseAssignment
     [Required]
     public int UserID { get; set; }
     [Required, MaxLength(30)]
-    public string AssignmentType { get; set; } = string.Empty; // Lead Officer, External Counsel, etc.
+    public string AssignmentType { get; set; } = string.Empty;
+    [Column("IsLeadCounsel")]                       // ✅ maps to actual DB column name
     public bool LeadCounsel { get; set; } = false;
     public DateTime AssignedDate { get; set; } = DateTime.UtcNow;
     public int AssignedBy { get; set; }

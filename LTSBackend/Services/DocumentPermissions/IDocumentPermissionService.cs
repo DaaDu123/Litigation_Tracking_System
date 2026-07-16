@@ -33,7 +33,12 @@ public interface IDocumentPermissionService
     /// <summary>
     /// Grant document permission to role
     /// </summary>
-    Task GrantDocumentPermissionAsync(long documentId,int roleId,bool canView,bool canDownload,bool canUpload,CancellationToken cancellationToken = default);
+    Task GrantDocumentPermissionAsync(long documentId, int roleId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Grant document permission to a specific user (overrides role-level grant)
+    /// </summary>
+    Task GrantUserDocumentPermissionAsync(long documentId, int userId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default);   // ✅ new
 
     /// <summary>
     /// Revoke document permission

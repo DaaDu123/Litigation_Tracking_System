@@ -1,7 +1,5 @@
 ﻿using MediatR;
-
 namespace LTSBackend.Features.Users.Commands.CreateUser;
-
 public record CreateUserCommand(
     string FullName,
     string Email,
@@ -10,4 +8,7 @@ public record CreateUserCommand(
     string? Department,
     int? RoleID,
     IFormFile? ProfileImage
-) : IRequest<int>;
+) : IRequest<int>
+{
+    public int ActingUserID { get; init; }   // ✅ set from controller via ClaimTypes.NameIdentifier
+}

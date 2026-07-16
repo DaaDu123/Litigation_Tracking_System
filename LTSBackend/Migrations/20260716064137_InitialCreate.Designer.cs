@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LTSBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260713061838_InitialCreate")]
+    [Migration("20260716064137_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -100,6 +100,9 @@ namespace LTSBackend.Migrations
                     b.Property<decimal>("ClaimedAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("ClosureDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("CourtID")
                         .HasColumnType("int");
 
@@ -133,11 +136,17 @@ namespace LTSBackend.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("ModifiedBy")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("NextHearingDate")
+                        .HasColumnType("date");
 
                     b.Property<decimal>("PotentialLiability")
                         .HasColumnType("decimal(18,2)");
@@ -163,6 +172,9 @@ namespace LTSBackend.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("UpcomingDeadline")
+                        .HasColumnType("date");
 
                     b.HasKey("CaseID");
 
@@ -210,7 +222,8 @@ namespace LTSBackend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("LeadCounsel")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasColumnName("IsLeadCounsel");
 
                     b.Property<string>("Remarks")
                         .HasMaxLength(255)
@@ -509,14 +522,24 @@ namespace LTSBackend.Migrations
                     b.Property<long>("DocumentID")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("RoleID")
+                    b.Property<DateTime?>("GrantedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RoleID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UserID")
                         .HasColumnType("int");
 
                     b.HasKey("PermissionID");
 
-                    b.HasIndex("DocumentID");
-
                     b.HasIndex("RoleID");
+
+                    b.HasIndex("UserID");
+
+                    b.HasIndex("DocumentID", "RoleID");
+
+                    b.HasIndex("DocumentID", "UserID");
 
                     b.ToTable("DocumentPermissions");
                 });
@@ -604,47 +627,6 @@ namespace LTSBackend.Migrations
                     b.HasIndex("UserID");
 
                     b.ToTable("HearingAttendance");
-                });
-
-            modelBuilder.Entity("LTSBackend.Models.Cases.Notification", b =>
-                {
-                    b.Property<long>("NotificationID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("NotificationID"));
-
-                    b.Property<long?>("CaseID")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NotificationType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Subject")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("UserID")
-                        .HasColumnType("int");
-
-                    b.HasKey("NotificationID");
-
-                    b.HasIndex("CaseID");
-
-                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.CaseCategory", b =>
@@ -797,9 +779,6 @@ namespace LTSBackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LoginID"));
 
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("IPAddress")
                         .HasMaxLength(45)
                         .HasColumnType("nvarchar(45)");
@@ -833,6 +812,140 @@ namespace LTSBackend.Migrations
                     b.ToTable("LoginHistories");
                 });
 
+            modelBuilder.Entity("LTSBackend.Models.Security.Notification", b =>
+                {
+                    b.Property<long>("NotificationID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("NotificationID"));
+
+                    b.Property<long?>("CaseID")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSent")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NotificationTypeID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ReadDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.HasKey("NotificationID");
+
+                    b.HasIndex("CaseID");
+
+                    b.HasIndex("NotificationTypeID");
+
+                    b.HasIndex("UserID");
+
+                    b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.NotificationType", b =>
+                {
+                    b.Property<int>("NotificationTypeID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotificationTypeID"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEmail")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsInApp")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSMS")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TypeName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("NotificationTypeID");
+
+                    b.HasIndex("TypeName")
+                        .IsUnique();
+
+                    b.ToTable("NotificationTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            NotificationTypeID = 1,
+                            Description = "Reminder for an approaching case deadline",
+                            IsActive = true,
+                            IsEmail = true,
+                            IsInApp = true,
+                            IsSMS = false,
+                            TypeName = "DeadlineAlert"
+                        },
+                        new
+                        {
+                            NotificationTypeID = 2,
+                            Description = "Reminder for an upcoming court hearing",
+                            IsActive = true,
+                            IsEmail = true,
+                            IsInApp = true,
+                            IsSMS = false,
+                            TypeName = "HearingReminder"
+                        },
+                        new
+                        {
+                            NotificationTypeID = 3,
+                            Description = "Notification when a case is assigned to a user",
+                            IsActive = true,
+                            IsEmail = true,
+                            IsInApp = true,
+                            IsSMS = false,
+                            TypeName = "CaseAssignment"
+                        },
+                        new
+                        {
+                            NotificationTypeID = 4,
+                            Description = "Notification when a new document is uploaded to a case",
+                            IsActive = true,
+                            IsEmail = false,
+                            IsInApp = true,
+                            IsSMS = false,
+                            TypeName = "DocumentUploaded"
+                        });
+                });
+
             modelBuilder.Entity("LTSBackend.Models.Security.Permission", b =>
                 {
                     b.Property<int>("PermissionID")
@@ -852,6 +965,163 @@ namespace LTSBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("Permissions");
+
+                    b.HasData(
+                        new
+                        {
+                            PermissionID = 101,
+                            PermissionName = "ManageFirms"
+                        },
+                        new
+                        {
+                            PermissionID = 102,
+                            PermissionName = "ViewSystemAuditLogs"
+                        },
+                        new
+                        {
+                            PermissionID = 103,
+                            PermissionName = "ManageDataMigration"
+                        },
+                        new
+                        {
+                            PermissionID = 104,
+                            PermissionName = "ManageSystemUsers"
+                        },
+                        new
+                        {
+                            PermissionID = 201,
+                            PermissionName = "ManageFirmUsers"
+                        },
+                        new
+                        {
+                            PermissionID = 202,
+                            PermissionName = "ViewFirmCaseDirectory"
+                        },
+                        new
+                        {
+                            PermissionID = 203,
+                            PermissionName = "AssignLawyersToCases"
+                        },
+                        new
+                        {
+                            PermissionID = 204,
+                            PermissionName = "ManageFirmSettings"
+                        },
+                        new
+                        {
+                            PermissionID = 205,
+                            PermissionName = "DeleteCases"
+                        },
+                        new
+                        {
+                            PermissionID = 301,
+                            PermissionName = "ViewFirmCases"
+                        },
+                        new
+                        {
+                            PermissionID = 302,
+                            PermissionName = "CreateCases"
+                        },
+                        new
+                        {
+                            PermissionID = 303,
+                            PermissionName = "UpdateCases"
+                        },
+                        new
+                        {
+                            PermissionID = 304,
+                            PermissionName = "AssignCases"
+                        },
+                        new
+                        {
+                            PermissionID = 305,
+                            PermissionName = "ViewAllDocuments"
+                        },
+                        new
+                        {
+                            PermissionID = 306,
+                            PermissionName = "DownloadDocuments"
+                        },
+                        new
+                        {
+                            PermissionID = 307,
+                            PermissionName = "ApproveFilings"
+                        },
+                        new
+                        {
+                            PermissionID = 308,
+                            PermissionName = "ViewFirmAnalytics"
+                        },
+                        new
+                        {
+                            PermissionID = 401,
+                            PermissionName = "ViewAssignedCases"
+                        },
+                        new
+                        {
+                            PermissionID = 402,
+                            PermissionName = "UploadDocuments"
+                        },
+                        new
+                        {
+                            PermissionID = 403,
+                            PermissionName = "DownloadAssignedDocuments"
+                        },
+                        new
+                        {
+                            PermissionID = 404,
+                            PermissionName = "AddCaseNotes"
+                        },
+                        new
+                        {
+                            PermissionID = 405,
+                            PermissionName = "TrackDeadlines"
+                        },
+                        new
+                        {
+                            PermissionID = 406,
+                            PermissionName = "LogBillableHours"
+                        },
+                        new
+                        {
+                            PermissionID = 501,
+                            PermissionName = "EnterCaseData"
+                        },
+                        new
+                        {
+                            PermissionID = 502,
+                            PermissionName = "UploadCaseDocuments"
+                        },
+                        new
+                        {
+                            PermissionID = 503,
+                            PermissionName = "ViewDocumentsIfPermitted"
+                        },
+                        new
+                        {
+                            PermissionID = 504,
+                            PermissionName = "DownloadDocumentsIfPermitted"
+                        },
+                        new
+                        {
+                            PermissionID = 505,
+                            PermissionName = "MaintainCaseRecords"
+                        },
+                        new
+                        {
+                            PermissionID = 601,
+                            PermissionName = "ViewDocumentsReadOnly"
+                        },
+                        new
+                        {
+                            PermissionID = 602,
+                            PermissionName = "DraftDocuments"
+                        },
+                        new
+                        {
+                            PermissionID = 603,
+                            PermissionName = "PerformResearch"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.RefreshToken", b =>
@@ -908,24 +1178,310 @@ namespace LTSBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            RoleID = 1,
+                            Description = "System-wide management and data custody",
+                            RoleName = "SuperAdmin"
+                        },
+                        new
+                        {
+                            RoleID = 2,
+                            Description = "Workspace owner - manages specific law firm",
+                            RoleName = "FirmAdmin"
+                        },
+                        new
+                        {
+                            RoleID = 3,
+                            Description = "Senior lawyer - supervises case teams",
+                            RoleName = "Partner"
+                        },
+                        new
+                        {
+                            RoleID = 4,
+                            Description = "Day-to-day legal work",
+                            RoleName = "AssociateLawyer"
+                        },
+                        new
+                        {
+                            RoleID = 5,
+                            Description = "Legal clerk / Data entry operator",
+                            RoleName = "Moharrir"
+                        },
+                        new
+                        {
+                            RoleID = 6,
+                            Description = "Temporary staff / Junior assistant",
+                            RoleName = "InternParalegal"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.RolePermission", b =>
                 {
-                    b.Property<int>("RoleID")
+                    b.Property<int>("RolePermissionID")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RolePermissionID"));
 
                     b.Property<int>("PermissionID")
                         .HasColumnType("int");
 
-                    b.Property<int>("RolePermissionID")
+                    b.Property<int>("RoleID")
                         .HasColumnType("int");
 
-                    b.HasKey("RoleID", "PermissionID");
+                    b.HasKey("RolePermissionID");
 
                     b.HasIndex("PermissionID");
 
+                    b.HasIndex("RoleID", "PermissionID")
+                        .IsUnique();
+
                     b.ToTable("RolePermissions");
+
+                    b.HasData(
+                        new
+                        {
+                            RolePermissionID = 1,
+                            PermissionID = 101,
+                            RoleID = 1
+                        },
+                        new
+                        {
+                            RolePermissionID = 2,
+                            PermissionID = 102,
+                            RoleID = 1
+                        },
+                        new
+                        {
+                            RolePermissionID = 3,
+                            PermissionID = 103,
+                            RoleID = 1
+                        },
+                        new
+                        {
+                            RolePermissionID = 4,
+                            PermissionID = 104,
+                            RoleID = 1
+                        },
+                        new
+                        {
+                            RolePermissionID = 5,
+                            PermissionID = 201,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 6,
+                            PermissionID = 202,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 7,
+                            PermissionID = 203,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 8,
+                            PermissionID = 204,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 9,
+                            PermissionID = 205,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 10,
+                            PermissionID = 301,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 11,
+                            PermissionID = 302,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 12,
+                            PermissionID = 303,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 13,
+                            PermissionID = 305,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 14,
+                            PermissionID = 306,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 15,
+                            PermissionID = 402,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 16,
+                            PermissionID = 308,
+                            RoleID = 2
+                        },
+                        new
+                        {
+                            RolePermissionID = 17,
+                            PermissionID = 202,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 18,
+                            PermissionID = 203,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 19,
+                            PermissionID = 304,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 20,
+                            PermissionID = 205,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 21,
+                            PermissionID = 301,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 22,
+                            PermissionID = 302,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 23,
+                            PermissionID = 303,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 24,
+                            PermissionID = 305,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 25,
+                            PermissionID = 306,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 26,
+                            PermissionID = 402,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 27,
+                            PermissionID = 307,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 28,
+                            PermissionID = 308,
+                            RoleID = 3
+                        },
+                        new
+                        {
+                            RolePermissionID = 29,
+                            PermissionID = 401,
+                            RoleID = 4
+                        },
+                        new
+                        {
+                            RolePermissionID = 30,
+                            PermissionID = 402,
+                            RoleID = 4
+                        },
+                        new
+                        {
+                            RolePermissionID = 31,
+                            PermissionID = 403,
+                            RoleID = 4
+                        },
+                        new
+                        {
+                            RolePermissionID = 32,
+                            PermissionID = 404,
+                            RoleID = 4
+                        },
+                        new
+                        {
+                            RolePermissionID = 33,
+                            PermissionID = 405,
+                            RoleID = 4
+                        },
+                        new
+                        {
+                            RolePermissionID = 34,
+                            PermissionID = 406,
+                            RoleID = 4
+                        },
+                        new
+                        {
+                            RolePermissionID = 35,
+                            PermissionID = 501,
+                            RoleID = 5
+                        },
+                        new
+                        {
+                            RolePermissionID = 36,
+                            PermissionID = 502,
+                            RoleID = 5
+                        },
+                        new
+                        {
+                            RolePermissionID = 37,
+                            PermissionID = 505,
+                            RoleID = 5
+                        },
+                        new
+                        {
+                            RolePermissionID = 38,
+                            PermissionID = 601,
+                            RoleID = 6
+                        },
+                        new
+                        {
+                            RolePermissionID = 39,
+                            PermissionID = 602,
+                            RoleID = 6
+                        },
+                        new
+                        {
+                            RolePermissionID = 40,
+                            PermissionID = 603,
+                            RoleID = 6
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.User", b =>
@@ -957,6 +1513,9 @@ namespace LTSBackend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("int");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -972,6 +1531,9 @@ namespace LTSBackend.Migrations
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastLogin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PasswordChangedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PasswordHash")
@@ -1059,7 +1621,7 @@ namespace LTSBackend.Migrations
                     b.HasOne("LTSBackend.Models.Masters.CaseCategory", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("LTSBackend.Models.Masters.Court", "Court")
@@ -1077,19 +1639,19 @@ namespace LTSBackend.Migrations
                     b.HasOne("LTSBackend.Models.Masters.Department", "Department")
                         .WithMany()
                         .HasForeignKey("ResponsibleDepartmentID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("LTSBackend.Models.Masters.CaseStage", "Stage")
                         .WithMany()
                         .HasForeignKey("StageID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("LTSBackend.Models.Masters.CaseStatus", "Status")
                         .WithMany()
                         .HasForeignKey("StatusID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Category");
@@ -1146,7 +1708,7 @@ namespace LTSBackend.Migrations
                     b.HasOne("LTSBackend.Models.Security.User", "User")
                         .WithMany()
                         .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Case");
@@ -1198,7 +1760,7 @@ namespace LTSBackend.Migrations
                     b.HasOne("LTSBackend.Models.Masters.DocumentType", "DocumentType")
                         .WithMany()
                         .HasForeignKey("DocumentTypeID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Case");
@@ -1217,12 +1779,18 @@ namespace LTSBackend.Migrations
                     b.HasOne("LTSBackend.Models.Security.Role", "Role")
                         .WithMany()
                         .HasForeignKey("RoleID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LTSBackend.Models.Security.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Document");
 
                     b.Navigation("Role");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Cases.Hearing", b =>
@@ -1255,22 +1823,12 @@ namespace LTSBackend.Migrations
                     b.HasOne("LTSBackend.Models.Security.User", "User")
                         .WithMany()
                         .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Hearing");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("LTSBackend.Models.Cases.Notification", b =>
-                {
-                    b.HasOne("LTSBackend.Models.Cases.Case", "Case")
-                        .WithMany()
-                        .HasForeignKey("CaseID")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Case");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.LoginHistory", b =>
@@ -1280,6 +1838,32 @@ namespace LTSBackend.Migrations
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.Notification", b =>
+                {
+                    b.HasOne("LTSBackend.Models.Cases.Case", "Case")
+                        .WithMany()
+                        .HasForeignKey("CaseID")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("LTSBackend.Models.Security.NotificationType", "NotificationType")
+                        .WithMany("Notifications")
+                        .HasForeignKey("NotificationTypeID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LTSBackend.Models.Security.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Case");
+
+                    b.Navigation("NotificationType");
 
                     b.Navigation("User");
                 });
@@ -1352,6 +1936,11 @@ namespace LTSBackend.Migrations
             modelBuilder.Entity("LTSBackend.Models.Cases.Hearing", b =>
                 {
                     b.Navigation("HearingAttendances");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.NotificationType", b =>
+                {
+                    b.Navigation("Notifications");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.Permission", b =>

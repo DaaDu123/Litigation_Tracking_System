@@ -9,13 +9,9 @@ namespace LTSBackend.Services.DocumentPermissions;
 /// Implementation of document permission service
 /// Handles Moharrir blind upload (write-only) and elevated access modes
 /// </summary>
-public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentPermissionService> _logger) : IDocumentPermissionService
+public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPermissionService> _logger) : IDocumentPermissionService
 {
-
-    /// <summary>
-    /// Check agar user ko specific document action allowed hai
-    /// </summary>
-    public async Task<bool> CanUserAccessDocumentAsync(int userId,long documentId,string action,CancellationToken cancellationToken = default)
+    public async Task<bool> CanUserAccessDocumentAsync(int userId, long documentId, string action, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -54,99 +50,122 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
             // ================================================
             if (role == UserRole.AssociateLawyer)
             {
-                bool allowed = action == "View" || action == "Download" || action == "Upload";
-                _logger.LogDebug("AssociateLawyer {UserId} - {Action} allowed: {Allowed}", userId, action, allowed);
-                return allowed;
+                bool actionAllowed = action == "View" || action == "Download" || action == "Upload";
+                if (!actionAllowed) return false;
+
+                bool isAssigned = await IsUserAssignedToDocumentCaseAsync(userId, documentId, cancellationToken);
+                _logger.LogDebug("AssociateLawyer {UserId} - {Action} on doc {DocumentId}, assigned={Assigned}", userId, action, documentId, isAssigned);
+                return isAssigned;
             }
 
-            // ================================================
-            // 5. InternParalegal -> ReadOnly (sirf View)
-            // ================================================
             if (role == UserRole.InternParalegal)
             {
-                bool allowed = action == "View";
-                _logger.LogDebug("InternParalegal {UserId} - {Action} allowed: {Allowed}", userId, action, allowed);
-                return allowed;
+                bool actionAllowed = action == "View" || action == "Download";
+                if (!actionAllowed) return false;
+                return await IsUserAssignedToDocumentCaseAsync(userId, documentId, cancellationToken);
             }
 
-            // ================================================
-            // 6. Moharrir - special handling (blind upload feature)
-            // ================================================
             if (role == UserRole.Moharrir)
             {
-                return await HandleMohallirAccessAsync(
-                    userId,
-                    documentId,
-                    action,
-                    cancellationToken);
+                return await HandleMohallirAccessAsync(userId, documentId, action, cancellationToken);
             }
 
-            _logger.LogWarning("User {UserId} with role {Role} trying to access document {DocumentId} with action {Action}",
-                userId, role, documentId, action);
+            _logger.LogWarning("User {UserId} with role {Role} trying to access document {DocumentId} with action {Action}", userId, role, documentId, action);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,"Error checking document access for user {UserId} document {DocumentId} action {Action}",
-                userId, documentId, action);
+            _logger.LogError(ex, "Error checking document access for user {UserId} document {DocumentId} action {Action}", userId, documentId, action);
             return false;
         }
     }
 
     /// <summary>
-    /// Special handling for Moharrir access (restricted vs elevated)
-    ///
-    /// FIX: Ab per-document DocumentPermissions row ko bhi check karta hai
-    /// (jo UploadDocumentHandler.GrantDocumentPermissionAsync se banti hai).
-    /// Agar documentId valid hai (>0) aur us document ke liye explicit
-    /// permission row exist karti hai, wahi authoritative hai.
-    /// Warna (documentId == 0, jaise fresh Upload ke waqt, ya row missing)
-    /// role-level elevated/restricted default logic use hoti hai.
+    /// Case active assignment check. CaseAssignments table has no IsActive
+    /// column — an assignment is treated as active when EndDate is null
+    /// (or in the future).
+    /// </summary>
+    private async Task<bool> IsUserAssignedToDocumentCaseAsync(int userId, long documentId, CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+
+        return await _context.Documents.AsNoTracking().Where(d => d.DocumentID == documentId)
+            .Join(_context.CaseAssignments.AsNoTracking().Where(a => a.UserID == userId && (a.EndDate == null || a.EndDate > now)),
+                d => d.CaseID,
+                a => a.CaseID,
+                (d, a) => a)
+            .AnyAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Special handling for Moharrir access (restricted vs elevated).
+    /// Checks per-document permission grants in priority order:
+    /// 1. User-specific grant (DocumentPermissions.UserID) — highest priority,
+    ///    lets an admin elevate/restrict one specific Moharrir individually.
+    /// 2. Role-based grant (DocumentPermissions.RoleID) — applies to all
+    ///    users sharing that role.
+    /// 3. Fallback — role-level elevated/restricted default via
+    ///    "ViewDocumentsIfPermitted" permission.
     /// </summary>
     private async Task<bool> HandleMohallirAccessAsync(int userId, long documentId, string action, CancellationToken cancellationToken)
     {
-        // ================================================
-        // Upload action: DocumentPermissions se koi lena dena nahi,
-        // ye hamesha role-level default se decide hota hai
-        // (document abhi tak exist hi nahi karta upload ke waqt).
-        // ================================================
         if (action == "Upload")
         {
             _logger.LogDebug("Moharrir {UserId} - Upload allowed by default", userId);
             return true;
         }
 
-        // ================================================
-        // View / Download: pehle specific document-level permission
-        // grant check karo (agar documentId valid hai)
-        // ================================================
         if (documentId > 0)
         {
-            var docPermission = await _context.DocumentPermissions
-                .AsNoTracking()
-                .Where(x => x.DocumentID == documentId)
-                .Join(_context.Users.AsNoTracking().Where(u => u.UserID == userId),
-                    dp => dp.RoleID,
-                    u => u.RoleID,
-                    (dp, u) => dp)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (docPermission != null)
+            var isAssigned = await IsUserAssignedToDocumentCaseAsync(userId, documentId, cancellationToken);
+            if (!isAssigned)
             {
-                bool explicitAllowed = action == "View" ? docPermission.CanView
-                    : action == "Download" ? docPermission.CanDownload
-                    : false;
+                _logger.LogDebug("Moharrir {UserId} not assigned to case for document {DocumentId} — denied", userId, documentId);
+                return false;
+            }
+
+            // ================================================
+            // 1. Pehle user-specific grant check karo (highest priority)
+            // ================================================
+            var userPermission = await _context.DocumentPermissions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.DocumentID == documentId && x.UserID == userId, cancellationToken);
+
+            if (userPermission != null)
+            {
+                bool userAllowed = action == "View" ? userPermission.CanView
+                    : action == "Download" && userPermission.CanDownload;
 
                 _logger.LogDebug(
-                    "Moharrir {UserId} - explicit document permission found for document {DocumentId}, {Action} allowed: {Allowed}",
-                    userId, documentId, action, explicitAllowed);
+                    "Moharrir {UserId} - user-specific permission found for document {DocumentId}, {Action} allowed: {Allowed}",
+                    userId, documentId, action, userAllowed);
+                return userAllowed;
+            }
 
-                return explicitAllowed;
+            // ================================================
+            // 2. Warna role-based grant check karo
+            // ================================================
+            var user = await _context.Users.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UserID == userId, cancellationToken);
+
+            if (user?.RoleID != null)
+            {
+                var rolePermission = await _context.DocumentPermissions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.DocumentID == documentId && x.RoleID == user.RoleID, cancellationToken);
+
+                if (rolePermission != null)
+                {
+                    bool roleAllowed = action == "View" ? rolePermission.CanView
+                        : action == "Download" && rolePermission.CanDownload;
+                    _logger.LogDebug("Moharrir {UserId} - role-based permission found for document {DocumentId}, {Action} allowed: {Allowed}",userId, documentId, action, roleAllowed);
+                    return roleAllowed;
+                }
             }
         }
 
         // ================================================
-        // Fallback: no explicit per-document row -> role-level default
+        // 3. Fallback: no explicit per-document row -> role-level default
         // (restricted = write-only, elevated = view+download+upload)
         // ================================================
         bool isElevated = await HasMohallirElevatedAccessAsync(userId, cancellationToken);
@@ -160,12 +179,7 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
         return false;
     }
 
-    /// <summary>
-    /// Check agar Moharrir ke paas elevated access hai
-    /// Elevated mode = Can View + Download documents
-    /// FIX: single query (pehle do separate DB round-trips the)
-    /// </summary>
-    public async Task<bool> HasMohallirElevatedAccessAsync(int userId,CancellationToken cancellationToken = default)
+    public async Task<bool> HasMohallirElevatedAccessAsync(int userId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -175,11 +189,7 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
                 .Include(x => x.Role!)
                 .ThenInclude(r => r.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
-                .AnyAsync(x =>
-                    x.Role != null &&
-                    x.Role.RolePermissions.Any(rp =>
-                        rp.Permission!.PermissionName == "ViewDocumentsIfPermitted"),
-                    cancellationToken);
+                .AnyAsync(x => x.Role != null && x.Role.RolePermissions.Any(rp => rp.Permission!.PermissionName == "ViewDocumentsIfPermitted"), cancellationToken);
 
             _logger.LogDebug("Moharrir {UserId} elevated access check: {Result}", userId, hasPermission);
             return hasPermission;
@@ -191,10 +201,7 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
         }
     }
 
-    /// <summary>
-    /// Check agar Moharrir restricted mode mein hai (write-only)
-    /// </summary>
-    public async Task<bool> IsMohallirRestrictedAsync(int userId,CancellationToken cancellationToken = default)
+    public async Task<bool> IsMohallirRestrictedAsync(int userId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -203,7 +210,6 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
             if (user?.GetRole() != UserRole.Moharrir)
                 return false;
 
-            // Agar elevated access nahi hai to restricted hai
             bool isRestricted = !await HasMohallirElevatedAccessAsync(userId, cancellationToken);
 
             _logger.LogDebug("Moharrir {UserId} restricted check: {IsRestricted}", userId, isRestricted);
@@ -223,10 +229,7 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
     {
         try
         {
-            var user = await _context.Users
-                .AsNoTracking()
-                .Include(x => x.Role)
-                .FirstOrDefaultAsync(x => x.UserID == userId, cancellationToken);
+            var user = await _context.Users.AsNoTracking().Include(x => x.Role).FirstOrDefaultAsync(x => x.UserID == userId, cancellationToken);
 
             if (user == null)
                 return DocumentAccessLevel.None;
@@ -242,7 +245,7 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
                 UserRole.FirmAdmin => DocumentAccessLevel.FullAccess,
                 UserRole.Partner => DocumentAccessLevel.FullAccess,
                 UserRole.AssociateLawyer => DocumentAccessLevel.ReadWrite,
-                UserRole.InternParalegal => DocumentAccessLevel.ReadOnly,
+                UserRole.InternParalegal => DocumentAccessLevel.ReadWrite,
                 UserRole.Moharrir => await GetMohallirAccessLevelAsync(userId, cancellationToken),
                 _ => DocumentAccessLevel.None
             };
@@ -254,10 +257,7 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
         }
     }
 
-    /// <summary>
-    /// Get Moharrir's specific access level (restricted vs elevated)
-    /// </summary>
-    private async Task<DocumentAccessLevel> GetMohallirAccessLevelAsync(int userId,CancellationToken cancellationToken)
+    private async Task<DocumentAccessLevel> GetMohallirAccessLevelAsync(int userId, CancellationToken cancellationToken)
     {
         bool isElevated = await HasMohallirElevatedAccessAsync(userId, cancellationToken);
         return isElevated ? DocumentAccessLevel.ReadWrite : DocumentAccessLevel.WriteOnly;
@@ -266,91 +266,109 @@ public class DocumentPermissionService (AppDbContext _context, ILogger<DocumentP
     /// <summary>
     /// Grant document permission to a role
     /// </summary>
-    public async Task GrantDocumentPermissionAsync(
-        long documentId,
-        int roleId,
-        bool canView,
-        bool canDownload,
-        bool canUpload,
-        CancellationToken cancellationToken = default)
+    public async Task GrantDocumentPermissionAsync(long documentId, int roleId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default)
     {
         try
         {
-            // ================================================
-            // Check agar permission pehle se exist karta hai
-            // ================================================
-            var existingPermission = await _context.DocumentPermissions
-                .FirstOrDefaultAsync(x =>
-                    x.DocumentID == documentId &&
-                    x.RoleID == roleId,
-                    cancellationToken);
+            var existingPermission = await _context.DocumentPermissions.FirstOrDefaultAsync(x => x.DocumentID == documentId && x.RoleID == roleId, cancellationToken);
 
             if (existingPermission != null)
             {
-                // Update existing
                 existingPermission.CanView = canView;
                 existingPermission.CanDownload = canDownload;
                 existingPermission.CanUpload = canUpload;
-                _logger.LogInformation(
-                    "Updated document permission for document {DocumentId} role {RoleId}",
-                    documentId, roleId);
+                _logger.LogInformation("Updated document permission for document {DocumentId} role {RoleId}", documentId, roleId);
             }
             else
             {
-                // Create new
                 var permission = new Models.Cases.DocumentPermission
                 {
                     DocumentID = documentId,
                     RoleID = roleId,
                     CanView = canView,
                     CanDownload = canDownload,
-                    CanUpload = canUpload
+                    CanUpload = canUpload,
+                    GrantedDate = DateTime.UtcNow
                 };
 
                 _context.DocumentPermissions.Add(permission);
-                _logger.LogInformation(
-                    "Granted document permission for document {DocumentId} role {RoleId}",
-                    documentId, roleId);
+                _logger.LogInformation("Granted document permission for document {DocumentId} role {RoleId}", documentId, roleId);
             }
 
             await _context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Error granting document permission for document {DocumentId} role {RoleId}",
-                documentId, roleId);
+            _logger.LogError(ex, "Error granting document permission for document {DocumentId} role {RoleId}", documentId, roleId);
             throw;
         }
     }
 
     /// <summary>
-    /// Revoke document permission
+    /// Grant document permission to a specific user (overrides role-level grant).
+    /// Used e.g. to elevate one restricted Moharrir individually without
+    /// changing access for the whole Moharrir role.
     /// </summary>
-    public async Task RevokeDocumentPermissionAsync(long documentId,int roleId,CancellationToken cancellationToken = default)
+    public async Task GrantUserDocumentPermissionAsync(long documentId, int userId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var existingPermission = await _context.DocumentPermissions
+                .FirstOrDefaultAsync(x => x.DocumentID == documentId && x.UserID == userId, cancellationToken);
+
+            if (existingPermission != null)
+            {
+                existingPermission.CanView = canView;
+                existingPermission.CanDownload = canDownload;
+                existingPermission.CanUpload = canUpload;
+                _logger.LogInformation("Updated user-specific document permission for document {DocumentId} user {UserId}", documentId, userId);
+            }
+            else
+            {
+                var permission = new Models.Cases.DocumentPermission
+                {
+                    DocumentID = documentId,
+                    UserID = userId,
+                    RoleID = null,
+                    CanView = canView,
+                    CanDownload = canDownload,
+                    CanUpload = canUpload,
+                    GrantedDate = DateTime.UtcNow
+                };
+
+                _context.DocumentPermissions.Add(permission);
+                _logger.LogInformation("Granted user-specific document permission for document {DocumentId} user {UserId}", documentId, userId);
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error granting user-specific document permission for document {DocumentId} user {UserId}", documentId, userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Revoke document permission (role-based)
+    /// </summary>
+    public async Task RevokeDocumentPermissionAsync(long documentId, int roleId, CancellationToken cancellationToken = default)
     {
         try
         {
             var permission = await _context.DocumentPermissions
-                .FirstOrDefaultAsync(x =>
-                    x.DocumentID == documentId &&
-                    x.RoleID == roleId,
-                    cancellationToken);
+                .FirstOrDefaultAsync(x => x.DocumentID == documentId && x.RoleID == roleId, cancellationToken);
 
             if (permission != null)
             {
                 _context.DocumentPermissions.Remove(permission);
                 await _context.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation(
-                    "Revoked document permission for document {DocumentId} role {RoleId}",
-                    documentId, roleId);
+                _logger.LogInformation("Revoked document permission for document {DocumentId} role {RoleId}", documentId, roleId);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Error revoking document permission for document {DocumentId} role {RoleId}",
-                documentId, roleId);
+            _logger.LogError(ex, "Error revoking document permission for document {DocumentId} role {RoleId}", documentId, roleId);
             throw;
         }
     }

@@ -10,4 +10,7 @@ public record UpdateUserCommand(
     int? RoleID,
     bool IsActive,
     IFormFile? ProfileImage
-) : IRequest<bool>;
+) : IRequest<bool>
+{
+    public int ActingUserID { get; init; }   // ✅ added
+}
