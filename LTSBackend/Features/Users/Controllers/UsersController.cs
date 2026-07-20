@@ -19,10 +19,15 @@ namespace LTSBackend.Features.Users.Controllers;
 public class UsersController(IMediator _mediator, ILogger<UsersController> _logger) : ControllerBase
 {
     // =====================================================
-    // CREATE USER — sirf FirmAdmin
+    // CREATE USER — FirmAdmin + SuperAdmin
+    // FIX: pehle sirf "FirmAdmin" string tha, SuperAdmin is
+    // check mein include nahi tha (JWT mein aik hi role claim
+    // hoti hai, koi bypass nahi), isliye SuperAdmin 403 pe
+    // atak jata tha. SRS 2.3 "System Admin: Full control of
+    // users and roles" ke mutabiq FirmAdminAndAbove use kiya.
     // =====================================================
     [HttpPost]
-    [Authorize(Roles = RoleNames.FirmAdmin)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Create([FromForm] CreateUserCommand command)
     {
         var actingUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -70,7 +75,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     // UPDATE USER — sirf FirmAdmin
     // =====================================================
     [HttpPut("{id}")]
-    [Authorize(Roles = RoleNames.FirmAdmin)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, [FromForm] UpdateUserCommand command)
     {
         _logger.LogInformation("Update user request: {UserID}", id);
@@ -91,7 +96,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     // DELETE USER (Soft Delete) — sirf FirmAdmin
     // =====================================================
     [HttpDelete("{id}")]
-    [Authorize(Roles = RoleNames.FirmAdmin)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)
     {
         _logger.LogInformation("Delete user request: {UserID}", id);

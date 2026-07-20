@@ -30,10 +30,13 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
     /// - Elevated Moharrir: Can upload AND view/download
     /// 
     /// Role-based: Partner, Associate, Moharrir, InternParalegal can upload
+    /// FIX: SRS (User Mgt Roles Matrix) ke mutabiq Admin (FirmAdmin/
+    /// SuperAdmin) bhi Document Upload kar sakta hai — pehle ye list
+    /// mein nahi tha.
     /// </summary>
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
-    [Authorize(Roles = RoleNames.CanViewDocuments + "," + RoleNames.InternParalegal)]
+    [Authorize(Roles = RoleNames.CanViewDocuments + "," + RoleNames.InternParalegal + "," + RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> UploadDocument(
         [FromForm] UploadDocumentRequest request)
     {
@@ -148,7 +151,7 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             var downloadData = await _mediator.Send(command);
 
             // Return file for download
-            return File(downloadData.FileBytes,downloadData.ContentType,downloadData.FileName);
+            return File(downloadData.FileBytes, downloadData.ContentType, downloadData.FileName);
         }
         catch (UnauthorizedException ex)
         {
@@ -205,7 +208,7 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
                 return NotFound(ApiResponse<bool>.FailureResponse("Document not found"));
             }
 
-            return Ok(ApiResponse<DocumentDetailDTO>.SuccessResponse(document,"Document retrieved successfully"));
+            return Ok(ApiResponse<DocumentDetailDTO>.SuccessResponse(document, "Document retrieved successfully"));
         }
         catch (UnauthorizedException ex)
         {
@@ -257,7 +260,7 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             var command = new DeleteDocumentCommand(documentId) { UserID = userId };
             var result = await _mediator.Send(command);
 
-            return Ok(ApiResponse<bool>.SuccessResponse(result,"Document deleted successfully"));
+            return Ok(ApiResponse<bool>.SuccessResponse(result, "Document deleted successfully"));
         }
         catch (NotFoundException ex)
         {

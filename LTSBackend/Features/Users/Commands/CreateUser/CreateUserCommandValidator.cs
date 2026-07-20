@@ -24,14 +24,16 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
         RuleFor(x => x.Password)
             .NotEmpty()
             .WithMessage("Password zaroori hai")
-            .MinimumLength(6)
-            .WithMessage("Password minimum 6 characters ka hona chahiye")
+            .MinimumLength(8)
+            .WithMessage("Password minimum 8 characters ka hona chahiye")
             .Matches("[A-Z]")
             .WithMessage("Password mein kam az kam aik uppercase letter hona chahiye")
             .Matches("[a-z]")
             .WithMessage("Password mein kam az kam aik lowercase letter hona chahiye")
             .Matches("[0-9]")
-            .WithMessage("Password mein kam az kam aik digit hona chahiye");
+            .WithMessage("Password mein kam az kam aik digit hona chahiye")
+            .Matches(@"[!@#$%^&*(),.?"":{}|<>_\-+=\[\]\\/;'~`]")
+            .WithMessage("Password mein kam az kam aik symbol (!@#$%^&* etc.) hona chahiye");
 
         RuleFor(x => x.Phone)
             .MaximumLength(20)

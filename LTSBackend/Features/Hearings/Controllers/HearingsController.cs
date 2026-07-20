@@ -10,6 +10,7 @@ using LTSBackend.Features.Hearings.DTOs;
 using LTSBackend.Features.Hearings.Queries.GetCaseHearings;
 using LTSBackend.Features.Hearings.Queries.GetHearingById;
 using LTSBackend.Features.Hearings.Queries.GetUpcomingHearings;
+using LTSBackend.Models.Security;
 
 namespace LTSBackend.Features.Hearings.Controllers
 {
@@ -26,6 +27,7 @@ namespace LTSBackend.Features.Hearings.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = RoleNames.AllLawyers)]
         [ProducesResponseType(typeof(ApiResponse<long>), 201)]
         [ProducesResponseType(typeof(ApiResponse<string>), 400)]
         public async Task<IActionResult> CreateHearing([FromBody] CreateHearingDTO dto)
@@ -37,6 +39,7 @@ namespace LTSBackend.Features.Hearings.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = RoleNames.AllFirmUsers)]
         [ProducesResponseType(typeof(ApiResponse<HearingDetailDTO>), 200)]
         [ProducesResponseType(typeof(ApiResponse<string>), 404)]
         public async Task<IActionResult> GetHearingById(long id)
@@ -47,6 +50,7 @@ namespace LTSBackend.Features.Hearings.Controllers
         }
 
         [HttpGet("upcoming")]
+        [Authorize(Roles = RoleNames.AllFirmUsers)]
         [ProducesResponseType(typeof(ApiResponse<PagedHearingResult<HearingDetailDTO>>), 200)]
         public async Task<IActionResult> GetUpcomingHearings(
             [FromQuery] int pageNumber = 1,
@@ -66,6 +70,7 @@ namespace LTSBackend.Features.Hearings.Controllers
         }
 
         [HttpGet("case/{caseId}")]
+        [Authorize(Roles = RoleNames.AllFirmUsers)]
         [ProducesResponseType(typeof(ApiResponse<PagedHearingResult<HearingDetailDTO>>), 200)]
         public async Task<IActionResult> GetCaseHearings(
             long caseId,
@@ -83,6 +88,7 @@ namespace LTSBackend.Features.Hearings.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = RoleNames.AllLawyers)]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<string>), 400)]
         public async Task<IActionResult> UpdateHearing(long id, [FromBody] UpdateHearingDTO dto)
@@ -94,6 +100,7 @@ namespace LTSBackend.Features.Hearings.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = RoleNames.PartnerAndAbove)]
         [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
         [ProducesResponseType(typeof(ApiResponse<string>), 404)]
         public async Task<IActionResult> DeleteHearing(long id)
