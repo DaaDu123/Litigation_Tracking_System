@@ -1,4 +1,4 @@
-using LTSFrontend.Components;
+using LTSFrontend;
 
 var builder = WebApplication.CreateBuilder(args);
 
