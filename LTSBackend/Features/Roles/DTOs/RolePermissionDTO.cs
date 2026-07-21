@@ -1,4 +1,5 @@
 ﻿namespace LTSBackend.Features.Roles.DTOs;
+
 public class RolePermissionDTO
 {
     public int PermissionID { get; set; }

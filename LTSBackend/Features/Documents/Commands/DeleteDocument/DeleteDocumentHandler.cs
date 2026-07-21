@@ -12,11 +12,11 @@ namespace LTSBackend.Features.Documents.Commands.DeleteDocument;
 /// Hard delete - permissions removed first (FK-safe order), then document row, then file on disk
 /// Role-based: Partner and FirmAdmin only
 /// </summary>
-public class DeleteDocumentHandler (AppDbContext _context, IFileService _fileService, IAuditService _auditService, ILogger<DeleteDocumentHandler> _logger) : IRequestHandler<DeleteDocumentCommand, bool>
+public class DeleteDocumentHandler(AppDbContext _context, IFileService _fileService, IAuditService _auditService, ILogger<DeleteDocumentHandler> _logger) : IRequestHandler<DeleteDocumentCommand, bool>
 {
-    public async Task<bool> Handle(DeleteDocumentCommand request,CancellationToken cancellationToken)
+    public async Task<bool> Handle(DeleteDocumentCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Document delete attempt - ID: {DocumentId}, User: {UserId}",request.DocumentID,request.UserID);
+        _logger.LogInformation("Document delete attempt - ID: {DocumentId}, User: {UserId}", request.DocumentID, request.UserID);
 
         // ================================================
         // 1. Find document
@@ -67,7 +67,7 @@ public class DeleteDocumentHandler (AppDbContext _context, IFileService _fileSer
         // ================================================
         // 5. Create audit log
         // ================================================
-        var auditLog = _auditService.Create(request.UserID,$"Document Delete: {document.DocumentName} (ID: {document.DocumentID})");
+        var auditLog = _auditService.Create(request.UserID, $"Document Delete: {document.DocumentName} (ID: {document.DocumentID})");
 
         _context.AuditLogs.Add(auditLog);
         await _context.SaveChangesAsync(cancellationToken);

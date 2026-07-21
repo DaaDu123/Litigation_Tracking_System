@@ -4,4 +4,4 @@ using MediatR;
 
 namespace LTSBackend.Features.Dashboard.Queries;
 
-public record GetDashboardStatsQuery: IRequest<DashboardDTO>;
+public record GetDashboardStatsQuery : IRequest<DashboardDTO>;

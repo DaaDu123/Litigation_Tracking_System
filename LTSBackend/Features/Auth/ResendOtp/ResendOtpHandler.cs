@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 
 namespace LTSBackend.Features.Auth.ResendOtp;
+
 public class ResendOtpHandler(AppDbContext _context, IEmailService _emailService, ILogger<ResendOtpHandler> _logger) : IRequestHandler<ResendOtpCommand, ResendOtpResponseDTO>
 {
     public async Task<ResendOtpResponseDTO> Handle(ResendOtpCommand request, CancellationToken cancellationToken)

@@ -24,9 +24,7 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
         _logger = logger;
     }
 
-    public async Task<bool> Handle(
-        AssignPermissionsCommand request,
-        CancellationToken cancellationToken)
+    public async Task<bool> Handle(AssignPermissionsCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation(
             "Assigning {Count} permissions to role: {RoleID}",
@@ -45,9 +43,7 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
         // ================================================
         var role = await _context.Roles
             .Include(x => x.RolePermissions)
-            .FirstOrDefaultAsync(
-                x => x.RoleID == request.RoleID,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.RoleID == request.RoleID,cancellationToken);
 
         if (role == null)
         {
@@ -60,7 +56,7 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
         // ================================================
         if (ProtectedRoles.Contains(role.RoleName, StringComparer.OrdinalIgnoreCase))
         {
-            _logger.LogWarning("Assign permissions blocked: {RoleName} is a protected system role: {RoleID}",role.RoleName, request.RoleID);
+            _logger.LogWarning("Assign permissions blocked: {RoleName} is a protected system role: {RoleID}", role.RoleName, request.RoleID);
             throw new ValidationException(
                 new List<string>
                 {

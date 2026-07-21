@@ -1,0 +1,35 @@
+﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Data;
+using LTSBackend.Services.Audit;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+
+namespace LTSBackend.Features.Deadlines.Commands.DeleteDeadline
+{
+    public class DeleteDeadlineHandler(
+        AppDbContext _context,
+        IAuditService _auditService,
+        IHttpContextAccessor _httpContextAccessor) : IRequestHandler<DeleteDeadlineCommand, bool>
+    {
+        public async Task<bool> Handle(DeleteDeadlineCommand request, CancellationToken cancellationToken)
+        {
+            var deadline = await _context.Deadlines.FirstOrDefaultAsync(d => d.DeadlineID == request.DeadlineID, cancellationToken);
+            if (deadline == null)
+                throw new NotFoundException($"Deadline ID {request.DeadlineID} nahi mila");
+
+            int currentUserId = GetCurrentUserId();
+            _context.AuditLogs.Add(_auditService.Create(currentUserId, $"Deadline Deleted: DeadlineID {deadline.DeadlineID}"));
+
+            _context.Deadlines.Remove(deadline);
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(userIdClaim, out var userId) ? userId : 0;
+        }
+    }
+}

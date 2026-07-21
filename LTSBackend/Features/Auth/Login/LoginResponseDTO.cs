@@ -1,4 +1,5 @@
 ﻿namespace LTSBackend.Features.Auth.Login;
+
 public class LoginResponseDTO
 {
     public int UserID { get; set; }

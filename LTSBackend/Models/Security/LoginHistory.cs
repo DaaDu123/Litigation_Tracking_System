@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LTSBackend.Models.Security;
+
 public class LoginHistory
 {
     [Key]

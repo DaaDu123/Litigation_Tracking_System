@@ -6,22 +6,9 @@ using LTSBackend.Features.Users.Queries.GetUserById;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDTO?>
+public class GetUserByIdQueryHandler (AppDbContext _context, ILogger<GetUserByIdQueryHandler> _logger) : IRequestHandler<GetUserByIdQuery, UserDTO?>
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<GetUserByIdQueryHandler> _logger;
-
-    public GetUserByIdQueryHandler(
-        AppDbContext context,
-        ILogger<GetUserByIdQueryHandler> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
-    public async Task<UserDTO?> Handle(
-        GetUserByIdQuery request,
-        CancellationToken cancellationToken)
+    public async Task<UserDTO?> Handle(GetUserByIdQuery request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching user: {UserId}", request.UserID);
 

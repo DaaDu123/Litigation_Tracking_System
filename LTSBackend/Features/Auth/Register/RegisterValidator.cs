@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 
 namespace LTSBackend.Features.Auth.Register;
+
 public class RegisterValidator : AbstractValidator<RegisterCommand>
 {
     public RegisterValidator()

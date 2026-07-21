@@ -8,7 +8,7 @@ namespace LTSBackend.Features.Cases.Queries.GetCaseById;
 
 public class GetCaseByIdHandler(AppDbContext _context, ILogger<GetCaseByIdHandler> _logger) : IRequestHandler<GetCaseByIdQuery, CaseDTO?>
 {
-    public async Task<CaseDTO?> Handle(GetCaseByIdQuery request,CancellationToken cancellationToken)
+    public async Task<CaseDTO?> Handle(GetCaseByIdQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Case fetch kia ja raha hai: {CaseID}", request.CaseID);
 

@@ -8,7 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Auth.Logout;
-public class LogoutHandler (AppDbContext _context, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, IAuditService _auditService, ILogger<LogoutHandler> _logger) : IRequestHandler<LogoutCommand, bool>
+
+public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, IAuditService _auditService, ILogger<LogoutHandler> _logger) : IRequestHandler<LogoutCommand, bool>
 {
     public async Task<bool> Handle(
         LogoutCommand request,

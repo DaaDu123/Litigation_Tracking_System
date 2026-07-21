@@ -136,17 +136,14 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 bool userAllowed = action == "View" ? userPermission.CanView
                     : action == "Download" && userPermission.CanDownload;
 
-                _logger.LogDebug(
-                    "Moharrir {UserId} - user-specific permission found for document {DocumentId}, {Action} allowed: {Allowed}",
-                    userId, documentId, action, userAllowed);
+                _logger.LogDebug("Moharrir {UserId} - user-specific permission found for document {DocumentId}, {Action} allowed: {Allowed}",userId, documentId, action, userAllowed);
                 return userAllowed;
             }
 
             // ================================================
             // 2. Warna role-based grant check karo
             // ================================================
-            var user = await _context.Users.AsNoTracking()
-                .FirstOrDefaultAsync(u => u.UserID == userId, cancellationToken);
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserID == userId, cancellationToken);
 
             if (user?.RoleID != null)
             {
@@ -158,7 +155,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 {
                     bool roleAllowed = action == "View" ? rolePermission.CanView
                         : action == "Download" && rolePermission.CanDownload;
-                    _logger.LogDebug("Moharrir {UserId} - role-based permission found for document {DocumentId}, {Action} allowed: {Allowed}",userId, documentId, action, roleAllowed);
+                    _logger.LogDebug("Moharrir {UserId} - role-based permission found for document {DocumentId}, {Action} allowed: {Allowed}", userId, documentId, action, roleAllowed);
                     return roleAllowed;
                 }
             }
@@ -225,7 +222,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
     /// <summary>
     /// Get user's document access level
     /// </summary>
-    public async Task<DocumentAccessLevel> GetUserDocumentAccessLevelAsync(int userId,CancellationToken cancellationToken = default)
+    public async Task<DocumentAccessLevel> GetUserDocumentAccessLevelAsync(int userId, CancellationToken cancellationToken = default)
     {
         try
         {

@@ -11,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 using CookieHelper = LTSBackend.Features.Auth.Helpers.CookieHelper;
 
 namespace LTSBackend.Features.Auth.Login;
-public class LoginHandler (AppDbContext _context, IPasswordService _passwordService, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<LoginHandler> _logger) : IRequestHandler<LoginCommand, LoginResponseDTO>
+
+public class LoginHandler(AppDbContext _context, IPasswordService _passwordService, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<LoginHandler> _logger) : IRequestHandler<LoginCommand, LoginResponseDTO>
 {
     private const int MaxFailedAttempts = 5;
     public async Task<LoginResponseDTO> Handle(LoginCommand request, CancellationToken cancellationToken)

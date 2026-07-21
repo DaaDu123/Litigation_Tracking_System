@@ -16,7 +16,7 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool
     private readonly IAuditService _auditService;
     private readonly ILogger<ChangePasswordHandler> _logger;
 
-    public ChangePasswordHandler(AppDbContext context,IPasswordService passwordService,IAuditService auditService,ILogger<ChangePasswordHandler> logger)
+    public ChangePasswordHandler(AppDbContext context, IPasswordService passwordService, IAuditService auditService, ILogger<ChangePasswordHandler> logger)
     {
         _context = context;
         _passwordService = passwordService;

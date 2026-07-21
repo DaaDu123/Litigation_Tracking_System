@@ -16,8 +16,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         // ================================================
         // 1. Find user
         // ================================================
-        var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
         {
@@ -28,8 +27,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         // ================================================
         // 2. Check if new email is unique
         // ================================================
-        bool emailExists = await _context.Users
-            .AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
+        bool emailExists = await _context.Users.AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
 
         if (emailExists)
         {
@@ -52,8 +50,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             throw new ValidationException([$"Invalid role. Role ID {request.RoleID} does not exist."]);
         }
 
-        bool roleExists = await _context.Roles
-            .AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
+        bool roleExists = await _context.Roles.AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
 
         if (!roleExists)
         {

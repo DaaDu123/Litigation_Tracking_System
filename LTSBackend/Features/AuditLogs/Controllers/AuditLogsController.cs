@@ -26,11 +26,11 @@ public class AuditLogsController : ControllerBase
     // =====================================================
 
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] string? search,[FromQuery] string? action,[FromQuery] DateTime? fromDate,[FromQuery] DateTime? toDate,[FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] string? action, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        _logger.LogInformation("Get audit logs request - Page: {PageNumber}, Size: {PageSize}",pageNumber,pageSize);
+        _logger.LogInformation("Get audit logs request - Page: {PageNumber}, Size: {PageSize}", pageNumber, pageSize);
 
-        var result = await _mediator.Send(new GetAuditLogsQuery(search,fromDate,toDate,action,pageNumber,pageSize));
-        return Ok(ApiResponse<PagedResult<AuditLogDTO>>.SuccessResponse(result,"Audit logs fetched successfully."));
+        var result = await _mediator.Send(new GetAuditLogsQuery(search, fromDate, toDate, action, pageNumber, pageSize));
+        return Ok(ApiResponse<PagedResult<AuditLogDTO>>.SuccessResponse(result, "Audit logs fetched successfully."));
     }
 }

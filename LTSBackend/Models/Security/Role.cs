@@ -7,7 +7,7 @@ namespace LTSBackend.Models.Security
         [Key]
         public int RoleID { get; set; }
 
-        [Required,MaxLength(50)]
+        [Required, MaxLength(50)]
         public string RoleName { get; set; } = string.Empty;
 
         [MaxLength(255)]

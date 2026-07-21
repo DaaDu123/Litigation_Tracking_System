@@ -9,7 +9,7 @@ using LTSBackend.Comman.Exceptions;
 namespace LTSBackend.Features.Hearings.Commands.DeleteHearing
 {
     public class DeleteHearingCommandHandler(AppDbContext _context) : IRequestHandler<DeleteHearingCommand, bool>
-    {     
+    {
         public async Task<bool> Handle(DeleteHearingCommand request, CancellationToken cancellationToken)
         {
             var hearing = await _context.Hearings.FirstOrDefaultAsync(h => h.HearingID == request.HearingId, cancellationToken);

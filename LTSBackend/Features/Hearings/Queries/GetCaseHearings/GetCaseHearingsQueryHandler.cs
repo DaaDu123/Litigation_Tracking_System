@@ -9,14 +9,8 @@ using LTSBackend.Features.Hearings.DTOs;
 
 namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
 {
-    public class GetCaseHearingsQueryHandler : IRequestHandler<GetCaseHearingsQuery, PagedHearingResult<HearingDetailDTO>>
+    public class GetCaseHearingsQueryHandler (AppDbContext _context) : IRequestHandler<GetCaseHearingsQuery, PagedHearingResult<HearingDetailDTO>>
     {
-        private readonly AppDbContext _context;
-
-        public GetCaseHearingsQueryHandler(AppDbContext context)
-        {
-            _context = context;
-        }
 
         public async Task<PagedHearingResult<HearingDetailDTO>> Handle(GetCaseHearingsQuery request, CancellationToken cancellationToken)
         {

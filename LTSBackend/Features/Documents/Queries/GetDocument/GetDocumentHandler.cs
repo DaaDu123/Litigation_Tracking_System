@@ -7,11 +7,12 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Documents.Queries.GetDocument;
-public class GetDocumentHandler (AppDbContext _context, IDocumentPermissionService _permissionService, ILogger<GetDocumentHandler> _logger) : IRequestHandler<GetDocumentQuery, DocumentDetailDTO?>
+
+public class GetDocumentHandler(AppDbContext _context, IDocumentPermissionService _permissionService, ILogger<GetDocumentHandler> _logger) : IRequestHandler<GetDocumentQuery, DocumentDetailDTO?>
 {
-    public async Task<DocumentDetailDTO?> Handle(GetDocumentQuery request,CancellationToken cancellationToken)
+    public async Task<DocumentDetailDTO?> Handle(GetDocumentQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Get document request - ID: {DocumentId}, User: {UserId}",request.DocumentID,request.UserID);
+        _logger.LogInformation("Get document request - ID: {DocumentId}, User: {UserId}", request.DocumentID, request.UserID);
 
         // ================================================
         // 1. Check user permissions
@@ -24,7 +25,7 @@ public class GetDocumentHandler (AppDbContext _context, IDocumentPermissionServi
 
         if (!canView)
         {
-            _logger.LogWarning("User {UserId} denied access to document {DocumentId}",request.UserID,request.DocumentID);
+            _logger.LogWarning("User {UserId} denied access to document {DocumentId}", request.UserID, request.DocumentID);
             throw new UnauthorizedException("You don't have permission to view this document");
         }
 
@@ -35,7 +36,7 @@ public class GetDocumentHandler (AppDbContext _context, IDocumentPermissionServi
             .AsNoTracking()
             .Include(x => x.DocumentType)
             .Include(x => x.Case)
-            .FirstOrDefaultAsync(x => x.DocumentID == request.DocumentID,cancellationToken);
+            .FirstOrDefaultAsync(x => x.DocumentID == request.DocumentID, cancellationToken);
 
         if (document == null)
         {

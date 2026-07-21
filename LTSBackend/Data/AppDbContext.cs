@@ -192,6 +192,12 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Stage).WithMany().HasForeignKey(e => e.StageID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.Department).WithMany().HasForeignKey(e => e.ResponsibleDepartmentID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.LegalOfficer).WithMany().HasForeignKey(e => e.CurrentLegalOfficerID).OnDelete(DeleteBehavior.Restrict);
+
+            // Performance indexes (Audit Issue #22 fix)
+            entity.HasIndex(e => e.StatusID);
+            entity.HasIndex(e => e.CourtID);
+            entity.HasIndex(e => e.CategoryID);
+            entity.HasIndex(e => e.CaseNumber);
         });
 
         // ================================================================
@@ -203,6 +209,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.PartyType).IsRequired().HasMaxLength(20);
             entity.Property(e => e.PartyName).IsRequired().HasMaxLength(255);
             entity.HasOne(e => e.Case).WithMany(c => c.CaseParties).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.CaseID);
         });
 
         // ================================================================
@@ -215,6 +222,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.LeadCounsel).HasColumnName("IsLeadCounsel");
             entity.HasOne(e => e.Case).WithMany(c => c.CaseAssignments).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.UserID);
+            entity.HasIndex(e => new { e.CaseID, e.EndDate });
         });
 
         // ================================================================
@@ -233,6 +242,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.MilestoneID);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.CaseID);
         });
 
         // ================================================================
@@ -244,6 +254,8 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Case).WithMany(c => c.Hearings).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.HearingAttendances).WithOne(ha => ha.Hearing).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.HearingDate);
+            entity.HasIndex(e => e.CaseID);
         });
 
         // ================================================================
@@ -254,6 +266,7 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.AttendanceID);
             entity.HasOne(e => e.Hearing).WithMany(h => h.HearingAttendances).HasForeignKey(e => e.HearingID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.HearingID, e.UserID }).IsUnique();
         });
 
         // ================================================================
@@ -263,6 +276,8 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.DeadlineID);
             entity.HasOne(e => e.Case).WithMany(c => c.Deadlines).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.DueDate);
+            entity.HasIndex(e => new { e.CaseID, e.Completed });
         });
 
         // ================================================================
@@ -297,6 +312,7 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.NoteID);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.CaseID);
         });
 
         // ================================================================

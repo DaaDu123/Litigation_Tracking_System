@@ -1,5 +1,6 @@
 ﻿using LTSBackend.Models.Audit;
 namespace LTSBackend.Services.Audit;
+
 public class AuditService(IHttpContextAccessor _httpContextAccessor) : IAuditService
 {
     public AuditLog Create(int? userId, string action)

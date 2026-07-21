@@ -8,9 +8,9 @@ using System.Security.Cryptography;
 
 namespace LTSBackend.Features.Auth.ForgotPassword;
 
-public class ForgotPasswordHandler(AppDbContext _context,IEmailService _emailService,ILogger<ForgotPasswordHandler> _logger): IRequestHandler<ForgotPasswordCommand, ForgotPasswordResponseDTO>
+public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailService, ILogger<ForgotPasswordHandler> _logger) : IRequestHandler<ForgotPasswordCommand, ForgotPasswordResponseDTO>
 {
-    public async Task<ForgotPasswordResponseDTO> Handle(ForgotPasswordCommand request,CancellationToken cancellationToken)
+    public async Task<ForgotPasswordResponseDTO> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Forgot password requested for email: {Email}", request.Email);
 

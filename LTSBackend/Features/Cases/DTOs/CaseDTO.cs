@@ -1,4 +1,5 @@
 ﻿namespace LTSBackend.Features.Cases.DTOs;
+
 public class CaseDTO
 {
     public long CaseID { get; set; }

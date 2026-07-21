@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 namespace LTSBackend.Features.Roles.Commands.CreateRole;
+
 public class CreateRoleValidator : AbstractValidator<CreateRoleCommand>
 {
     public CreateRoleValidator()

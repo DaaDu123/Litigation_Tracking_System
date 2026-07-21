@@ -23,9 +23,7 @@ public class DeleteRoleHandler : IRequestHandler<DeleteRoleCommand, bool>
         _logger = logger;
     }
 
-    public async Task<bool> Handle(
-        DeleteRoleCommand request,
-        CancellationToken cancellationToken)
+    public async Task<bool> Handle(DeleteRoleCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deleting role: {RoleID}", request.RoleID);
 
@@ -35,9 +33,7 @@ public class DeleteRoleHandler : IRequestHandler<DeleteRoleCommand, bool>
         var role = await _context.Roles
             .Include(x => x.Users)
             .Include(x => x.RolePermissions)
-            .FirstOrDefaultAsync(
-                x => x.RoleID == request.RoleID,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.RoleID == request.RoleID,cancellationToken);
 
         if (role == null)
         {
@@ -60,10 +56,7 @@ public class DeleteRoleHandler : IRequestHandler<DeleteRoleCommand, bool>
         // ================================================
         if (role.Users.Any())
         {
-            _logger.LogWarning(
-                "Delete failed: {Count} users assigned to role: {RoleID}",
-                role.Users.Count,
-                request.RoleID);
+            _logger.LogWarning("Delete failed: {Count} users assigned to role: {RoleID}",role.Users.Count,request.RoleID);
 
             throw new ValidationException(
                 new List<string> {
@@ -74,8 +67,7 @@ public class DeleteRoleHandler : IRequestHandler<DeleteRoleCommand, bool>
         // ================================================
         // 4. Begin transaction
         // ================================================
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
         try
         {
@@ -85,10 +77,7 @@ public class DeleteRoleHandler : IRequestHandler<DeleteRoleCommand, bool>
             _context.RolePermissions.RemoveRange(role.RolePermissions);
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation(
-                "Removed {Count} permissions for role: {RoleID}",
-                role.RolePermissions.Count,
-                request.RoleID);
+            _logger.LogInformation("Removed {Count} permissions for role: {RoleID}",role.RolePermissions.Count,request.RoleID);
 
             // ================================================
             // 6. Delete role

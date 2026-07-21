@@ -2,9 +2,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 namespace LTSBackend.Features.LoginHistory.Commands.DeleteOldHistory;
-public class DeleteOldHistoryHandler(AppDbContext context): IRequestHandler<DeleteOldHistoryCommand, int>
+
+public class DeleteOldHistoryHandler(AppDbContext context) : IRequestHandler<DeleteOldHistoryCommand, int>
 {
-    public async Task<int> Handle(DeleteOldHistoryCommand request,CancellationToken cancellationToken)
+    public async Task<int> Handle(DeleteOldHistoryCommand request, CancellationToken cancellationToken)
     {
         var cutOffDate = DateTime.UtcNow.AddDays(-request.Days);
 

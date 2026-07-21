@@ -8,9 +8,9 @@ using System.Security.Claims;
 
 namespace LTSBackend.Features.Cases.Commands.UpdateCaseStatus;
 
-public class UpdateCaseStatusHandler (AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseStatusHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseStatusCommand, bool>
+public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseStatusHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseStatusCommand, bool>
 {
-    public async Task<bool> Handle(UpdateCaseStatusCommand request,CancellationToken cancellationToken)
+    public async Task<bool> Handle(UpdateCaseStatusCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Case status update kia ja raha hai: {CaseID}", request.CaseID);
 

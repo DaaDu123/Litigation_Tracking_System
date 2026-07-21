@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 namespace LTSBackend.Features.Auth.Login;
+
 public class LoginValidator : AbstractValidator<LoginCommand>
 {
     public LoginValidator()

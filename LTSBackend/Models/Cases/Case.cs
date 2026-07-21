@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using LTSBackend.Models.Masters;
 using LTSBackend.Models.Security;
 namespace LTSBackend.Models.Cases;
+
 [Table("Cases")]
 public class Case
 {

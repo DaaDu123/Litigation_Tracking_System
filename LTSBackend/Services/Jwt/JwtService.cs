@@ -7,15 +7,8 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace LTSBackend.Services.Jwt;
 
-public class JwtService : IJwtService
+public class JwtService(IConfiguration _configuration) : IJwtService
 {
-    private readonly IConfiguration _configuration;
-
-    public JwtService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
     public string GenerateToken(User user)
     {
         var claims = new List<Claim>

@@ -8,7 +8,7 @@ namespace LTSBackend.Features.Roles.Commands.CreateRole;
 
 public sealed class CreateRoleHandler(AppDbContext _context) : IRequestHandler<CreateRoleCommand, int>
 {
-    public async Task<int> Handle(CreateRoleCommand request,CancellationToken cancellationToken)
+    public async Task<int> Handle(CreateRoleCommand request, CancellationToken cancellationToken)
     {
         request = request with
         {
@@ -16,7 +16,7 @@ public sealed class CreateRoleHandler(AppDbContext _context) : IRequestHandler<C
             PermissionIds = request.PermissionIds.Distinct().ToList()
         };
 
-        bool exists = await _context.Roles.AnyAsync(x =>x.RoleName.ToLower() == request.RoleName.ToLower(),cancellationToken);
+        bool exists = await _context.Roles.AnyAsync(x => x.RoleName.ToLower() == request.RoleName.ToLower(), cancellationToken);
         if (exists)
             throw new ValidationException(new()
             {
@@ -48,12 +48,12 @@ public sealed class CreateRoleHandler(AppDbContext _context) : IRequestHandler<C
             _context.Roles.Add(role);
             await _context.SaveChangesAsync(cancellationToken);
             var rolePermissions = validPermissions.Select(permissionId => new RolePermission
-                {
-                    RoleID = role.RoleID,
-                    PermissionID = permissionId
-                });
+            {
+                RoleID = role.RoleID,
+                PermissionID = permissionId
+            });
 
-            await _context.RolePermissions.AddRangeAsync(rolePermissions,cancellationToken);
+            await _context.RolePermissions.AddRangeAsync(rolePermissions, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return role.RoleID;

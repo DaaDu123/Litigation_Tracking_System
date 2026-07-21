@@ -196,9 +196,3 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Case status successfully updated"));
     }
 }
-
-public class UpdateCaseStatusRequest
-{
-    public int NewStatusID { get; set; }
-    public string? Remarks { get; set; }
-}

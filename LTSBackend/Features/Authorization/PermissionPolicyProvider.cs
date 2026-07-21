@@ -23,9 +23,9 @@ public class PermissionPolicyProvider : IAuthorizationPolicyProvider
         FallbackPolicyProvider = new DefaultAuthorizationPolicyProvider(options);
     }
 
-    public Task<AuthorizationPolicy> GetDefaultPolicyAsync()=> FallbackPolicyProvider.GetDefaultPolicyAsync();
+    public Task<AuthorizationPolicy> GetDefaultPolicyAsync() => FallbackPolicyProvider.GetDefaultPolicyAsync();
 
-    public Task<AuthorizationPolicy?> GetFallbackPolicyAsync()=> FallbackPolicyProvider.GetFallbackPolicyAsync();
+    public Task<AuthorizationPolicy?> GetFallbackPolicyAsync() => FallbackPolicyProvider.GetFallbackPolicyAsync();
 
     public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {

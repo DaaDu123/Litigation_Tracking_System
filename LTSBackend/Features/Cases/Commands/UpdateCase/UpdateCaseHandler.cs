@@ -8,8 +8,8 @@ using System.Security.Claims;
 
 namespace LTSBackend.Features.Cases.Commands.UpdateCase;
 
-public class UpdateCaseHandler (AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseCommand, bool>
-{   
+public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseCommand, bool>
+{
     public async Task<bool> Handle(
         UpdateCaseCommand request,
         CancellationToken cancellationToken)
@@ -178,7 +178,7 @@ public class UpdateCaseHandler (AppDbContext _context, IAuditService _auditServi
         // ================================================
         // 8. Create Audit Log
         // ================================================
-        var auditLog = _auditService.Create(currentUserId,$"Case Update: {caseToUpdate.CaseNumber}");
+        var auditLog = _auditService.Create(currentUserId, $"Case Update: {caseToUpdate.CaseNumber}");
         _context.AuditLogs.Add(auditLog);
 
         // ================================================

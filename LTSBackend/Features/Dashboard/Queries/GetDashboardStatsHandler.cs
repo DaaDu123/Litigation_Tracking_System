@@ -1,4 +1,5 @@
 ﻿using LTSBackend.Data;
+using LTSBackend.Features.Dashboard.DTO.cs;
 using LTSBackend.Features.Dashboard.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

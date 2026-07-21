@@ -12,5 +12,5 @@ public record UpdateUserCommand(
     IFormFile? ProfileImage
 ) : IRequest<bool>
 {
-    public int ActingUserID { get; init; }   // ✅ added
+    public int ActingUserID { get; init; }
 }

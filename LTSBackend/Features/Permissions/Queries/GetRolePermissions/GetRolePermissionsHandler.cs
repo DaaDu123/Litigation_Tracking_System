@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Permissions.Queries.GetRolePermissions;
 
-public class GetRolePermissionsHandler(AppDbContext context): IRequestHandler<GetRolePermissionsQuery, List<PermissionDTO>>
+public class GetRolePermissionsHandler(AppDbContext context) : IRequestHandler<GetRolePermissionsQuery, List<PermissionDTO>>
 {
-    public async Task<List<PermissionDTO>> Handle(GetRolePermissionsQuery request,CancellationToken cancellationToken)
+    public async Task<List<PermissionDTO>> Handle(GetRolePermissionsQuery request, CancellationToken cancellationToken)
     {
-        bool roleExists = await context.Roles.AnyAsync(x => x.RoleID == request.RoleID,cancellationToken);
+        bool roleExists = await context.Roles.AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
 
         if (!roleExists)
             throw new NotFoundException("Role not found.");

@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.LoginHistory.Queries.GetMyLoginHistory;
 
-public class GetMyLoginHistoryHandler(AppDbContext context): IRequestHandler<GetMyLoginHistoryQuery, List<MyLoginHistoryDTO>>
+public class GetMyLoginHistoryHandler(AppDbContext context) : IRequestHandler<GetMyLoginHistoryQuery, List<MyLoginHistoryDTO>>
 {
-    public async Task<List<MyLoginHistoryDTO>> Handle(GetMyLoginHistoryQuery request,CancellationToken cancellationToken)
+    public async Task<List<MyLoginHistoryDTO>> Handle(GetMyLoginHistoryQuery request, CancellationToken cancellationToken)
     {
         return await context.LoginHistories
             .AsNoTracking()

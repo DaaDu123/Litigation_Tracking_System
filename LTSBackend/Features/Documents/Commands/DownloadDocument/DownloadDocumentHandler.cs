@@ -5,9 +5,10 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Documents.Commands.DownloadDocument;
-public class DownloadDocumentHandler (AppDbContext _context, IDocumentPermissionService _permissionService, ILogger<DownloadDocumentHandler> _logger) : IRequestHandler<DownloadDocumentCommand, DocumentDownloadDTO>
+
+public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionService _permissionService, ILogger<DownloadDocumentHandler> _logger) : IRequestHandler<DownloadDocumentCommand, DocumentDownloadDTO>
 {
-    public async Task<DocumentDownloadDTO> Handle(DownloadDocumentCommand request,CancellationToken cancellationToken)
+    public async Task<DocumentDownloadDTO> Handle(DownloadDocumentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Document download request - ID: {DocumentId}, User: {UserId}",
             request.DocumentID,
@@ -16,11 +17,11 @@ public class DownloadDocumentHandler (AppDbContext _context, IDocumentPermission
         // ================================================
         // 1. Check download permission
         // ================================================
-        bool canDownload = await _permissionService.CanUserAccessDocumentAsync(request.UserID,request.DocumentID,"Download",cancellationToken);
+        bool canDownload = await _permissionService.CanUserAccessDocumentAsync(request.UserID, request.DocumentID, "Download", cancellationToken);
 
         if (!canDownload)
         {
-            _logger.LogWarning("User {UserId} denied download access to document {DocumentId}",request.UserID,request.DocumentID);
+            _logger.LogWarning("User {UserId} denied download access to document {DocumentId}", request.UserID, request.DocumentID);
             throw new UnauthorizedException("You don't have permission to download this document. " +
                 "If you are a restricted Moharrir, contact your administrator to grant access.");
         }
@@ -28,7 +29,7 @@ public class DownloadDocumentHandler (AppDbContext _context, IDocumentPermission
         // ================================================
         // 2. Fetch document
         // ================================================
-        var document = await _context.Documents.AsNoTracking().FirstOrDefaultAsync(x => x.DocumentID == request.DocumentID,cancellationToken);
+        var document = await _context.Documents.AsNoTracking().FirstOrDefaultAsync(x => x.DocumentID == request.DocumentID, cancellationToken);
 
         if (document == null)
         {
@@ -39,7 +40,7 @@ public class DownloadDocumentHandler (AppDbContext _context, IDocumentPermission
         // ================================================
         // 3. Check if file exists on disk
         // ================================================
-        var filePath = Path.Combine(Environment.CurrentDirectory,"wwwroot",document.FilePath.TrimStart('/'));
+        var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", document.FilePath.TrimStart('/'));
 
         if (!File.Exists(filePath))
         {
@@ -76,7 +77,7 @@ public class DownloadDocumentHandler (AppDbContext _context, IDocumentPermission
             FileSize = fileBytes.Length
         };
 
-        _logger.LogInformation("Document download prepared: {DocumentId}, FileName: {FileName}",request.DocumentID,document.FileName);
+        _logger.LogInformation("Document download prepared: {DocumentId}, FileName: {FileName}", request.DocumentID, document.FileName);
 
         return downloadDto;
     }

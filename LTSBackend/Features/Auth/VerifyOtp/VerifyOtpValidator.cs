@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 namespace LTSBackend.Features.Auth.VerifyOtp;
+
 public class VerifyOtpValidator : AbstractValidator<VerifyOtpCommand>
 {
     public VerifyOtpValidator()

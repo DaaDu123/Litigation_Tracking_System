@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using RefreshTokenEntity = LTSBackend.Models.Security.RefreshToken;
 
 namespace LTSBackend.Features.Auth.VerifyOtp;
+
 public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<VerifyOtpHandler> _logger) : IRequestHandler<VerifyOtpCommand, VerifyOtpResponseDTO>
 {
 

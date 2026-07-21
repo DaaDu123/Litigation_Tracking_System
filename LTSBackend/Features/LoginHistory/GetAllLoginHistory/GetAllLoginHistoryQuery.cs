@@ -4,5 +4,5 @@ using MediatR;
 
 namespace LTSBackend.Features.LoginHistory.Queries.GetAllLoginHistory;
 
-public record GetAllLoginHistoryQuery(string? Search,DateTime? FromDate,DateTime? ToDate,string? Status,
-    int PageNumber = 1,int PageSize = 10) : IRequest<PagedResult<LoginHistoryDTO>>;
+public record GetAllLoginHistoryQuery(string? Search, DateTime? FromDate, DateTime? ToDate, string? Status,
+    int PageNumber = 1, int PageSize = 10) : IRequest<PagedResult<LoginHistoryDTO>>;

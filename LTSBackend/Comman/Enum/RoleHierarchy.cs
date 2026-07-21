@@ -1,10 +1,11 @@
 ﻿namespace LTSBackend.Comman.Enum;
+
 public static class RoleHierarchy
 {
     // Lower number = higher privilege (UserRole enum values already follow this)
     public static bool CanAssignRole(UserRole actingUserRole, int targetRoleId)
     {
-        if (!System.Enum.IsDefined(typeof(UserRole), targetRoleId))   // ✅ fixed
+        if (!System.Enum.IsDefined(typeof(UserRole), targetRoleId))
             return false;
 
         var targetRole = (UserRole)targetRoleId;

@@ -4,22 +4,9 @@ using LTSBackend.Features.Users.Queries.GetAllUsers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, List<UserDTO>>
-{
-    private readonly AppDbContext _context;
-    private readonly ILogger<GetAllUsersQueryHandler> _logger;
-
-    public GetAllUsersQueryHandler(
-        AppDbContext context,
-        ILogger<GetAllUsersQueryHandler> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
-    public async Task<List<UserDTO>> Handle(
-        GetAllUsersQuery request,
-        CancellationToken cancellationToken)
+public class GetAllUsersQueryHandler (AppDbContext _context, ILogger<GetAllUsersQueryHandler> _logger) : IRequestHandler<GetAllUsersQuery, List<UserDTO>>
+{    
+    public async Task<List<UserDTO>> Handle(GetAllUsersQuery request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching all active users");
 

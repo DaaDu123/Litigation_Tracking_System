@@ -2,13 +2,14 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using LTSBackend.Comman.Enum;
 namespace LTSBackend.Models.Security;
+
 public class UserOtp
 {
     [Key]
     public int OtpID { get; set; }
-    [Required,MaxLength(150)]
+    [Required, MaxLength(150)]
     public string Email { get; set; } = string.Empty;
-    [Required,MaxLength(6)]
+    [Required, MaxLength(6)]
     public string OtpCode { get; set; } = string.Empty;
     [Required]
     public DateTime ExpiresAt { get; set; }

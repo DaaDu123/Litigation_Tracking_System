@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Users.Commands.CreateUser;
 
-public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _passwordService, IFileService _fileService, IAuditService _auditService, ILogger<CreateUserCommandHandler> _logger) : IRequestHandler<CreateUserCommand, int>
+public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _passwordService, IFileService _fileService, IAuditService _auditService, ILogger<CreateUserCommandHandler> _logger) : IRequestHandler<CreateUserCommand, int>
 {
     public async Task<int> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
@@ -63,7 +63,7 @@ public class CreateUserCommandHandler (AppDbContext _context, IPasswordService _
         var actingRole = actingUser?.GetRole();
         if (actingRole == null || !RoleHierarchy.CanAssignRole(actingRole.Value, request.RoleID.Value))
         {
-            _logger.LogWarning("User {ActingUserId} with role {ActingRole} attempted to assign disallowed role {TargetRoleId}",request.ActingUserID, actingRole, request.RoleID);
+            _logger.LogWarning("User {ActingUserId} with role {ActingRole} attempted to assign disallowed role {TargetRoleId}", request.ActingUserID, actingRole, request.RoleID);
             throw new ValidationException(["Aap ye role assign karne ke authorized nahi hain."]);
         }
         // ================================================

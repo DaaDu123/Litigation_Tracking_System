@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using LTSBackend.Models.Security;
 
 namespace LTSBackend.Models.Cases;
+
 [Table("CaseAssignments")]
 public class CaseAssignment
 {

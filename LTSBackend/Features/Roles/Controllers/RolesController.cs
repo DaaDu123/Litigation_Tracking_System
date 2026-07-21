@@ -34,22 +34,22 @@ public class RolesController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Create(CreateRoleCommand command)
     {
         var id = await mediator.Send(command);
-        return Ok(ApiResponse<int>.SuccessResponse(id,"Role created successfully."));
+        return Ok(ApiResponse<int>.SuccessResponse(id, "Role created successfully."));
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id,UpdateRoleCommand command)
+    public async Task<IActionResult> Update(int id, UpdateRoleCommand command)
     {
         if (id != command.RoleID)
             return BadRequest();
         var result = await mediator.Send(command);
-        return Ok(ApiResponse<bool>.SuccessResponse(result,"Role updated successfully."));
+        return Ok(ApiResponse<bool>.SuccessResponse(result, "Role updated successfully."));
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await mediator.Send(new DeleteRoleCommand(id));
-        return Ok(ApiResponse<bool>.SuccessResponse(result,"Role deleted successfully."));
+        return Ok(ApiResponse<bool>.SuccessResponse(result, "Role deleted successfully."));
     }
 }

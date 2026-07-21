@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.LoginHistory.Queries.GetAllLoginHistory;
 
-public class GetAllLoginHistoryHandler(AppDbContext context): IRequestHandler<GetAllLoginHistoryQuery, PagedResult<LoginHistoryDTO>>
+public class GetAllLoginHistoryHandler(AppDbContext context) : IRequestHandler<GetAllLoginHistoryQuery, PagedResult<LoginHistoryDTO>>
 {
-    public async Task<PagedResult<LoginHistoryDTO>> Handle(GetAllLoginHistoryQuery request,CancellationToken cancellationToken)
+    public async Task<PagedResult<LoginHistoryDTO>> Handle(GetAllLoginHistoryQuery request, CancellationToken cancellationToken)
     {
         var query = context.LoginHistories.AsNoTracking().Include(x => x.User).AsQueryable();
 
@@ -19,7 +19,7 @@ public class GetAllLoginHistoryHandler(AppDbContext context): IRequestHandler<Ge
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
-            query = query.Where(x =>x.User.FullName.Contains(search) || x.User.Email.Contains(search));
+            query = query.Where(x => x.User.FullName.Contains(search) || x.User.Email.Contains(search));
         }
 
         //----------------------------------------

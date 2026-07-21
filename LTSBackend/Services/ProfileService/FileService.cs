@@ -1,4 +1,5 @@
 ﻿namespace LTSBackend.Services.ProfileService;
+
 public class FileService(IWebHostEnvironment _environment, ILogger<FileService> _logger) : IFileService
 {
     public async Task<string> SaveFileAsync(IFormFile file, string folderName)

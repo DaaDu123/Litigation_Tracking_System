@@ -16,8 +16,7 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         // ================================================
         // 1. Find user
         // ================================================
-        var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
         {
@@ -50,7 +49,7 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         var actingRole = actingUser?.GetRole();
         if (actingRole == null || targetRole == null || (int)targetRole < (int)actingRole)
         {
-            _logger.LogWarning("User {ActingUserId} attempted to deactivate higher-privileged user {TargetUserId}",request.ActingUserID, request.UserID);
+            _logger.LogWarning("User {ActingUserId} attempted to deactivate higher-privileged user {TargetUserId}", request.ActingUserID, request.UserID);
             throw new ValidationException(["Aap is user ko deactivate karne ke authorized nahi hain."]);
         }
 
@@ -64,9 +63,7 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         // ================================================
         // 4. Revoke all active refresh tokens
         // ================================================
-        var activeTokens = await _context.RefreshTokens
-            .Where(x => x.UserID == request.UserID && !x.IsRevoked)
-            .ToListAsync(cancellationToken);
+        var activeTokens = await _context.RefreshTokens.Where(x => x.UserID == request.UserID && !x.IsRevoked).ToListAsync(cancellationToken);
 
         foreach (var token in activeTokens)
         {

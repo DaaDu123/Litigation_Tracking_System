@@ -1,4 +1,5 @@
 ﻿namespace LTSBackend.Comman.Exceptions;
+
 public class ValidationException : Exception
 {
     public List<string> Errors { get; }

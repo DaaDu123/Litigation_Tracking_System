@@ -10,7 +10,7 @@ namespace LTSBackend.Features.Cases.Commands.CreateCase;
 
 public class CreateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<CreateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateCaseCommand, long>
 {
-    public async Task<long> Handle(CreateCaseCommand request,CancellationToken cancellationToken)
+    public async Task<long> Handle(CreateCaseCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Naya Case create kia ja raha hai: {CaseNumber}", request.CaseNumber);
 

@@ -10,6 +10,10 @@ using LTSBackend.Features.Hearings.DTOs;
 using LTSBackend.Features.Hearings.Queries.GetCaseHearings;
 using LTSBackend.Features.Hearings.Queries.GetHearingById;
 using LTSBackend.Features.Hearings.Queries.GetUpcomingHearings;
+using LTSBackend.Features.Hearings.Commands.RecordAttendance;
+using LTSBackend.Features.Hearings.Commands.UpdateAttendance;
+using LTSBackend.Features.Hearings.Commands.DeleteAttendance;
+using LTSBackend.Features.Hearings.Queries.GetHearingAttendance;
 using LTSBackend.Models.Security;
 
 namespace LTSBackend.Features.Hearings.Controllers
@@ -108,6 +112,51 @@ namespace LTSBackend.Features.Hearings.Controllers
             var command = new DeleteHearingCommand { HearingId = id };
             var result = await _mediator.Send(command);
             return Ok(new ApiResponse<bool> { Success = result, Data = result, Message = "Hearing deleted successfully" });
+        }
+
+        // ================================================================
+        // HEARING ATTENDANCE
+        // SRS Reference: Complete Database Schema - HearingAttendance table
+        // Fixes Critical Issue: "Hearing Attendance Tracking" had model but no API
+        // ================================================================
+
+        [HttpPost("{hearingId}/attendance")]
+        [Authorize(Roles = RoleNames.AllFirmUsers)]
+        [ProducesResponseType(typeof(ApiResponse<long>), 201)]
+        public async Task<IActionResult> RecordAttendance(long hearingId, [FromBody] RecordAttendanceDTO dto)
+        {
+            dto.HearingId = hearingId;
+            var attendanceId = await _mediator.Send(new RecordAttendanceCommand { Attendance = dto });
+            return CreatedAtAction(nameof(GetHearingAttendance), new { hearingId },
+                new ApiResponse<long> { Success = true, Data = attendanceId, Message = "Attendance recorded successfully" });
+        }
+
+        [HttpGet("{hearingId}/attendance")]
+        [Authorize(Roles = RoleNames.AllFirmUsers)]
+        [ProducesResponseType(typeof(ApiResponse<List<HearingAttendanceDTO>>), 200)]
+        public async Task<IActionResult> GetHearingAttendance(long hearingId)
+        {
+            var result = await _mediator.Send(new GetHearingAttendanceQuery { HearingId = hearingId });
+            return Ok(new ApiResponse<List<HearingAttendanceDTO>> { Success = true, Data = result });
+        }
+
+        [HttpPut("{hearingId}/attendance/{attendanceId}")]
+        [Authorize(Roles = RoleNames.AllFirmUsers)]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        public async Task<IActionResult> UpdateAttendance(long hearingId, long attendanceId, [FromBody] UpdateAttendanceCommand command)
+        {
+            command.AttendanceId = attendanceId;
+            var result = await _mediator.Send(command);
+            return Ok(new ApiResponse<bool> { Success = result, Data = result, Message = "Attendance updated successfully" });
+        }
+
+        [HttpDelete("{hearingId}/attendance/{attendanceId}")]
+        [Authorize(Roles = RoleNames.PartnerAndAbove)]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        public async Task<IActionResult> DeleteAttendance(long hearingId, long attendanceId)
+        {
+            var result = await _mediator.Send(new DeleteAttendanceCommand { AttendanceId = attendanceId });
+            return Ok(new ApiResponse<bool> { Success = result, Data = result, Message = "Attendance deleted successfully" });
         }
     }
 }

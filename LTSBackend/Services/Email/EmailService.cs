@@ -2,15 +2,9 @@
 using MailKit.Security;
 using MimeKit;
 namespace LTSBackend.Services.Email;
-public class EmailService : IEmailService
+
+public class EmailService(IConfiguration _configuration, ILogger<EmailService> _logger) : IEmailService
 {
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<EmailService> _logger;
-    public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
-    {
-        _configuration = configuration;
-        _logger = logger;
-    }
     public async Task SendOtpEmailAsync(string toEmail, string fullName, string otpCode)
     {
         try
@@ -21,8 +15,7 @@ public class EmailService : IEmailService
             string senderName = _configuration["EmailSettings:SenderName"]!;
             string appPassword = _configuration["EmailSettings:AppPassword"]!;
 
-            _logger.LogInformation("SMTP Configuration - Host: {Host}, Port: {Port}, Sender: {Sender}",
-                smtpHost, smtpPort, senderEmail);
+            _logger.LogInformation("SMTP Configuration - Host: {Host}, Port: {Port}, Sender: {Sender}",smtpHost, smtpPort, senderEmail);
 
             var email = new MimeMessage();
             email.From.Add(new MailboxAddress(senderName, senderEmail));

@@ -16,7 +16,14 @@ public class HearingAttendance
     [Required]
     public int UserID { get; set; }
 
+    [MaxLength(100)]
+    public string? AttendanceRole { get; set; }
+
     public bool Present { get; set; } = true;
+
+    public DateTime? ArrivalTime { get; set; }
+
+    public DateTime? DepartureTime { get; set; }
 
     [MaxLength(255)]
     public string? Remarks { get; set; }

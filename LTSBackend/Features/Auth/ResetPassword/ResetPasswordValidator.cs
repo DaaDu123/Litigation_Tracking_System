@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 
 namespace LTSBackend.Features.Auth.ResetPassword;
+
 public class ResetPasswordValidator : AbstractValidator<ResetPasswordCommand>
 {
     public ResetPasswordValidator()

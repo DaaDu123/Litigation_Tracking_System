@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 
 namespace LTSBackend.Features.Auth.Register;
+
 public class RegisterHandler(AppDbContext _context, IPasswordService _passwordService, IEmailService _emailService, IAuditService _auditService, ILogger<RegisterHandler> _logger) : IRequestHandler<RegisterCommand, RegisterResponseDTO>
 {
 
@@ -37,7 +38,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         // ================================================
         var defaultRole = await _context.Roles
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.RoleID == (int)UserRole.InternParalegal,cancellationToken);
+            .FirstOrDefaultAsync(x => x.RoleID == (int)UserRole.InternParalegal, cancellationToken);
 
         if (defaultRole == null)
         {

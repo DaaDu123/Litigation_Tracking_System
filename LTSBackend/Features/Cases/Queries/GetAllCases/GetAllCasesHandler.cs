@@ -7,9 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Cases.Queries.GetAllCases;
 
-public class GetAllCasesHandler (AppDbContext _context, ILogger<GetAllCasesHandler> _logger) : IRequestHandler<GetAllCasesQuery, PagedResult<CaseDTO>>
+public class GetAllCasesHandler(AppDbContext _context, ILogger<GetAllCasesHandler> _logger) : IRequestHandler<GetAllCasesQuery, PagedResult<CaseDTO>>
 {
-    public async Task<PagedResult<CaseDTO>> Handle(GetAllCasesQuery request,CancellationToken cancellationToken)
+    public async Task<PagedResult<CaseDTO>> Handle(GetAllCasesQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Cases fetch kiye ja rahe hain - Page: {PageNumber}, Size: {PageSize}",
             request.PageNumber,

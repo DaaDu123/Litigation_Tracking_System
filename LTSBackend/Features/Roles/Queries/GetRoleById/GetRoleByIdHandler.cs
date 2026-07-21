@@ -5,20 +5,10 @@ using LTSBackend.Features.Roles.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 namespace LTSBackend.Features.Roles.Queries.GetRoleById;
-public class GetRoleByIdHandler : IRequestHandler<GetRoleByIdQuery, RoleDTO>
+
+public class GetRoleByIdHandler (AppDbContext _context, ILogger<GetRoleByIdHandler> _logger) : IRequestHandler<GetRoleByIdQuery, RoleDTO>
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<GetRoleByIdHandler> _logger;
-
-    public GetRoleByIdHandler(AppDbContext context, ILogger<GetRoleByIdHandler> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
-    public async Task<RoleDTO> Handle(
-        GetRoleByIdQuery request,
-        CancellationToken cancellationToken)
+    public async Task<RoleDTO> Handle(GetRoleByIdQuery request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching role: {RoleID}", request.RoleID);
 
@@ -26,9 +16,7 @@ public class GetRoleByIdHandler : IRequestHandler<GetRoleByIdQuery, RoleDTO>
             .AsNoTracking()
             .Include(x => x.RolePermissions)
             .ThenInclude(x => x.Permission)
-            .FirstOrDefaultAsync(
-                x => x.RoleID == request.RoleID,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.RoleID == request.RoleID,cancellationToken);
 
         if (role == null)
         {
