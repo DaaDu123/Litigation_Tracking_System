@@ -17,6 +17,13 @@ public class JwtService(IConfiguration _configuration) : IJwtService
             new(ClaimTypes.Email, user.Email)
         };
 
+        // FirmID claim - drives multi-tenant row-level scoping on every
+        // request (null/absent for SuperAdmin = no firm restriction).
+        if (user.FirmID.HasValue)
+        {
+            claims.Add(new Claim("FirmID", user.FirmID.Value.ToString()));
+        }
+
         // Add role claim
         var role = user.GetRole();
         if (role.HasValue)
