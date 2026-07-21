@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
     // ✅ SECURITY MODELS (User, Role, Permission)
     // ================================================================
     public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Firm> Firms { get; set; } = null!;
     public DbSet<Role> Roles { get; set; } = null!;
     public DbSet<Permission> Permissions { get; set; } = null!;
     public DbSet<NotificationType> NotificationTypes { get; set; } = null!;
@@ -89,9 +90,22 @@ public class AppDbContext : DbContext
             entity.Property(e => e.FullName).IsRequired();
             entity.Property(e => e.PasswordHash).IsRequired();
             entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasOne(e => e.Firm).WithMany(f => f.Users).HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.FirmID);
             entity.HasMany(e => e.RefreshTokens).WithOne(r => r.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.UserOtps).WithOne(o => o.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.LoginHistories).WithOne(l => l.User).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ================================================================
+        // ✅ FIRM ENTITY CONFIGURATION (multi-tenant workspace)
+        // ================================================================
+        modelBuilder.Entity<Firm>(entity =>
+        {
+            entity.HasKey(e => e.FirmID);
+            entity.Property(e => e.FirmName).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.FirmCode).IsRequired().HasMaxLength(30);
+            entity.HasIndex(e => e.FirmCode).IsUnique();
         });
 
         // ================================================================
@@ -186,6 +200,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Priority).IsRequired().HasMaxLength(20);
             entity.Property(e => e.SubjectMatter).IsRequired().HasMaxLength(255);
 
+            entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Court).WithMany().HasForeignKey(e => e.CourtID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryID).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(e => e.Status).WithMany().HasForeignKey(e => e.StatusID).OnDelete(DeleteBehavior.NoAction);
@@ -198,6 +213,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.CourtID);
             entity.HasIndex(e => e.CategoryID);
             entity.HasIndex(e => e.CaseNumber);
+            entity.HasIndex(e => e.FirmID);
         });
 
         // ================================================================

@@ -25,17 +25,24 @@ public class User
     [MaxLength(100)]
     public string? Designation { get; set; }
     public int? RoleID { get; set; }
+    /// <summary>
+    /// Firm this user belongs to. Null only for the platform-level
+    /// SuperAdmin - every other role must belong to exactly one firm.
+    /// </summary>
+    public int? FirmID { get; set; }
     public bool IsExternal { get; set; } = false;
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; } = false;
     public DateTime? LastLogin { get; set; }
-    public int FailedLoginAttempts { get; set; } = 0;
-    public DateTime? PasswordChangedDate { get; set; }
+    public int FailedLoginAttempts { get; set; } = 0;          // ✅ added
+    public DateTime? PasswordChangedDate { get; set; }          // ✅ added (was in SQL, missing in model)
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     // Foreign Keys & Navigation Properties
     [ForeignKey(nameof(RoleID))]
     public Role? Role { get; set; }
+    [ForeignKey(nameof(FirmID))]
+    public Firm? Firm { get; set; }
     // Collections
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
     public ICollection<UserOtp> UserOtps { get; set; } = [];
