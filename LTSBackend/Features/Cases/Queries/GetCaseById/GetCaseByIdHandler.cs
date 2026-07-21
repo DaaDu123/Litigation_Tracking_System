@@ -1,21 +1,22 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.Cases.DTOs;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Cases.Queries.GetCaseById;
 
-public class GetCaseByIdHandler(AppDbContext _context, ILogger<GetCaseByIdHandler> _logger) : IRequestHandler<GetCaseByIdQuery, CaseDTO?>
+public class GetCaseByIdHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<GetCaseByIdHandler> _logger) : IRequestHandler<GetCaseByIdQuery, CaseDTO?>
 {
     public async Task<CaseDTO?> Handle(GetCaseByIdQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Case fetch kia ja raha hai: {CaseID}", request.CaseID);
 
         // ================================================
-        // 1. Find case with all relations
+        // 1. Find case with all relations (firm-scoped)
         // ================================================
-        var caseRecord = await _context.Cases
+        var query = _context.Cases
             .AsNoTracking()
             .Include(x => x.Court)
             .Include(x => x.Category)
@@ -23,7 +24,14 @@ public class GetCaseByIdHandler(AppDbContext _context, ILogger<GetCaseByIdHandle
             .Include(x => x.Stage)
             .Include(x => x.Department)
             .Include(x => x.LegalOfficer)
-            .FirstOrDefaultAsync(x => x.CaseID == request.CaseID, cancellationToken);
+            .Where(x => x.CaseID == request.CaseID);
+
+        if (!_currentUser.IsSuperAdmin)
+        {
+            query = query.Where(x => x.FirmID == _currentUser.FirmID);
+        }
+
+        var caseRecord = await query.FirstOrDefaultAsync(cancellationToken);
 
         if (caseRecord == null)
         {

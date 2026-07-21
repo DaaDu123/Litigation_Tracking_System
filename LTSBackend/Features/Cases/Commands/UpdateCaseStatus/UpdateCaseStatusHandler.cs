@@ -2,13 +2,14 @@
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LTSBackend.Features.Cases.Commands.UpdateCaseStatus;
 
-public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseStatusHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseStatusCommand, bool>
+public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseStatusHandler> _logger, IHttpContextAccessor _httpContextAccessor, ICurrentUserService _currentUser) : IRequestHandler<UpdateCaseStatusCommand, bool>
 {
     public async Task<bool> Handle(UpdateCaseStatusCommand request, CancellationToken cancellationToken)
     {
@@ -17,10 +18,14 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
         int currentUserId = GetCurrentUserId();
 
         // ================================================
-        // 1. Find Case
+        // 1. Find Case (firm-scoped)
         // ================================================
-        var caseToUpdate = await _context.Cases
-            .FirstOrDefaultAsync(x => x.CaseID == request.CaseID, cancellationToken);
+        var caseQuery = _context.Cases.Where(x => x.CaseID == request.CaseID);
+        if (!_currentUser.IsSuperAdmin)
+        {
+            caseQuery = caseQuery.Where(x => x.FirmID == _currentUser.FirmID);
+        }
+        var caseToUpdate = await caseQuery.FirstOrDefaultAsync(cancellationToken);
 
         if (caseToUpdate == null)
         {

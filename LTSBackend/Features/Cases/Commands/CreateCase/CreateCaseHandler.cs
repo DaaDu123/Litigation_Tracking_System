@@ -2,29 +2,38 @@
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LTSBackend.Features.Cases.Commands.CreateCase;
 
-public class CreateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<CreateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateCaseCommand, long>
+public class CreateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<CreateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor, ICurrentUserService _currentUser) : IRequestHandler<CreateCaseCommand, long>
 {
     public async Task<long> Handle(CreateCaseCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Naya Case create kia ja raha hai: {CaseNumber}", request.CaseNumber);
 
         // ================================================
-        // Get logged-in user ID
+        // Get logged-in user ID + firm (multi-tenancy)
         // ================================================
         int currentUserId = GetCurrentUserId();
 
+        if (_currentUser.FirmID == null)
+        {
+            _logger.LogWarning("User {UserId} without a firm attempted to create a case", currentUserId);
+            throw new ValidationException(["Aap kisi firm se mansoob nahi hain, is liye case create nahi kar sakte."]);
+        }
+        int firmId = _currentUser.FirmID.Value;
+
         // ================================================
         // 1. Check agar Case Number pehle se exist karta hai
+        //    (scoped to this firm - other firms may reuse numbers)
         // ================================================
         bool caseExists = await _context.Cases
             .AsNoTracking()
-            .AnyAsync(x => x.CaseNumber == request.CaseNumber, cancellationToken);
+            .AnyAsync(x => x.CaseNumber == request.CaseNumber && x.FirmID == firmId, cancellationToken);
 
         if (caseExists)
         {
@@ -82,7 +91,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             .FirstOrDefaultAsync(
                 x => x.UserID == request.CurrentLegalOfficerID &&
                      x.IsActive &&
-                     !x.IsDeleted,
+                     !x.IsDeleted &&
+                     x.FirmID == firmId,
                 cancellationToken);
 
         if (legalOfficer == null)
@@ -132,6 +142,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         // ================================================
         var newCase = new Case
         {
+            FirmID = firmId,
             InternalReferenceNo = internalRefNo,
             CaseNumber = request.CaseNumber,
             CaseTitle = request.CaseTitle,

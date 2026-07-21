@@ -23,7 +23,9 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
         _logger = logger;
     }
 
-    public async Task<bool> Handle(UpdateRoleCommand request,CancellationToken cancellationToken)
+    public async Task<bool> Handle(
+        UpdateRoleCommand request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating role: {RoleID}", request.RoleID);
 
@@ -33,7 +35,9 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
         request = request with
         {
             RoleName = request.RoleName.Trim(),
-            PermissionIds = request.PermissionIds.Distinct().ToList()
+            PermissionIds = request.PermissionIds
+                .Distinct()
+                .ToList()
         };
 
         // ================================================
@@ -41,7 +45,9 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
         // ================================================
         var role = await _context.Roles
             .Include(x => x.RolePermissions)
-            .FirstOrDefaultAsync(x => x.RoleID == request.RoleID,cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.RoleID == request.RoleID,
+                cancellationToken);
 
         if (role == null)
         {
@@ -53,12 +59,16 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
         // 3. Check if new role name is unique
         // ================================================
         bool roleExists = await _context.Roles
-            .AnyAsync(x =>x.RoleID != request.RoleID &&x.RoleName.ToLower() == request.RoleName.ToLower(),cancellationToken);
+            .AnyAsync(x =>
+                x.RoleID != request.RoleID &&
+                x.RoleName.ToLower() == request.RoleName.ToLower(),
+                cancellationToken);
 
         if (roleExists)
         {
             _logger.LogWarning("Update failed: Role name already exists: {RoleName}", request.RoleName);
-            throw new ValidationException( new List<string> { $"Role '{request.RoleName}' already exists." });
+            throw new ValidationException(
+                new List<string> { $"Role '{request.RoleName}' already exists." });
         }
 
         if (ProtectedRoles.Contains(role.RoleName, StringComparer.OrdinalIgnoreCase))
@@ -82,13 +92,15 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
         if (validPermissions.Count != request.PermissionIds.Count)
         {
             _logger.LogWarning("Update failed: Invalid permissions for role: {RoleID}", request.RoleID);
-            throw new ValidationException(new List<string> { "One or more permissions are invalid." });
+            throw new ValidationException(
+                new List<string> { "One or more permissions are invalid." });
         }
 
         // ================================================
         // 5. Begin transaction
         // ================================================
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync(cancellationToken);
 
         try
         {
@@ -109,17 +121,23 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
             // ================================================
             // 8. Assign new permissions
             // ================================================
-            var rolePermissions = validPermissions.Select(permissionId => new RolePermission
+            var rolePermissions = validPermissions
+                .Select(permissionId => new RolePermission
                 {
                     RoleID = role.RoleID,
                     PermissionID = permissionId
                 });
 
-            await _context.RolePermissions.AddRangeAsync(rolePermissions,cancellationToken);
+            await _context.RolePermissions.AddRangeAsync(
+                rolePermissions,
+                cancellationToken);
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Role {RoleID} assigned {Count} new permissions",request.RoleID,validPermissions.Count);
+            _logger.LogInformation(
+                "Role {RoleID} assigned {Count} new permissions",
+                request.RoleID,
+                validPermissions.Count);
 
             // ================================================
             // 9. Commit transaction

@@ -7,7 +7,9 @@ using System.Security.Claims;
 
 namespace LTSBackend.Features.Milestones.Commands.CompleteMilestone
 {
-    public class CompleteMilestoneHandler(AppDbContext _context,IAuditService _auditService,
+    public class CompleteMilestoneHandler(
+        AppDbContext _context,
+        IAuditService _auditService,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CompleteMilestoneCommand, bool>
     {
         public async Task<bool> Handle(CompleteMilestoneCommand request, CancellationToken cancellationToken)

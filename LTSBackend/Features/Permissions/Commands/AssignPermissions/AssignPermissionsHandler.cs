@@ -24,7 +24,9 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
         _logger = logger;
     }
 
-    public async Task<bool> Handle(AssignPermissionsCommand request,CancellationToken cancellationToken)
+    public async Task<bool> Handle(
+        AssignPermissionsCommand request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation(
             "Assigning {Count} permissions to role: {RoleID}",
@@ -43,7 +45,9 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
         // ================================================
         var role = await _context.Roles
             .Include(x => x.RolePermissions)
-            .FirstOrDefaultAsync(x => x.RoleID == request.RoleID,cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.RoleID == request.RoleID,
+                cancellationToken);
 
         if (role == null)
         {

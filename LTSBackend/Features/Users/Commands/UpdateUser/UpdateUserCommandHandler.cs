@@ -16,7 +16,8 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         // ================================================
         // 1. Find user
         // ================================================
-        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
+        var user = await _context.Users
+            .FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
         {
@@ -27,7 +28,8 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         // ================================================
         // 2. Check if new email is unique
         // ================================================
-        bool emailExists = await _context.Users.AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
+        bool emailExists = await _context.Users
+            .AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
 
         if (emailExists)
         {
@@ -50,7 +52,8 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             throw new ValidationException([$"Invalid role. Role ID {request.RoleID} does not exist."]);
         }
 
-        bool roleExists = await _context.Roles.AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
+        bool roleExists = await _context.Roles
+            .AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
 
         if (!roleExists)
         {
@@ -73,6 +76,16 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             _logger.LogWarning("User {ActingUserId} with role {ActingRole} attempted to assign disallowed role {TargetRoleId}",
                 request.ActingUserID, actingRole, request.RoleID);
             throw new ValidationException(["Aap ye role assign karne ke authorized nahi hain."]);
+        }
+
+        // ================================================
+        // 3c. Multi-tenancy: can only edit users in your own firm
+        // (SuperAdmin, whose FirmID is null, bypasses this check)
+        // ================================================
+        if (actingUser!.FirmID != null && user.FirmID != actingUser.FirmID)
+        {
+            _logger.LogWarning("User {ActingUserId} attempted to update a user from a different firm: {TargetUserId}", request.ActingUserID, request.UserID);
+            throw new ValidationException(["Aap sirf apni firm ke users edit kar sakte hain."]);
         }
 
         // ================================================

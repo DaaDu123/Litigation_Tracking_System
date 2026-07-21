@@ -2,13 +2,14 @@
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LTSBackend.Features.Cases.Commands.UpdateCase;
 
-public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseCommand, bool>
+public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor, ICurrentUserService _currentUser) : IRequestHandler<UpdateCaseCommand, bool>
 {
     public async Task<bool> Handle(
         UpdateCaseCommand request,
@@ -19,10 +20,14 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         int currentUserId = GetCurrentUserId();
 
         // ================================================
-        // 1. Find Case
+        // 1. Find Case (firm-scoped - can't touch another firm's case)
         // ================================================
-        var caseToUpdate = await _context.Cases
-            .FirstOrDefaultAsync(x => x.CaseID == request.CaseID, cancellationToken);
+        var caseQuery = _context.Cases.Where(x => x.CaseID == request.CaseID);
+        if (!_currentUser.IsSuperAdmin)
+        {
+            caseQuery = caseQuery.Where(x => x.FirmID == _currentUser.FirmID);
+        }
+        var caseToUpdate = await caseQuery.FirstOrDefaultAsync(cancellationToken);
 
         if (caseToUpdate == null)
         {
@@ -115,7 +120,8 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
             bool duplicateExists = await _context.Cases
                 .AsNoTracking()
                 .AnyAsync(x => x.CaseNumber == request.CaseNumber &&
-                               x.CaseID != request.CaseID,
+                               x.CaseID != request.CaseID &&
+                               x.FirmID == caseToUpdate.FirmID,
                     cancellationToken);
 
             if (duplicateExists)

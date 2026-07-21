@@ -8,6 +8,7 @@ using LTSBackend.Features.Authorization;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.BackgroundServices;
+using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.DocumentPermissions;
 using LTSBackend.Services.Email;
 using LTSBackend.Services.Jwt;
@@ -103,6 +104,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddHostedService<ReminderService>();
 #region Service Registration
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // Authentication & Security Services
 builder.Services.AddScoped<IPasswordService, PasswordService>();

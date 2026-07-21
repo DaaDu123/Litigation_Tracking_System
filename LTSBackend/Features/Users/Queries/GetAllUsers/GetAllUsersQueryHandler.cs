@@ -1,18 +1,28 @@
 ﻿using LTSBackend.Data;
 using LTSBackend.Features.Users.DTOs;
 using LTSBackend.Features.Users.Queries.GetAllUsers;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-public class GetAllUsersQueryHandler (AppDbContext _context, ILogger<GetAllUsersQueryHandler> _logger) : IRequestHandler<GetAllUsersQuery, List<UserDTO>>
-{    
-    public async Task<List<UserDTO>> Handle(GetAllUsersQuery request,CancellationToken cancellationToken)
+public class GetAllUsersQueryHandler(AppDbContext _context,ICurrentUserService _currentUser,
+    ILogger<GetAllUsersQueryHandler> _logger) : IRequestHandler<GetAllUsersQuery, List<UserDTO>>
+{   
+    public async Task<List<UserDTO>> Handle(
+        GetAllUsersQuery request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching all active users");
 
-        var users = await _context.Users
-            .AsNoTracking()
-            .Where(x => x.IsActive && !x.IsDeleted)
+        var query = _context.Users.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted);
+
+        // Multi-tenancy: everyone except SuperAdmin only sees their own firm's users.
+        if (!_currentUser.IsSuperAdmin)
+        {
+            query = query.Where(x => x.FirmID == _currentUser.FirmID);
+        }
+
+        var users = await query
             .Include(x => x.Role)
             .OrderBy(x => x.FullName)
             .Select(x => new UserDTO

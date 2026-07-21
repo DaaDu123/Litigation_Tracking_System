@@ -7,13 +7,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Profile.Queries;
 
-public class GetMyProfileHandler (AppDbContext _context, ILogger<GetMyProfileHandler> _logger) : IRequestHandler<GetMyProfileQuery, ProfileDTO>
+public class GetMyProfileHandler : IRequestHandler<GetMyProfileQuery, ProfileDTO>
 {
-    public async Task<ProfileDTO> Handle(GetMyProfileQuery request,CancellationToken cancellationToken)
+    private readonly AppDbContext _context;
+    private readonly ILogger<GetMyProfileHandler> _logger;
+
+    public GetMyProfileHandler(AppDbContext context, ILogger<GetMyProfileHandler> logger)
+    {
+        _context = context;
+        _logger = logger;
+    }
+
+    public async Task<ProfileDTO> Handle(
+        GetMyProfileQuery request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching profile for user: {UserId}", request.UserID);
 
-        var user = await _context.Users.AsNoTracking().Include(x => x.Role).FirstOrDefaultAsync(x => x.UserID == request.UserID,cancellationToken);
+        var user = await _context.Users
+            .AsNoTracking()
+            .Include(x => x.Role)
+            .FirstOrDefaultAsync(
+                x => x.UserID == request.UserID,
+                cancellationToken);
 
         if (user == null)
         {

@@ -3,18 +3,43 @@ using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Users.DTOs;
 using LTSBackend.Features.Users.Queries.GetUserById;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-public class GetUserByIdQueryHandler (AppDbContext _context, ILogger<GetUserByIdQueryHandler> _logger) : IRequestHandler<GetUserByIdQuery, UserDTO?>
+public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDTO?>
 {
-    public async Task<UserDTO?> Handle(GetUserByIdQuery request,CancellationToken cancellationToken)
+    private readonly AppDbContext _context;
+    private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<GetUserByIdQueryHandler> _logger;
+
+    public GetUserByIdQueryHandler(
+        AppDbContext context,
+        ICurrentUserService currentUser,
+        ILogger<GetUserByIdQueryHandler> logger)
+    {
+        _context = context;
+        _currentUser = currentUser;
+        _logger = logger;
+    }
+
+    public async Task<UserDTO?> Handle(
+        GetUserByIdQuery request,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching user: {UserId}", request.UserID);
 
-        var user = await _context.Users
+        var query = _context.Users
             .AsNoTracking()
-            .Where(x => x.IsActive && !x.IsDeleted && x.UserID == request.UserID)
+            .Where(x => x.IsActive && !x.IsDeleted && x.UserID == request.UserID);
+
+        // Multi-tenancy: can't fetch a user outside your own firm.
+        if (!_currentUser.IsSuperAdmin)
+        {
+            query = query.Where(x => x.FirmID == _currentUser.FirmID);
+        }
+
+        var user = await query
             .Include(x => x.Role)
             .Select(x => new UserDTO
             {

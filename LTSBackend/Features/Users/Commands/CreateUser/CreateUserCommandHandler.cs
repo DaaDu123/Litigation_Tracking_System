@@ -67,6 +67,19 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             throw new ValidationException(["Aap ye role assign karne ke authorized nahi hain."]);
         }
         // ================================================
+        // 2c. Multi-tenancy: new user inherits the acting user's
+        // firm. SuperAdmin has no firm of their own, so they can't
+        // create firm-scoped users via this endpoint - firms are
+        // bootstrapped (with their first Firm Admin) via
+        // POST /api/firms instead.
+        // ================================================
+        if (actingUser.FirmID == null)
+        {
+            _logger.LogWarning("SuperAdmin {ActingUserId} attempted to create a user via /api/users instead of /api/firms", request.ActingUserID);
+            throw new ValidationException(["SuperAdmin naya firm user is endpoint se nahi bana sakta - pehle POST /api/firms se firm banayein."]);
+        }
+
+        // ================================================
         // 3. Get role details
         // ================================================
         var role = await _context.Roles
@@ -131,6 +144,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             Designation = null,
             ProfileImage = profileImagePath,
             RoleID = request.RoleID.Value,
+            FirmID = actingUser.FirmID,
             IsExternal = false,
             IsActive = true,
             IsDeleted = false,

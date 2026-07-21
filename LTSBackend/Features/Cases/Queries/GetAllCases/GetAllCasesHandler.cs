@@ -2,12 +2,13 @@
 using LTSBackend.Data;
 using LTSBackend.Features.Cases.DTOs;
 using LTSBackend.Features.Cases.Queries.GetAllCases;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Cases.Queries.GetAllCases;
 
-public class GetAllCasesHandler(AppDbContext _context, ILogger<GetAllCasesHandler> _logger) : IRequestHandler<GetAllCasesQuery, PagedResult<CaseDTO>>
+public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<GetAllCasesHandler> _logger) : IRequestHandler<GetAllCasesQuery, PagedResult<CaseDTO>>
 {
     public async Task<PagedResult<CaseDTO>> Handle(GetAllCasesQuery request, CancellationToken cancellationToken)
     {
@@ -27,6 +28,12 @@ public class GetAllCasesHandler(AppDbContext _context, ILogger<GetAllCasesHandle
             .Include(x => x.Department)
             .Include(x => x.LegalOfficer)
             .AsQueryable();
+
+        // Multi-tenancy: everyone except SuperAdmin only sees their own firm's cases.
+        if (!_currentUser.IsSuperAdmin)
+        {
+            query = query.Where(x => x.FirmID == _currentUser.FirmID);
+        }
 
         // ================================================
         // 2. Search filter - Case Number, Title, or Reference

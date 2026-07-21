@@ -12,8 +12,17 @@ namespace LTSBackend.Features.Profile.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
-public class ProfileController(IMediator _mediator, ILogger<ProfileController> _logger) : ControllerBase
-{    
+public class ProfileController : ControllerBase
+{
+    private readonly IMediator _mediator;
+    private readonly ILogger<ProfileController> _logger;
+
+    public ProfileController(IMediator mediator, ILogger<ProfileController> logger)
+    {
+        _mediator = mediator;
+        _logger = logger;
+    }
+
     // =====================================================
     // GET MY PROFILE
     // =====================================================

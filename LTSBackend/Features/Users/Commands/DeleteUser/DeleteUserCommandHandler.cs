@@ -16,7 +16,8 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         // ================================================
         // 1. Find user
         // ================================================
-        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
+        var user = await _context.Users
+            .FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
         {
@@ -54,6 +55,16 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         }
 
         // ================================================
+        // 2d. Multi-tenancy: can only deactivate users in your own
+        // firm (SuperAdmin, FirmID == null, bypasses this check)
+        // ================================================
+        if (actingUser!.FirmID != null && user.FirmID != actingUser.FirmID)
+        {
+            _logger.LogWarning("User {ActingUserId} attempted to deactivate a user from a different firm: {TargetUserId}", request.ActingUserID, request.UserID);
+            throw new ValidationException(["Aap sirf apni firm ke users deactivate kar sakte hain."]);
+        }
+
+        // ================================================
         // 3. Perform soft delete
         // ================================================
         user.IsActive = false;
@@ -63,7 +74,9 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         // ================================================
         // 4. Revoke all active refresh tokens
         // ================================================
-        var activeTokens = await _context.RefreshTokens.Where(x => x.UserID == request.UserID && !x.IsRevoked).ToListAsync(cancellationToken);
+        var activeTokens = await _context.RefreshTokens
+            .Where(x => x.UserID == request.UserID && !x.IsRevoked)
+            .ToListAsync(cancellationToken);
 
         foreach (var token in activeTokens)
         {

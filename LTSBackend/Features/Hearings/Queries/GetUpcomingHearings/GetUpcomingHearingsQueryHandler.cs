@@ -9,11 +9,21 @@ using LTSBackend.Features.Hearings.DTOs;
 
 namespace LTSBackend.Features.Hearings.Queries.GetUpcomingHearings
 {
-    public class GetUpcomingHearingsQueryHandler (AppDbContext _context) : IRequestHandler<GetUpcomingHearingsQuery, PagedHearingResult<HearingDetailDTO>>
+    public class GetUpcomingHearingsQueryHandler : IRequestHandler<GetUpcomingHearingsQuery, PagedHearingResult<HearingDetailDTO>>
     {
+        private readonly AppDbContext _context;
+
+        public GetUpcomingHearingsQueryHandler(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public async Task<PagedHearingResult<HearingDetailDTO>> Handle(GetUpcomingHearingsQuery request, CancellationToken cancellationToken)
         {
-            var query = _context.Hearings.Include(h => h.Case).Include(h => h.Court).Where(h => h.HearingDate >= DateTime.UtcNow);
+            var query = _context.Hearings
+                .Include(h => h.Case)
+                .Include(h => h.Court)
+                .Where(h => h.HearingDate >= DateTime.UtcNow);
 
             if (request.CaseId.HasValue)
                 query = query.Where(h => h.CaseID == request.CaseId.Value);

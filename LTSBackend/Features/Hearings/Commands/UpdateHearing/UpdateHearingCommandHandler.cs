@@ -7,8 +7,15 @@ using LTSBackend.Comman.Exceptions;
 
 namespace LTSBackend.Features.Hearings.Commands.UpdateHearing
 {
-    public class UpdateHearingCommandHandler (AppDbContext _context) : IRequestHandler<UpdateHearingCommand, bool>
-    {      
+    public class UpdateHearingCommandHandler : IRequestHandler<UpdateHearingCommand, bool>
+    {
+        private readonly AppDbContext _context;
+
+        public UpdateHearingCommandHandler(AppDbContext context)
+        {
+            _context = context;
+        }
+
         public async Task<bool> Handle(UpdateHearingCommand request, CancellationToken cancellationToken)
         {
             var hearing = await _context.Hearings
