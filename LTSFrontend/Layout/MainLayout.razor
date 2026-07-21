@@ -1,19 +1,42 @@
 ﻿@inherits LayoutComponentBase
+@using LTSFrontend.Features.Auth.Services
+@using LTSFrontend.State
+@inject UserSessionState Session
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
 
-<div class="page">
-    <div class="sidebar">
+<div class="lts-app-shell">
+    <div class="lts-sidebar">
+        <div class="brand">
+            <i class="bi bi-shield-check fs-4"></i>
+            <span>LTS</span>
+        </div>
         <NavMenu />
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+    <div class="lts-main-content">
+        <div class="lts-topbar">
+            <div class="fw-semibold">Litigation Tracking System</div>
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-bell"></i>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-1"></i>
+                        Welcome, @(string.IsNullOrWhiteSpace(Session.FullName) ? "User" : Session.FullName)
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/profile">My Profile</a></li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li><button class="dropdown-item" @onclick="HandleLogoutAsync">Logout</button></li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
-        <article class="content px-4">
+        <div class="lts-content-body">
             @Body
-        </article>
-    </main>
+        </div>
+    </div>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
@@ -21,3 +44,11 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private async Task HandleLogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

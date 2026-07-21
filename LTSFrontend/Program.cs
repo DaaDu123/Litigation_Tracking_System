@@ -1,10 +1,14 @@
 using LTSFrontend;
+using LTSFrontend.Core.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// LTS auth + API client + feature services
+builder.Services.AddLtsFrontendServices(builder.Configuration);
 
 var app = builder.Build();
 
@@ -17,7 +21,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseAntiforgery();
 
