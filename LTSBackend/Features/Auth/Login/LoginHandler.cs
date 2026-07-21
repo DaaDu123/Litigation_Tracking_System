@@ -24,6 +24,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         // ================================================
         var user = await _context.Users
             .Include(x => x.Role)
+            .Include(x => x.Firm)
             .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         if (user == null)
@@ -65,6 +66,25 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         {
             _logger.LogWarning("Login failed: Account is inactive for user: {UserId}", user.UserID);
             throw new ValidationException(["Please verify your email address before logging in, or contact your administrator if your account was locked."]);
+        }
+
+        // ================================================
+        // 4b. Check if the user's firm workspace is still usable
+        // (multi-tenancy: a blocked/removed firm locks out every
+        // user under it, regardless of their own account status)
+        // ================================================
+        if (user.Firm != null)
+        {
+            if (user.Firm.IsDeleted)
+            {
+                _logger.LogWarning("Login failed: Firm {FirmID} is removed", user.FirmID);
+                throw new UnauthorizedException("Ye firm workspace ab active nahi hai.");
+            }
+            if (user.Firm.IsBlocked)
+            {
+                _logger.LogWarning("Login failed: Firm {FirmID} is blocked", user.FirmID);
+                throw new UnauthorizedException("Aap ki firm ka workspace filhaal blocked hai. Apne administrator se rabta karein.");
+            }
         }
 
         // ================================================

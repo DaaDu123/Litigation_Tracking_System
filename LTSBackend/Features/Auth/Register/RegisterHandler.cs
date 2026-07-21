@@ -34,7 +34,22 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         }
 
         // ================================================
-        // 2. Get default role (InternParalegal)
+        // 2. Resolve the firm this user is registering into
+        // ================================================
+        var firm = await _context.Firms
+            .FirstOrDefaultAsync(x => x.FirmCode == request.FirmCode.Trim().ToUpper(), cancellationToken);
+
+        if (firm == null)
+            throw new ValidationException(["Firm code galat hai. Apne Firm Admin se sahi code lein."]);
+
+        if (firm.IsDeleted)
+            throw new ValidationException(["Ye firm workspace ab active nahi hai."]);
+
+        if (firm.IsBlocked)
+            throw new ValidationException(["Ye firm workspace filhaal blocked hai. Apne Firm Admin se rabta karein."]);
+
+        // ================================================
+        // 3. Get default role (InternParalegal)
         // ================================================
         var defaultRole = await _context.Roles
             .AsNoTracking()
@@ -57,6 +72,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             Phone = request.Phone,
             Department = request.Department,
             RoleID = defaultRole.RoleID,
+            FirmID = firm.FirmID,
             IsActive = false,  // Inactive until email verified
             IsDeleted = false,
             CreatedAt = DateTime.UtcNow,

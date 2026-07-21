@@ -9,6 +9,9 @@ public class Case
 {
     [Key]
     public long CaseID { get; set; }
+    /// <summary>Firm this case belongs to - every case is strictly firm-scoped.</summary>
+    [Required]
+    public int FirmID { get; set; }
     [Required, MaxLength(50)]
     public string InternalReferenceNo { get; set; } = string.Empty;
     [Required, MaxLength(100)]
@@ -56,6 +59,8 @@ public class Case
     public bool IsClosed { get; set; } = false;
     public DateTime? ClosureDate { get; set; }
     // Foreign Key Relationships
+    [ForeignKey(nameof(FirmID))]
+    public LTSBackend.Models.Security.Firm Firm { get; set; } = null!;
     [ForeignKey(nameof(CourtID))]
     public Court Court { get; set; } = null!;
     [ForeignKey(nameof(CategoryID))]

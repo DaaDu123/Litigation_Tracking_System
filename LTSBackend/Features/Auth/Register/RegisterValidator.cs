@@ -44,5 +44,9 @@ public class RegisterValidator : AbstractValidator<RegisterCommand>
         RuleFor(x => x.Department)
             .MaximumLength(100)
             .WithMessage("Department cannot exceed 100 characters.");
+
+        RuleFor(x => x.FirmCode)
+            .NotEmpty()
+            .WithMessage("Firm code is required - ask your Firm Admin for your firm's registration code.");
     }
 }
