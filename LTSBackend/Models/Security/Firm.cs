@@ -39,6 +39,21 @@ public class Firm
     [MaxLength(150)]
     public string? CustomDomain { get; set; }
 
+    /// <summary>
+    /// Domain/data migration status: "None", "Requested", "InProgress",
+    /// "Completed", "Failed". Set via POST /api/firms/{id}/migrate-domain
+    /// (Roles SRS §4.I: Super Admin "Domain Migration" responsibility).
+    /// </summary>
+    [MaxLength(30)]
+    public string MigrationStatus { get; set; } = "None";
+
+    public DateTime? MigrationRequestedAt { get; set; }
+    public int? MigrationRequestedBy { get; set; }
+    public DateTime? MigrationCompletedAt { get; set; }
+
+    [MaxLength(500)]
+    public string? MigrationNotes { get; set; }
+
     public bool IsBlocked { get; set; } = false;
     [MaxLength(255)]
     public string? BlockedReason { get; set; }

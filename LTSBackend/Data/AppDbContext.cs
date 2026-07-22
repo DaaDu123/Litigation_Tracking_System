@@ -106,6 +106,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.FirmName).IsRequired().HasMaxLength(150);
             entity.Property(e => e.FirmCode).IsRequired().HasMaxLength(30);
             entity.HasIndex(e => e.FirmCode).IsUnique();
+            entity.Property(e => e.MigrationStatus).IsRequired().HasMaxLength(30).HasDefaultValue("None");
+            entity.Property(e => e.MigrationNotes).HasMaxLength(500);
         });
 
         // ================================================================

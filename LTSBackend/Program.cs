@@ -1,7 +1,6 @@
 using FluentValidation;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Comman.Behaviors;
-using LTSBackend.Common.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Authorization;
@@ -282,6 +281,9 @@ var app = builder.Build();
 #region Middleware Pipeline - 🔴 CRITICAL: ORDER MATTERS
 // 1. Exception handling (must be first)
 app.UseMiddleware<GlobalExceptionMiddleware>();
+
+// 1b. Request-level audit logging (incoming method/path/IP)
+app.UseMiddleware<AuditMiddleware>();
 
 // 2. Forwarded headers (for proxies)
 app.UseForwardedHeaders();

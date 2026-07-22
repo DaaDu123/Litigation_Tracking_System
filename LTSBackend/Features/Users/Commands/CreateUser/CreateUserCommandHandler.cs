@@ -1,6 +1,6 @@
 ﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
-using LTSBackend.Common.Middleware;
+using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Models.Security;
 using LTSBackend.Services;
@@ -27,7 +27,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         if (emailExists)
         {
             _logger.LogWarning("User creation failed: Email already exists: {Email}", request.Email);
-            throw new ValidationException(["$\"Email '{request.Email}' pehle se exist karta hai\""]);
+            throw new ValidationException([$"Email '{request.Email}' pehle se exist karta hai"]);
         }
 
         // ================================================
