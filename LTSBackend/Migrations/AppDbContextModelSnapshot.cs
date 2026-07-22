@@ -122,6 +122,9 @@ namespace LTSBackend.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<int>("FirmID")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("InstitutionDate")
                         .HasColumnType("date");
 
@@ -175,11 +178,15 @@ namespace LTSBackend.Migrations
 
                     b.HasKey("CaseID");
 
+                    b.HasIndex("CaseNumber");
+
                     b.HasIndex("CategoryID");
 
                     b.HasIndex("CourtID");
 
                     b.HasIndex("CurrentLegalOfficerID");
+
+                    b.HasIndex("FirmID");
 
                     b.HasIndex("InternalReferenceNo")
                         .IsUnique();
@@ -231,9 +238,9 @@ namespace LTSBackend.Migrations
 
                     b.HasKey("AssignmentID");
 
-                    b.HasIndex("CaseID");
-
                     b.HasIndex("UserID");
+
+                    b.HasIndex("CaseID", "EndDate");
 
                     b.ToTable("CaseAssignments");
                 });
@@ -437,7 +444,9 @@ namespace LTSBackend.Migrations
 
                     b.HasKey("DeadlineID");
 
-                    b.HasIndex("CaseID");
+                    b.HasIndex("DueDate");
+
+                    b.HasIndex("CaseID", "Completed");
 
                     b.ToTable("Deadlines");
                 });
@@ -593,6 +602,8 @@ namespace LTSBackend.Migrations
 
                     b.HasIndex("CourtID");
 
+                    b.HasIndex("HearingDate");
+
                     b.ToTable("Hearings");
                 });
 
@@ -603,6 +614,16 @@ namespace LTSBackend.Migrations
                         .HasColumnType("bigint");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AttendanceID"));
+
+                    b.Property<DateTime?>("ArrivalTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AttendanceRole")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("DepartureTime")
+                        .HasColumnType("datetime2");
 
                     b.Property<long>("HearingID")
                         .HasColumnType("bigint");
@@ -619,11 +640,67 @@ namespace LTSBackend.Migrations
 
                     b.HasKey("AttendanceID");
 
-                    b.HasIndex("HearingID");
+                    b.HasIndex("UserID");
+
+                    b.HasIndex("HearingID", "UserID")
+                        .IsUnique();
+
+                    b.ToTable("HearingAttendance");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Cases.Notification", b =>
+                {
+                    b.Property<long>("NotificationID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("NotificationID"));
+
+                    b.Property<long?>("CaseID")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSent")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NotificationTypeID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ReadDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("UserID")
+                        .HasColumnType("int");
+
+                    b.HasKey("NotificationID");
+
+                    b.HasIndex("CaseID");
+
+                    b.HasIndex("NotificationTypeID");
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("HearingAttendance");
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.CaseCategory", b =>
@@ -768,6 +845,99 @@ namespace LTSBackend.Migrations
                     b.ToTable("DocumentTypes");
                 });
 
+            modelBuilder.Entity("LTSBackend.Models.Security.Firm", b =>
+                {
+                    b.Property<int>("FirmID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FirmID"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("BlockedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("BlockedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BlockedReason")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomDomain")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DeletedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FirmCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("FirmName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("MigrationCompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MigrationNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("MigrationRequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("MigrationRequestedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MigrationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("None");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("FirmID");
+
+                    b.HasIndex("FirmCode")
+                        .IsUnique();
+
+                    b.ToTable("Firms");
+                });
+
             modelBuilder.Entity("LTSBackend.Models.Security.LoginHistory", b =>
                 {
                     b.Property<int>("LoginID")
@@ -807,61 +977,6 @@ namespace LTSBackend.Migrations
                         .IsDescending(false, true);
 
                     b.ToTable("LoginHistories");
-                });
-
-            modelBuilder.Entity("LTSBackend.Models.Security.Notification", b =>
-                {
-                    b.Property<long>("NotificationID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("NotificationID"));
-
-                    b.Property<long?>("CaseID")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsSent")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("NotificationTypeID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("ReadDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("SentDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Subject")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<int>("UserID")
-                        .HasColumnType("int");
-
-                    b.HasKey("NotificationID");
-
-                    b.HasIndex("CaseID");
-
-                    b.HasIndex("NotificationTypeID");
-
-                    b.HasIndex("UserID");
-
-                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.NotificationType", b =>
@@ -1513,6 +1628,9 @@ namespace LTSBackend.Migrations
                     b.Property<int>("FailedLoginAttempts")
                         .HasColumnType("int");
 
+                    b.Property<int?>("FirmID")
+                        .HasColumnType("int");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -1556,6 +1674,8 @@ namespace LTSBackend.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("FirmID");
 
                     b.HasIndex("RoleID");
 
@@ -1633,6 +1753,12 @@ namespace LTSBackend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("LTSBackend.Models.Security.Firm", "Firm")
+                        .WithMany()
+                        .HasForeignKey("FirmID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("LTSBackend.Models.Masters.Department", "Department")
                         .WithMany()
                         .HasForeignKey("ResponsibleDepartmentID")
@@ -1656,6 +1782,8 @@ namespace LTSBackend.Migrations
                     b.Navigation("Court");
 
                     b.Navigation("Department");
+
+                    b.Navigation("Firm");
 
                     b.Navigation("LegalOfficer");
 
@@ -1828,18 +1956,7 @@ namespace LTSBackend.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("LTSBackend.Models.Security.LoginHistory", b =>
-                {
-                    b.HasOne("LTSBackend.Models.Security.User", "User")
-                        .WithMany("LoginHistories")
-                        .HasForeignKey("UserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("LTSBackend.Models.Security.Notification", b =>
+            modelBuilder.Entity("LTSBackend.Models.Cases.Notification", b =>
                 {
                     b.HasOne("LTSBackend.Models.Cases.Case", "Case")
                         .WithMany()
@@ -1861,6 +1978,17 @@ namespace LTSBackend.Migrations
                     b.Navigation("Case");
 
                     b.Navigation("NotificationType");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.LoginHistory", b =>
+                {
+                    b.HasOne("LTSBackend.Models.Security.User", "User")
+                        .WithMany("LoginHistories")
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -1897,9 +2025,16 @@ namespace LTSBackend.Migrations
 
             modelBuilder.Entity("LTSBackend.Models.Security.User", b =>
                 {
+                    b.HasOne("LTSBackend.Models.Security.Firm", "Firm")
+                        .WithMany("Users")
+                        .HasForeignKey("FirmID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LTSBackend.Models.Security.Role", "Role")
                         .WithMany("Users")
                         .HasForeignKey("RoleID");
+
+                    b.Navigation("Firm");
 
                     b.Navigation("Role");
                 });
@@ -1933,6 +2068,11 @@ namespace LTSBackend.Migrations
             modelBuilder.Entity("LTSBackend.Models.Cases.Hearing", b =>
                 {
                     b.Navigation("HearingAttendances");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.Firm", b =>
+                {
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.NotificationType", b =>

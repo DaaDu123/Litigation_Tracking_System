@@ -13,7 +13,6 @@ namespace LTSBackend.Features.Auth.Register;
 
 public class RegisterHandler(AppDbContext _context, IPasswordService _passwordService, IEmailService _emailService, IAuditService _auditService, ILogger<RegisterHandler> _logger) : IRequestHandler<RegisterCommand, RegisterResponseDTO>
 {
-
     public async Task<RegisterResponseDTO> Handle(
         RegisterCommand request,
         CancellationToken cancellationToken)
@@ -40,13 +39,13 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             .FirstOrDefaultAsync(x => x.FirmCode == request.FirmCode.Trim().ToUpper(), cancellationToken);
 
         if (firm == null)
-            throw new ValidationException(["Firm code galat hai. Apne Firm Admin se sahi code lein."]);
+            throw new ValidationException(["Invalid firm code. Please obtain the correct code from your Firm Administrator."]);
 
         if (firm.IsDeleted)
-            throw new ValidationException(["Ye firm workspace ab active nahi hai."]);
+            throw new ValidationException(["This firm workspace is no longer active."]);
 
         if (firm.IsBlocked)
-            throw new ValidationException(["Ye firm workspace filhaal blocked hai. Apne Firm Admin se rabta karein."]);
+            throw new ValidationException(["This firm workspace is currently blocked. Please contact your Firm Administrator."]);
 
         // ================================================
         // 3. Get default role (InternParalegal)
@@ -153,10 +152,12 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             Message = "Registration successful! Please check your email (including Spam/Junk folder) for the OTP code to verify your account."
         };
     }
+
     private static string GenerateSecureOtp()
     {
         return RandomNumberGenerator.GetInt32(100000, 1000000).ToString("D6");
     }
+
     private static string GenerateEmployeeNo()
     {
         var now = DateTime.UtcNow;

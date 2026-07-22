@@ -1,5 +1,5 @@
 ﻿using LTSBackend.Comman.Exceptions;
-using LTSBackend.Common.Middleware;
+using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Profile.DTOs;
 using MediatR;

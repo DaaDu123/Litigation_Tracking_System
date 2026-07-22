@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LTSBackend.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class FirmEntity : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -100,6 +100,39 @@ namespace LTSBackend.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Firms",
+                columns: table => new
+                {
+                    FirmID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FirmName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    FirmCode = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    ContactEmail = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    ContactPhone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    CustomDomain = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    MigrationStatus = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false, defaultValue: "None"),
+                    MigrationRequestedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MigrationRequestedBy = table.Column<int>(type: "int", nullable: true),
+                    MigrationCompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MigrationNotes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsBlocked = table.Column<bool>(type: "bit", nullable: false),
+                    BlockedReason = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    BlockedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    BlockedBy = table.Column<int>(type: "int", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<int>(type: "int", nullable: true),
+                    CreatedBy = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Firms", x => x.FirmID);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "NotificationTypes",
                 columns: table => new
                 {
@@ -185,6 +218,7 @@ namespace LTSBackend.Migrations
                     Department = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Designation = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     RoleID = table.Column<int>(type: "int", nullable: true),
+                    FirmID = table.Column<int>(type: "int", nullable: true),
                     IsExternal = table.Column<bool>(type: "bit", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
@@ -197,6 +231,12 @@ namespace LTSBackend.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.UserID);
+                    table.ForeignKey(
+                        name: "FK_Users_Firms_FirmID",
+                        column: x => x.FirmID,
+                        principalTable: "Firms",
+                        principalColumn: "FirmID",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Users_Roles_RoleID",
                         column: x => x.RoleID,
@@ -236,6 +276,7 @@ namespace LTSBackend.Migrations
                 {
                     CaseID = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    FirmID = table.Column<int>(type: "int", nullable: false),
                     InternalReferenceNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     CaseNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     CaseTitle = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
@@ -293,6 +334,12 @@ namespace LTSBackend.Migrations
                         column: x => x.ResponsibleDepartmentID,
                         principalTable: "Departments",
                         principalColumn: "DepartmentID");
+                    table.ForeignKey(
+                        name: "FK_Cases_Firms_FirmID",
+                        column: x => x.FirmID,
+                        principalTable: "Firms",
+                        principalColumn: "FirmID",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Cases_Users_CurrentLegalOfficerID",
                         column: x => x.CurrentLegalOfficerID,
@@ -691,7 +738,10 @@ namespace LTSBackend.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     HearingID = table.Column<long>(type: "bigint", nullable: false),
                     UserID = table.Column<int>(type: "int", nullable: false),
+                    AttendanceRole = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Present = table.Column<bool>(type: "bit", nullable: false),
+                    ArrivalTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DepartureTime = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Remarks = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
                 },
                 constraints: table =>
@@ -832,9 +882,9 @@ namespace LTSBackend.Migrations
                 column: "UserID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CaseAssignments_CaseID",
+                name: "IX_CaseAssignments_CaseID_EndDate",
                 table: "CaseAssignments",
-                column: "CaseID");
+                columns: new[] { "CaseID", "EndDate" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_CaseAssignments_UserID",
@@ -862,6 +912,11 @@ namespace LTSBackend.Migrations
                 column: "CaseID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Cases_CaseNumber",
+                table: "Cases",
+                column: "CaseNumber");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Cases_CategoryID",
                 table: "Cases",
                 column: "CategoryID");
@@ -875,6 +930,11 @@ namespace LTSBackend.Migrations
                 name: "IX_Cases_CurrentLegalOfficerID",
                 table: "Cases",
                 column: "CurrentLegalOfficerID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Cases_FirmID",
+                table: "Cases",
+                column: "FirmID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Cases_InternalReferenceNo",
@@ -903,9 +963,14 @@ namespace LTSBackend.Migrations
                 column: "CaseID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Deadlines_CaseID",
+                name: "IX_Deadlines_CaseID_Completed",
                 table: "Deadlines",
-                column: "CaseID");
+                columns: new[] { "CaseID", "Completed" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Deadlines_DueDate",
+                table: "Deadlines",
+                column: "DueDate");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DocumentPermissions_DocumentID_RoleID",
@@ -938,9 +1003,16 @@ namespace LTSBackend.Migrations
                 column: "DocumentTypeID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_HearingAttendance_HearingID",
+                name: "IX_Firms_FirmCode",
+                table: "Firms",
+                column: "FirmCode",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_HearingAttendance_HearingID_UserID",
                 table: "HearingAttendance",
-                column: "HearingID");
+                columns: new[] { "HearingID", "UserID" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_HearingAttendance_UserID",
@@ -956,6 +1028,11 @@ namespace LTSBackend.Migrations
                 name: "IX_Hearings_CourtID",
                 table: "Hearings",
                 column: "CourtID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Hearings_HearingDate",
+                table: "Hearings",
+                column: "HearingDate");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LoginHistories_UserID_LoginTime",
@@ -1027,6 +1104,11 @@ namespace LTSBackend.Migrations
                 table: "Users",
                 column: "Email",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_FirmID",
+                table: "Users",
+                column: "FirmID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_RoleID",
@@ -1114,6 +1196,9 @@ namespace LTSBackend.Migrations
 
             migrationBuilder.DropTable(
                 name: "Users");
+
+            migrationBuilder.DropTable(
+                name: "Firms");
 
             migrationBuilder.DropTable(
                 name: "Roles");
