@@ -44,12 +44,12 @@ namespace LTSFrontend.Core.Extensions
                     CookieContainer = new CookieContainer()
                 };
 
-                if (env.IsDevelopment())
-                {
-                    // Local dev self-signed cert convenience only.
-                    socketHandler.ServerCertificateCustomValidationCallback =
-                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidation;
-                }
+                //if (env.IsDevelopment())
+                //{
+                //    // Local dev self-signed cert convenience only.
+                //    socketHandler.ServerCertificateCustomValidationCallback =
+                //        HttpClientHandler.DangerousAcceptAnyServerCertificateValidation;
+                //}
 
                 var authHandler = sp.GetRequiredService<AuthTokenHandler>();
                 authHandler.InnerHandler = socketHandler;
@@ -63,8 +63,8 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<ApiClient>();
 
             // Feature services
-            services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IUserService, UserService>();
+            //services.AddScoped<IAuthService, AuthService>();
+            //services.AddScoped<IUserService, UserService>();
 
             return services;
         }
