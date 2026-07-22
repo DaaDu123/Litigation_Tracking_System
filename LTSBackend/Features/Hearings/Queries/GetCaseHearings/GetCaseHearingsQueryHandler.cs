@@ -6,16 +6,19 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using LTSBackend.Data;
 using LTSBackend.Features.Hearings.DTOs;
+using LTSBackend.Services.CurrentUser;
 
 namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
 {
     public class GetCaseHearingsQueryHandler : IRequestHandler<GetCaseHearingsQuery, PagedHearingResult<HearingDetailDTO>>
     {
         private readonly AppDbContext _context;
+        private readonly ICurrentUserService _currentUser;
 
-        public GetCaseHearingsQueryHandler(AppDbContext context)
+        public GetCaseHearingsQueryHandler(AppDbContext context, ICurrentUserService currentUser)
         {
             _context = context;
+            _currentUser = currentUser;
         }
 
         public async Task<PagedHearingResult<HearingDetailDTO>> Handle(GetCaseHearingsQuery request, CancellationToken cancellationToken)
@@ -23,8 +26,13 @@ namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
             var query = _context.Hearings
                 .Include(h => h.Case)
                 .Include(h => h.Court)
-                .Where(h => h.CaseID == request.CaseId)
-                .OrderByDescending(h => h.HearingDate);
+                .Where(h => h.CaseID == request.CaseId);
+
+            // FIX: multi-tenant isolation
+            if (!_currentUser.IsSuperAdmin)
+                query = query.Where(h => h.Case.FirmID == _currentUser.FirmID);
+
+            query = query.OrderByDescending(h => h.HearingDate);
 
             int totalCount = await query.CountAsync(cancellationToken);
 

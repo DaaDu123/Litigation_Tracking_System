@@ -2,6 +2,7 @@
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -11,13 +12,14 @@ namespace LTSBackend.Features.CaseParties.Commands.CreateCaseParty
     public class CreateCasePartyHandler(
         AppDbContext _context,
         IAuditService _auditService,
+        ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor,
         ILogger<CreateCasePartyHandler> _logger) : IRequestHandler<CreateCasePartyCommand, long>
     {
         public async Task<long> Handle(CreateCasePartyCommand request, CancellationToken cancellationToken)
         {
-            var caseExists = await _context.Cases.AnyAsync(c => c.CaseID == request.Party.CaseID, cancellationToken);
-            if (!caseExists)
+            var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Party.CaseID, cancellationToken);
+            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Case ID {request.Party.CaseID} nahi mila");
 
             int currentUserId = GetCurrentUserId();

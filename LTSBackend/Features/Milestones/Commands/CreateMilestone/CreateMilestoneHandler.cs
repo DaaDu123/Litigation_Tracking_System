@@ -2,19 +2,20 @@
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LTSBackend.Features.Milestones.Commands.CreateMilestone
 {
-    public class CreateMilestoneHandler(AppDbContext _context,IAuditService _auditService,
-        IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateMilestoneCommand, long>
+    public class CreateMilestoneHandler(AppDbContext _context, IAuditService _auditService,
+        ICurrentUserService _currentUser, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateMilestoneCommand, long>
     {
         public async Task<long> Handle(CreateMilestoneCommand request, CancellationToken cancellationToken)
         {
-            var caseExists = await _context.Cases.AnyAsync(c => c.CaseID == request.Milestone.CaseID, cancellationToken);
-            if (!caseExists)
+            var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Milestone.CaseID, cancellationToken);
+            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Case ID {request.Milestone.CaseID} nahi mila");
 
             var milestone = new CaseMilestone

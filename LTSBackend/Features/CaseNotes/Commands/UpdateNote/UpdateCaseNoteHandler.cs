@@ -1,6 +1,7 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -11,15 +12,16 @@ namespace LTSBackend.Features.CaseNotes.Commands.UpdateNote
     /// SRS: Only the note author or Partner/FirmAdmin/SuperAdmin may edit a note
     /// (protects "Confidential" internal notes from being altered by unrelated users)
     /// </summary>
-    public class UpdateCaseNoteHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
+    public class UpdateCaseNoteHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseNoteCommand, bool>
     {
         public async Task<bool> Handle(UpdateCaseNoteCommand request, CancellationToken cancellationToken)
         {
-            var note = await _context.CaseNotes.FirstOrDefaultAsync(n => n.NoteID == request.Note.NoteID, cancellationToken);
-            if (note == null)
+            var note = await _context.CaseNotes
+                .Include(n => n.Case)
+                .FirstOrDefaultAsync(n => n.NoteID == request.Note.NoteID, cancellationToken);
+
+            if (note == null || (!_currentUser.IsSuperAdmin && note.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Note ID {request.Note.NoteID} nahi mila");
 
             int currentUserId = GetCurrentUserId();

@@ -6,16 +6,19 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using LTSBackend.Data;
 using LTSBackend.Features.Hearings.DTOs;
+using LTSBackend.Services.CurrentUser;
 
 namespace LTSBackend.Features.Hearings.Queries.GetUpcomingHearings
 {
     public class GetUpcomingHearingsQueryHandler : IRequestHandler<GetUpcomingHearingsQuery, PagedHearingResult<HearingDetailDTO>>
     {
         private readonly AppDbContext _context;
+        private readonly ICurrentUserService _currentUser;
 
-        public GetUpcomingHearingsQueryHandler(AppDbContext context)
+        public GetUpcomingHearingsQueryHandler(AppDbContext context, ICurrentUserService currentUser)
         {
             _context = context;
+            _currentUser = currentUser;
         }
 
         public async Task<PagedHearingResult<HearingDetailDTO>> Handle(GetUpcomingHearingsQuery request, CancellationToken cancellationToken)
@@ -24,6 +27,10 @@ namespace LTSBackend.Features.Hearings.Queries.GetUpcomingHearings
                 .Include(h => h.Case)
                 .Include(h => h.Court)
                 .Where(h => h.HearingDate >= DateTime.UtcNow);
+
+            // FIX: previously this leaked EVERY firm's upcoming hearings to any logged-in user
+            if (!_currentUser.IsSuperAdmin)
+                query = query.Where(h => h.Case.FirmID == _currentUser.FirmID);
 
             if (request.CaseId.HasValue)
                 query = query.Where(h => h.CaseID == request.CaseId.Value);
@@ -40,7 +47,6 @@ namespace LTSBackend.Features.Hearings.Queries.GetUpcomingHearings
                 .Take(request.PageSize)
                 .ToListAsync(cancellationToken);
 
-            // Fetch creator names in one batch (avoid N+1 queries)
             var creatorIds = hearings.Select(h => h.CreatedBy).Distinct().ToList();
             var creatorNames = await _context.Users
                 .Where(u => creatorIds.Contains(u.UserID))

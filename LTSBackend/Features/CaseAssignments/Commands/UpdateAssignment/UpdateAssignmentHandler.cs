@@ -1,6 +1,7 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -10,12 +11,16 @@ namespace LTSBackend.Features.CaseAssignments.Commands.UpdateAssignment
     public class UpdateAssignmentHandler(
         AppDbContext _context,
         IAuditService _auditService,
+        ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateAssignmentCommand, bool>
     {
         public async Task<bool> Handle(UpdateAssignmentCommand request, CancellationToken cancellationToken)
         {
-            var assignment = await _context.CaseAssignments.FirstOrDefaultAsync(a => a.AssignmentID == request.Assignment.AssignmentID, cancellationToken);
-            if (assignment == null)
+            var assignment = await _context.CaseAssignments
+                .Include(a => a.Case)
+                .FirstOrDefaultAsync(a => a.AssignmentID == request.Assignment.AssignmentID, cancellationToken);
+
+            if (assignment == null || (!_currentUser.IsSuperAdmin && assignment.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Assignment ID {request.Assignment.AssignmentID} nahi mila");
 
             if (assignment.EndDate != null)

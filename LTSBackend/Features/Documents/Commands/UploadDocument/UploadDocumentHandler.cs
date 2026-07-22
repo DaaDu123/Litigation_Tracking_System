@@ -3,11 +3,11 @@ using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.DocumentPermissions;
 using LTSBackend.Services.ProfileService;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace LTSBackend.Features.Documents.Commands.UploadDocument;
 
@@ -15,7 +15,7 @@ namespace LTSBackend.Features.Documents.Commands.UploadDocument;
 /// Upload document handler with Moharrir blind upload (write-only) feature
 /// </summary>
 public class UploadDocumentHandler(AppDbContext _context, IFileService _fileService, IDocumentPermissionService _permissionService, IAuditService _auditService,
-    IHttpContextAccessor _httpContextAccessor, ILogger<UploadDocumentHandler> _logger) : IRequestHandler<UploadDocumentCommand, UploadDocumentResult>
+    ICurrentUserService _currentUser, IHttpContextAccessor _httpContextAccessor, ILogger<UploadDocumentHandler> _logger) : IRequestHandler<UploadDocumentCommand, UploadDocumentResult>
 {
     public async Task<UploadDocumentResult> Handle(UploadDocumentCommand request, CancellationToken cancellationToken)
     {
@@ -43,15 +43,17 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         }
 
         // ================================================
-        // 3. Verify case exists
+        // 3. Verify case exists AND belongs to the user's own firm
+        //    FIX: previously any user could upload a "document" onto
+        //    another firm's case just by knowing the CaseID.
         // ================================================
         var caseRecord = await _context.Cases
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.CaseID == request.CaseID, cancellationToken);
 
-        if (caseRecord == null)
+        if (caseRecord == null || (!_currentUser.IsSuperAdmin && caseRecord.FirmID != _currentUser.FirmID))
         {
-            _logger.LogWarning("Upload failed: Case not found {CaseId}", request.CaseID);
+            _logger.LogWarning("Upload failed: Case not found or cross-firm access blocked {CaseId}", request.CaseID);
             throw new NotFoundException($"Case {request.CaseID} not found");
         }
 
@@ -114,10 +116,6 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         bool isMohallirRestricted = await _permissionService.IsMohallirRestrictedAsync(request.UserID, cancellationToken);
         if (isMohallirRestricted)
         {
-            // ================================================
-            // Restricted Moharrir: Do NOT grant view/download permissions
-            // The document exists but they can't see it after uploading
-            // ================================================
             _logger.LogInformation("Moharrir {UserId} blind upload: Document {DocumentId} - no view/download permissions granted",
                 request.UserID, document.DocumentID);
 
@@ -125,13 +123,9 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         }
         else
         {
-            // ================================================
-            // Elevated Moharrir or other roles: Grant appropriate permissions
-            // ================================================
             var role = user.Role;
             if (role != null)
             {
-                // Determine permissions based on role
                 bool canView = true;
                 bool canDownload = user.GetRole() switch
                 {
@@ -160,10 +154,6 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         _logger.LogInformation("Document upload completed - ID: {DocumentId}, User: {UserId}, Case: {CaseId}",
             document.DocumentID, request.UserID, request.CaseID);
 
-        // ================================================
-        // 9. Return DocumentID + restricted flag so the controller
-        //    can inform the client whether this was a blind upload
-        // ================================================
         return new UploadDocumentResult(document.DocumentID, isMohallirRestricted);
     }
 }

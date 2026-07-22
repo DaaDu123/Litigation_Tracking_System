@@ -1,11 +1,12 @@
 ﻿using LTSBackend.Data;
 using LTSBackend.Features.CaseAssignments.DTOs;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.CaseAssignments.Queries.GetCaseAssignments
 {
-    public class GetCaseAssignmentsHandler(AppDbContext _context) : IRequestHandler<GetCaseAssignmentsQuery, List<CaseAssignmentDetailDTO>>
+    public class GetCaseAssignmentsHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<GetCaseAssignmentsQuery, List<CaseAssignmentDetailDTO>>
     {
         public async Task<List<CaseAssignmentDetailDTO>> Handle(GetCaseAssignmentsQuery request, CancellationToken cancellationToken)
         {
@@ -14,6 +15,10 @@ namespace LTSBackend.Features.CaseAssignments.Queries.GetCaseAssignments
                 .Include(a => a.Case)
                 .Include(a => a.User)
                 .Where(a => a.CaseID == request.CaseID);
+
+            // FIX: multi-tenant isolation - don't leak another firm's assignments
+            if (!_currentUser.IsSuperAdmin)
+                query = query.Where(a => a.Case.FirmID == _currentUser.FirmID);
 
             if (request.ActiveOnly)
                 query = query.Where(a => a.EndDate == null);

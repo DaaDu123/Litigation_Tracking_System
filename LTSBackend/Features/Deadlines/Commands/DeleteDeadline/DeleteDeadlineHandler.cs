@@ -1,21 +1,21 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LTSBackend.Features.Deadlines.Commands.DeleteDeadline
 {
-    public class DeleteDeadlineHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
+    public class DeleteDeadlineHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<DeleteDeadlineCommand, bool>
     {
         public async Task<bool> Handle(DeleteDeadlineCommand request, CancellationToken cancellationToken)
         {
-            var deadline = await _context.Deadlines.FirstOrDefaultAsync(d => d.DeadlineID == request.DeadlineID, cancellationToken);
-            if (deadline == null)
+            var deadline = await _context.Deadlines.Include(d => d.Case).FirstOrDefaultAsync(d => d.DeadlineID == request.DeadlineID, cancellationToken);
+
+            if (deadline == null || (!_currentUser.IsSuperAdmin && deadline.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Deadline ID {request.DeadlineID} nahi mila");
 
             int currentUserId = GetCurrentUserId();

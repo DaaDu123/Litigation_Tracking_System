@@ -2,21 +2,20 @@
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LTSBackend.Features.CaseNotes.Commands.CreateNote
 {
-    public class CreateCaseNoteHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
+    public class CreateCaseNoteHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateCaseNoteCommand, long>
     {
         public async Task<long> Handle(CreateCaseNoteCommand request, CancellationToken cancellationToken)
         {
-            var caseExists = await _context.Cases.AnyAsync(c => c.CaseID == request.Note.CaseID, cancellationToken);
-            if (!caseExists)
+            var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Note.CaseID, cancellationToken);
+            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Case ID {request.Note.CaseID} nahi mila");
 
             int currentUserId = GetCurrentUserId();

@@ -5,22 +5,21 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using LTSBackend.Data;
 using LTSBackend.Comman.Exceptions;
+using LTSBackend.Services.CurrentUser;
 
 namespace LTSBackend.Features.Hearings.Commands.DeleteHearing
 {
-    public class DeleteHearingCommandHandler(AppDbContext _context) : IRequestHandler<DeleteHearingCommand, bool>
+    public class DeleteHearingCommandHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<DeleteHearingCommand, bool>
     {
         public async Task<bool> Handle(DeleteHearingCommand request, CancellationToken cancellationToken)
         {
-            var hearing = await _context.Hearings.FirstOrDefaultAsync(h => h.HearingID == request.HearingId, cancellationToken);
+            var hearing = await _context.Hearings.Include(h => h.Case).FirstOrDefaultAsync(h => h.HearingID == request.HearingId, cancellationToken);
 
-            if (hearing == null)
+            if (hearing == null || (!_currentUser.IsSuperAdmin && hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException("Hearing not found");
 
             // Delete associated attendance records first
-            var attendanceRecords = await _context.HearingAttendances
-                .Where(ha => ha.HearingID == request.HearingId)
-                .ToListAsync(cancellationToken);
+            var attendanceRecords = await _context.HearingAttendances.Where(ha => ha.HearingID == request.HearingId).ToListAsync(cancellationToken);
 
             foreach (var record in attendanceRecords)
             {

@@ -3,6 +3,7 @@ using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Models.Security;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -17,18 +18,24 @@ namespace LTSBackend.Features.CaseAssignments.Commands.AssignCase
     public class AssignCaseHandler(
         AppDbContext _context,
         IAuditService _auditService,
+        ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor,
         ILogger<AssignCaseHandler> _logger) : IRequestHandler<AssignCaseCommand, long>
     {
         public async Task<long> Handle(AssignCaseCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Assignment.CaseID, cancellationToken);
-            if (caseEntity == null)
+            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Case ID {request.Assignment.CaseID} nahi mila");
 
-            var userExists = await _context.Users.AnyAsync(u => u.UserID == request.Assignment.UserID && u.IsActive, cancellationToken);
+            // FIX: user being assigned must belong to the same firm as the case
+            // (otherwise a lawyer from another firm could be "assigned" cross-tenant)
+            var userExists = await _context.Users.AnyAsync(u =>
+                u.UserID == request.Assignment.UserID &&
+                u.IsActive &&
+                u.FirmID == caseEntity.FirmID, cancellationToken);
             if (!userExists)
-                throw new NotFoundException($"User ID {request.Assignment.UserID} nahi mila ya inactive hai");
+                throw new NotFoundException($"User ID {request.Assignment.UserID} nahi mila ya inactive hai ya is firm ka nahi hai");
 
             // Prevent duplicate active assignment of the same user+type on the same case
             var duplicate = await _context.CaseAssignments.AnyAsync(a =>

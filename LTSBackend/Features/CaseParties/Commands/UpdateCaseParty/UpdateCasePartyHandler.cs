@@ -1,6 +1,7 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -10,12 +11,16 @@ namespace LTSBackend.Features.CaseParties.Commands.UpdateCaseParty
     public class UpdateCasePartyHandler(
         AppDbContext _context,
         IAuditService _auditService,
+        ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCasePartyCommand, bool>
     {
         public async Task<bool> Handle(UpdateCasePartyCommand request, CancellationToken cancellationToken)
         {
-            var party = await _context.CaseParties.FirstOrDefaultAsync(p => p.PartyID == request.Party.PartyID, cancellationToken);
-            if (party == null)
+            var party = await _context.CaseParties
+                .Include(p => p.Case)
+                .FirstOrDefaultAsync(p => p.PartyID == request.Party.PartyID, cancellationToken);
+
+            if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Party ID {request.Party.PartyID} nahi mila");
 
             party.PartyType = request.Party.PartyType;

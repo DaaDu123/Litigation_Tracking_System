@@ -2,6 +2,7 @@
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -12,15 +13,16 @@ namespace LTSBackend.Features.Hearings.Commands.RecordAttendance
     /// SRS Reference: Complete Database Schema - HearingAttendance table
     /// (attendance tracking for lawyers/officers present at a hearing)
     /// </summary>
-    public class RecordAttendanceHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
+    public class RecordAttendanceHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<RecordAttendanceCommand, long>
     {
         public async Task<long> Handle(RecordAttendanceCommand request, CancellationToken cancellationToken)
         {
-            var hearingExists = await _context.Hearings.AnyAsync(h => h.HearingID == request.Attendance.HearingId, cancellationToken);
-            if (!hearingExists)
+            var hearing = await _context.Hearings
+                .Include(h => h.Case)
+                .FirstOrDefaultAsync(h => h.HearingID == request.Attendance.HearingId, cancellationToken);
+
+            if (hearing == null || (!_currentUser.IsSuperAdmin && hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Hearing ID {request.Attendance.HearingId} nahi mila");
 
             var userExists = await _context.Users.AnyAsync(u => u.UserID == request.Attendance.UserId, cancellationToken);

@@ -8,25 +8,28 @@ using Microsoft.EntityFrameworkCore;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Comman.Exceptions;
+using LTSBackend.Services.CurrentUser;
 
 namespace LTSBackend.Features.Hearings.Commands.CreateHearing
 {
     public class CreateHearingCommandHandler : IRequestHandler<CreateHearingCommand, long>
     {
         private readonly AppDbContext _context;
+        private readonly ICurrentUserService _currentUser;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public CreateHearingCommandHandler(AppDbContext context, IHttpContextAccessor httpContextAccessor)
+        public CreateHearingCommandHandler(AppDbContext context, ICurrentUserService currentUser, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
+            _currentUser = currentUser;
             _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<long> Handle(CreateHearingCommand request, CancellationToken cancellationToken)
         {
-            // Validate case exists
-            var caseExists = await _context.Cases.AnyAsync(c => c.CaseID == request.Hearing.CaseId, cancellationToken);
-            if (!caseExists)
+            // Validate case exists AND belongs to the acting user's firm
+            var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Hearing.CaseId, cancellationToken);
+            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException("Case not found");
 
             // Validate court exists

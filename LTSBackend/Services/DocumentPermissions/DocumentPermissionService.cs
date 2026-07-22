@@ -28,7 +28,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
             var role = user.GetRole();
             // ================================================
-            // 2. Super Admin ko sab kuch access hai
+            // 2. Super Admin ko sab kuch access hai (system-wide, no firm scope)
             // ================================================
             if (role == UserRole.SuperAdmin)
             {
@@ -37,11 +37,37 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
             }
 
             // ================================================
+            // FIX (CRITICAL): Multi-tenant isolation.
+            // A user must NEVER access a document belonging to another
+            // firm's case, no matter what role they have. Previously
+            // FirmAdmin/Partner returned true unconditionally below,
+            // which let anyone with that role read/download/delete ANY
+            // firm's documents just by guessing a DocumentID.
+            // ================================================
+            if (documentId > 0)
+            {
+                var documentFirmId = await _context.Documents
+                    .AsNoTracking()
+                    .Where(d => d.DocumentID == documentId)
+                    .Select(d => (int?)d.Case.FirmID)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (documentFirmId == null || documentFirmId != user.FirmID)
+                {
+                    _logger.LogWarning(
+                        "User {UserId} (Firm {UserFirmId}) denied cross-firm access to document {DocumentId} (Firm {DocFirmId})",
+                        userId, user.FirmID, documentId, documentFirmId);
+                    return false;
+                }
+            }
+
+            // ================================================
             // 3. FirmAdmin and Partner have full access (View/Download/Upload/Delete)
+            //    within their own firm (enforced above)
             // ================================================
             if (role == UserRole.FirmAdmin || role == UserRole.Partner)
             {
-                _logger.LogDebug("Role {Role} has full document access", role);
+                _logger.LogDebug("Role {Role} has full document access (own firm only)", role);
                 return true;
             }
 
@@ -136,7 +162,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 bool userAllowed = action == "View" ? userPermission.CanView
                     : action == "Download" && userPermission.CanDownload;
 
-                _logger.LogDebug("Moharrir {UserId} - user-specific permission found for document {DocumentId}, {Action} allowed: {Allowed}",userId, documentId, action, userAllowed);
+                _logger.LogDebug("Moharrir {UserId} - user-specific permission found for document {DocumentId}, {Action} allowed: {Allowed}", userId, documentId, action, userAllowed);
                 return userAllowed;
             }
 
@@ -233,9 +259,6 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
             var role = user.GetRole();
 
-            // ================================================
-            // Determine access level by role
-            // ================================================
             return role switch
             {
                 UserRole.SuperAdmin => DocumentAccessLevel.FullAccess,
@@ -303,8 +326,6 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
     /// <summary>
     /// Grant document permission to a specific user (overrides role-level grant).
-    /// Used e.g. to elevate one restricted Moharrir individually without
-    /// changing access for the whole Moharrir role.
     /// </summary>
     public async Task GrantUserDocumentPermissionAsync(long documentId, int userId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default)
     {

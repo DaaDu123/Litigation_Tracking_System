@@ -1,6 +1,7 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -10,12 +11,16 @@ namespace LTSBackend.Features.CaseNotes.Commands.DeleteNote
     public class DeleteCaseNoteHandler(
         AppDbContext _context,
         IAuditService _auditService,
+        ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<DeleteCaseNoteCommand, bool>
     {
         public async Task<bool> Handle(DeleteCaseNoteCommand request, CancellationToken cancellationToken)
         {
-            var note = await _context.CaseNotes.FirstOrDefaultAsync(n => n.NoteID == request.NoteID, cancellationToken);
-            if (note == null)
+            var note = await _context.CaseNotes
+                .Include(n => n.Case)
+                .FirstOrDefaultAsync(n => n.NoteID == request.NoteID, cancellationToken);
+
+            if (note == null || (!_currentUser.IsSuperAdmin && note.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Note ID {request.NoteID} nahi mila");
 
             int currentUserId = GetCurrentUserId();

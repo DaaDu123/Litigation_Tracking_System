@@ -1,18 +1,25 @@
 ﻿using LTSBackend.Data;
 using LTSBackend.Features.Milestones.DTOs;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Milestones.Queries.GetCaseMilestones
 {
-    public class GetCaseMilestonesHandler(AppDbContext _context) : IRequestHandler<GetCaseMilestonesQuery, List<MilestoneDetailDTO>>
+    public class GetCaseMilestonesHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<GetCaseMilestonesQuery, List<MilestoneDetailDTO>>
     {
         public async Task<List<MilestoneDetailDTO>> Handle(GetCaseMilestonesQuery request, CancellationToken cancellationToken)
         {
-            var milestones = await _context.CaseMilestones
+            var query = _context.CaseMilestones
                 .AsNoTracking()
                 .Include(m => m.Case)
-                .Where(m => m.CaseID == request.CaseID)
+                .Where(m => m.CaseID == request.CaseID);
+
+            // FIX: multi-tenant isolation
+            if (!_currentUser.IsSuperAdmin)
+                query = query.Where(m => m.Case.FirmID == _currentUser.FirmID);
+
+            var milestones = await query
                 .OrderBy(m => m.MilestoneDate)
                 .ToListAsync(cancellationToken);
 

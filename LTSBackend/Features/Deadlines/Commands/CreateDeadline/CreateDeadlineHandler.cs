@@ -2,22 +2,20 @@
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace LTSBackend.Features.Deadlines.Commands.CreateDeadline
 {
-    public class CreateDeadlineHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
-        IHttpContextAccessor _httpContextAccessor,
-        ILogger<CreateDeadlineHandler> _logger) : IRequestHandler<CreateDeadlineCommand, long>
+    public class CreateDeadlineHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
+        IHttpContextAccessor _httpContextAccessor,ILogger<CreateDeadlineHandler> _logger) : IRequestHandler<CreateDeadlineCommand, long>
     {
         public async Task<long> Handle(CreateDeadlineCommand request, CancellationToken cancellationToken)
         {
-            var caseExists = await _context.Cases.AnyAsync(c => c.CaseID == request.Deadline.CaseID, cancellationToken);
-            if (!caseExists)
+            var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Deadline.CaseID, cancellationToken);
+            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Case ID {request.Deadline.CaseID} nahi mila");
 
             var deadline = new Deadline

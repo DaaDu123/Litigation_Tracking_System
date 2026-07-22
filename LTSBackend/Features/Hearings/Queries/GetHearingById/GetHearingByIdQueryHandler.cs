@@ -7,16 +7,19 @@ using Microsoft.EntityFrameworkCore;
 using LTSBackend.Data;
 using LTSBackend.Features.Hearings.DTOs;
 using LTSBackend.Comman.Exceptions;
+using LTSBackend.Services.CurrentUser;
 
 namespace LTSBackend.Features.Hearings.Queries.GetHearingById
 {
     public class GetHearingByIdQueryHandler : IRequestHandler<GetHearingByIdQuery, HearingDetailDTO>
     {
         private readonly AppDbContext _context;
+        private readonly ICurrentUserService _currentUser;
 
-        public GetHearingByIdQueryHandler(AppDbContext context)
+        public GetHearingByIdQueryHandler(AppDbContext context, ICurrentUserService currentUser)
         {
             _context = context;
+            _currentUser = currentUser;
         }
 
         public async Task<HearingDetailDTO> Handle(GetHearingByIdQuery request, CancellationToken cancellationToken)
@@ -27,10 +30,9 @@ namespace LTSBackend.Features.Hearings.Queries.GetHearingById
                 .Where(h => h.HearingID == request.HearingId)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (hearing == null)
+            if (hearing == null || (!_currentUser.IsSuperAdmin && hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException("Hearing not found");
 
-            // No CreatedByUser navigation configured on Hearing entity - fetch name separately
             string? createdByName = await _context.Users
                 .Where(u => u.UserID == hearing.CreatedBy)
                 .Select(u => u.FullName)
