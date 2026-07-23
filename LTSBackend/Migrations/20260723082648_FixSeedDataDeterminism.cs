@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LTSBackend.Migrations
 {
     /// <inheritdoc />
-    public partial class FirmEntity : Migration
+    public partial class FixSeedDataDeterminism : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -33,7 +33,8 @@ namespace LTSBackend.Migrations
                 {
                     StageID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    StageName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false)
+                    StageName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -49,7 +50,8 @@ namespace LTSBackend.Migrations
                     StatusName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     SequenceNo = table.Column<int>(type: "int", nullable: false),
                     ColorCode = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    IsClosed = table.Column<bool>(type: "bit", nullable: false)
+                    IsClosed = table.Column<bool>(type: "bit", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -79,7 +81,9 @@ namespace LTSBackend.Migrations
                     DepartmentID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     DepartmentName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
+                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    DepartmentCode = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -92,7 +96,8 @@ namespace LTSBackend.Migrations
                 {
                     DocumentTypeID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    TypeName = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false)
+                    TypeName = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -156,7 +161,8 @@ namespace LTSBackend.Migrations
                 {
                     PermissionID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    PermissionName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                    PermissionName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -170,7 +176,9 @@ namespace LTSBackend.Migrations
                     RoleID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     RoleName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true)
+                    Description = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    IsSystemRole = table.Column<bool>(type: "bit", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -762,66 +770,165 @@ namespace LTSBackend.Migrations
                 });
 
             migrationBuilder.InsertData(
+                table: "CaseCategories",
+                columns: new[] { "CategoryID", "CategoryName", "Description" },
+                values: new object[,]
+                {
+                    { 1, "Civil", "Civil matters and disputes" },
+                    { 2, "Criminal", "Criminal cases" },
+                    { 3, "Constitutional", "Constitutional matters" },
+                    { 4, "Corporate", "Corporate and commercial disputes" },
+                    { 5, "Labour", "Labour and employment disputes" },
+                    { 6, "Administrative", "Administrative law matters" },
+                    { 7, "Banking", "Banking and financial disputes" },
+                    { 8, "Tax", "Tax-related matters" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "CaseStages",
+                columns: new[] { "StageID", "Description", "StageName" },
+                values: new object[,]
+                {
+                    { 1, "Initial case filing stage", "Filing" },
+                    { 2, "Case admission by court", "Admission" },
+                    { 3, "Evidence submission stage", "Evidence" },
+                    { 4, "Oral arguments before court", "Arguments" },
+                    { 5, "Judgment delivery", "Judgment" },
+                    { 6, "Appeal proceedings", "Appeal" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "CaseStatus",
+                columns: new[] { "StatusID", "ColorCode", "IsActive", "IsClosed", "SequenceNo", "StatusName" },
+                values: new object[,]
+                {
+                    { 1, "#0066CC", true, false, 1, "New" },
+                    { 2, "#FF9900", true, false, 2, "Pending" },
+                    { 3, "#00CC66", true, false, 3, "Active" },
+                    { 4, "#FF6600", true, false, 4, "Hearing Scheduled" },
+                    { 5, "#9900CC", true, false, 5, "Judgment Reserved" },
+                    { 6, "#666666", true, true, 6, "Closed" },
+                    { 7, "#999999", true, true, 7, "Archived" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Courts",
+                columns: new[] { "CourtID", "Address", "CourtName", "CourtType", "Jurisdiction" },
+                values: new object[,]
+                {
+                    { 1, "Constitution Avenue, Islamabad", "Supreme Court of Pakistan", "Federal", "National" },
+                    { 2, "H-8/4, Islamabad", "Islamabad High Court", "High Court", "Islamabad Capital Territory" },
+                    { 3, "The Mall, Lahore", "Lahore High Court", "High Court", "Punjab" },
+                    { 4, "Constitution Avenue, Karachi", "Sindh High Court", "High Court", "Sindh" },
+                    { 5, "Peshawar", "Peshawar High Court", "High Court", "Khyber Pakhtunkhwa" },
+                    { 6, "Quetta", "Quetta High Court", "High Court", "Balochistan" },
+                    { 7, "Thokar Niaz Baig, Lahore", "District Court Lahore", "District Court", "Lahore District" },
+                    { 8, "Karachi", "District Court Karachi", "District Court", "Karachi District" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Departments",
+                columns: new[] { "DepartmentID", "DepartmentCode", "DepartmentName", "Description", "IsActive" },
+                values: new object[,]
+                {
+                    { 1, "FIN", "Finance Department", null, true },
+                    { 2, "REV", "Revenue Department", null, true },
+                    { 3, "LAW", "Law Department", null, true },
+                    { 4, "DEF", "Defense Department", null, true },
+                    { 5, "INT", "Interior Department", null, true }
+                });
+
+            migrationBuilder.InsertData(
+                table: "DocumentTypes",
+                columns: new[] { "DocumentTypeID", "Description", "TypeName" },
+                values: new object[,]
+                {
+                    { 1, "Main petition/plaint document", "Petition" },
+                    { 2, "Sworn affidavit", "Affidavit" },
+                    { 3, "Order issued by court", "Court Order" },
+                    { 4, "Supporting evidence documents", "Evidence" },
+                    { 5, "Reply to petition/arguments", "Reply" },
+                    { 6, "Final judgment document", "Judgment" },
+                    { 7, "Legal notices", "Notice" },
+                    { 8, "Appeal documents", "Appeal" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Firms",
+                columns: new[] { "FirmID", "Address", "BlockedAt", "BlockedBy", "BlockedReason", "ContactEmail", "ContactPhone", "CreatedAt", "CreatedBy", "CustomDomain", "DeletedAt", "DeletedBy", "FirmCode", "FirmName", "IsBlocked", "IsDeleted", "MigrationCompletedAt", "MigrationNotes", "MigrationRequestedAt", "MigrationRequestedBy", "MigrationStatus", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, null, null, null, null, null, null, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 0, null, null, null, "DEMO", "Demo Law Firm", false, false, null, "Development/Testing Firm", null, null, "None", null },
+                    { 2, null, null, null, null, null, null, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 0, null, null, null, "TEST", "Test Law Firm", false, false, null, "QA Testing Firm", null, null, "None", null }
+                });
+
+            migrationBuilder.InsertData(
                 table: "NotificationTypes",
                 columns: new[] { "NotificationTypeID", "Description", "IsActive", "IsEmail", "IsInApp", "IsSMS", "TypeName" },
                 values: new object[,]
                 {
-                    { 1, "Reminder for an approaching case deadline", true, true, true, false, "DeadlineAlert" },
-                    { 2, "Reminder for an upcoming court hearing", true, true, true, false, "HearingReminder" },
-                    { 3, "Notification when a case is assigned to a user", true, true, true, false, "CaseAssignment" },
-                    { 4, "Notification when a new document is uploaded to a case", true, false, true, false, "DocumentUploaded" }
+                    { 1, "Reminder for approaching case deadline", true, true, true, false, "DeadlineAlert" },
+                    { 2, "Reminder for upcoming court hearing", true, true, true, false, "HearingReminder" },
+                    { 3, "Notification when case is assigned", true, true, true, false, "CaseAssignment" },
+                    { 4, "Notification when document uploaded to case", true, false, true, false, "DocumentUploaded" },
+                    { 5, "Notification when case status changes", true, true, true, false, "CaseStatusChanged" }
                 });
 
             migrationBuilder.InsertData(
                 table: "Permissions",
-                columns: new[] { "PermissionID", "PermissionName" },
+                columns: new[] { "PermissionID", "Description", "PermissionName" },
                 values: new object[,]
                 {
-                    { 101, "ManageFirms" },
-                    { 102, "ViewSystemAuditLogs" },
-                    { 103, "ManageDataMigration" },
-                    { 104, "ManageSystemUsers" },
-                    { 201, "ManageFirmUsers" },
-                    { 202, "ViewFirmCaseDirectory" },
-                    { 203, "AssignLawyersToCases" },
-                    { 204, "ManageFirmSettings" },
-                    { 205, "DeleteCases" },
-                    { 301, "ViewFirmCases" },
-                    { 302, "CreateCases" },
-                    { 303, "UpdateCases" },
-                    { 304, "AssignCases" },
-                    { 305, "ViewAllDocuments" },
-                    { 306, "DownloadDocuments" },
-                    { 307, "ApproveFilings" },
-                    { 308, "ViewFirmAnalytics" },
-                    { 401, "ViewAssignedCases" },
-                    { 402, "UploadDocuments" },
-                    { 403, "DownloadAssignedDocuments" },
-                    { 404, "AddCaseNotes" },
-                    { 405, "TrackDeadlines" },
-                    { 406, "LogBillableHours" },
-                    { 501, "EnterCaseData" },
-                    { 502, "UploadCaseDocuments" },
-                    { 503, "ViewDocumentsIfPermitted" },
-                    { 504, "DownloadDocumentsIfPermitted" },
-                    { 505, "MaintainCaseRecords" },
-                    { 601, "ViewDocumentsReadOnly" },
-                    { 602, "DraftDocuments" },
-                    { 603, "PerformResearch" }
+                    { 101, "Create, block, remove firms", "ManageFirms" },
+                    { 102, "View system-wide audit logs", "ViewSystemAuditLogs" },
+                    { 103, "Manage firm data migration", "ManageDataMigration" },
+                    { 104, "Manage all system users", "ManageSystemUsers" },
+                    { 201, "Create and manage firm users", "ManageFirmUsers" },
+                    { 202, "View all cases in firm", "ViewFirmCaseDirectory" },
+                    { 203, "Assign lawyers to cases", "AssignLawyersToCases" },
+                    { 204, "Manage firm settings and billing", "ManageFirmSettings" },
+                    { 205, "Delete cases", "DeleteCases" },
+                    { 301, "View firm cases", "ViewFirmCases" },
+                    { 302, "Create new cases", "CreateCases" },
+                    { 303, "Update case information", "UpdateCases" },
+                    { 304, "Assign cases to lawyers", "AssignCases" },
+                    { 305, "View all case documents", "ViewAllDocuments" },
+                    { 306, "Download documents", "DownloadDocuments" },
+                    { 307, "Approve critical filings", "ApproveFilings" },
+                    { 308, "View firm analytics and reports", "ViewFirmAnalytics" },
+                    { 401, "View assigned cases only", "ViewAssignedCases" },
+                    { 402, "Upload documents", "UploadDocuments" },
+                    { 403, "Download assigned case documents", "DownloadAssignedDocuments" },
+                    { 404, "Add notes to cases", "AddCaseNotes" },
+                    { 405, "Track case deadlines", "TrackDeadlines" },
+                    { 406, "Log billable hours", "LogBillableHours" },
+                    { 501, "Enter case data", "EnterCaseData" },
+                    { 502, "Upload case documents", "UploadCaseDocuments" },
+                    { 503, "View documents if permitted", "ViewDocumentsIfPermitted" },
+                    { 504, "Download documents if permitted", "DownloadDocumentsIfPermitted" },
+                    { 505, "Maintain case records", "MaintainCaseRecords" },
+                    { 601, "View documents (read-only)", "ViewDocumentsReadOnly" },
+                    { 602, "Draft legal documents", "DraftDocuments" },
+                    { 603, "Perform legal research", "PerformResearch" }
                 });
 
             migrationBuilder.InsertData(
                 table: "Roles",
-                columns: new[] { "RoleID", "Description", "RoleName" },
+                columns: new[] { "RoleID", "Description", "IsActive", "IsSystemRole", "RoleName" },
                 values: new object[,]
                 {
-                    { 1, "System-wide management and data custody", "SuperAdmin" },
-                    { 2, "Workspace owner - manages specific law firm", "FirmAdmin" },
-                    { 3, "Senior lawyer - supervises case teams", "Partner" },
-                    { 4, "Day-to-day legal work", "AssociateLawyer" },
-                    { 5, "Legal clerk / Data entry operator", "Moharrir" },
-                    { 6, "Temporary staff / Junior assistant", "InternParalegal" }
+                    { 1, "System-wide management and data custody", true, true, "SuperAdmin" },
+                    { 2, "Workspace owner - manages specific law firm", true, false, "FirmAdmin" },
+                    { 3, "Senior lawyer - supervises case teams", true, false, "Partner" },
+                    { 4, "Day-to-day legal work", true, false, "AssociateLawyer" },
+                    { 5, "Legal clerk / Data entry operator", true, false, "Moharrir" },
+                    { 6, "Temporary staff / Junior assistant", true, false, "InternParalegal" }
                 });
+
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "UserID", "CreatedAt", "Department", "Designation", "Email", "EmployeeNo", "FailedLoginAttempts", "FirmID", "FullName", "IsActive", "IsDeleted", "IsExternal", "LastLogin", "PasswordChangedDate", "PasswordHash", "Phone", "ProfileImage", "RoleID", "UpdatedAt" },
+                values: new object[] { 1, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "System Administrator", "superadmin@lts.pk", "", 0, null, "Super Administrator", true, false, false, null, null, "$2a$11$placeholder_superadmin_hash_replace_in_production", null, null, null, null });
 
             migrationBuilder.InsertData(
                 table: "RolePermissions",
@@ -868,6 +975,18 @@ namespace LTSBackend.Migrations
                     { 38, 601, 6 },
                     { 39, 602, 6 },
                     { 40, 603, 6 }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "UserID", "CreatedAt", "Department", "Designation", "Email", "EmployeeNo", "FailedLoginAttempts", "FirmID", "FullName", "IsActive", "IsDeleted", "IsExternal", "LastLogin", "PasswordChangedDate", "PasswordHash", "Phone", "ProfileImage", "RoleID", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 2, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Firm Administrator", "admin@demolaw.pk", "", 0, 1, "Firm Administrator", true, false, false, null, null, "$2a$11$placeholder_firmadmin_hash_replace_in_production", null, null, null, null },
+                    { 3, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Senior Partner", "partner@demolaw.pk", "", 0, 1, "Muhammad Ashraf (Partner)", true, false, false, null, null, "$2a$11$placeholder_partner_hash_replace_in_production", null, null, null, null },
+                    { 4, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Associate Lawyer", "associate@demolaw.pk", "", 0, 1, "Ayesha Khan (Associate)", true, false, false, null, null, "$2a$11$placeholder_associate_hash_replace_in_production", null, null, null, null },
+                    { 5, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Legal Clerk", "moharrir@demolaw.pk", "", 0, 1, "Hassan Ali (Moharrir)", true, false, false, null, null, "$2a$11$placeholder_moharrir_hash_replace_in_production", null, null, null, null },
+                    { 6, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Paralegal Intern", "intern@demolaw.pk", "", 0, 1, "Amna Saeed (Intern)", true, false, false, null, null, "$2a$11$placeholder_intern_hash_replace_in_production", null, null, null, null }
                 });
 
             migrationBuilder.CreateIndex(

@@ -723,6 +723,56 @@ namespace LTSBackend.Migrations
                     b.HasKey("CategoryID");
 
                     b.ToTable("CaseCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            CategoryID = 1,
+                            CategoryName = "Civil",
+                            Description = "Civil matters and disputes"
+                        },
+                        new
+                        {
+                            CategoryID = 2,
+                            CategoryName = "Criminal",
+                            Description = "Criminal cases"
+                        },
+                        new
+                        {
+                            CategoryID = 3,
+                            CategoryName = "Constitutional",
+                            Description = "Constitutional matters"
+                        },
+                        new
+                        {
+                            CategoryID = 4,
+                            CategoryName = "Corporate",
+                            Description = "Corporate and commercial disputes"
+                        },
+                        new
+                        {
+                            CategoryID = 5,
+                            CategoryName = "Labour",
+                            Description = "Labour and employment disputes"
+                        },
+                        new
+                        {
+                            CategoryID = 6,
+                            CategoryName = "Administrative",
+                            Description = "Administrative law matters"
+                        },
+                        new
+                        {
+                            CategoryID = 7,
+                            CategoryName = "Banking",
+                            Description = "Banking and financial disputes"
+                        },
+                        new
+                        {
+                            CategoryID = 8,
+                            CategoryName = "Tax",
+                            Description = "Tax-related matters"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.CaseStage", b =>
@@ -733,6 +783,10 @@ namespace LTSBackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StageID"));
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("StageName")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -741,6 +795,44 @@ namespace LTSBackend.Migrations
                     b.HasKey("StageID");
 
                     b.ToTable("CaseStages");
+
+                    b.HasData(
+                        new
+                        {
+                            StageID = 1,
+                            Description = "Initial case filing stage",
+                            StageName = "Filing"
+                        },
+                        new
+                        {
+                            StageID = 2,
+                            Description = "Case admission by court",
+                            StageName = "Admission"
+                        },
+                        new
+                        {
+                            StageID = 3,
+                            Description = "Evidence submission stage",
+                            StageName = "Evidence"
+                        },
+                        new
+                        {
+                            StageID = 4,
+                            Description = "Oral arguments before court",
+                            StageName = "Arguments"
+                        },
+                        new
+                        {
+                            StageID = 5,
+                            Description = "Judgment delivery",
+                            StageName = "Judgment"
+                        },
+                        new
+                        {
+                            StageID = 6,
+                            Description = "Appeal proceedings",
+                            StageName = "Appeal"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.CaseStatus", b =>
@@ -756,6 +848,9 @@ namespace LTSBackend.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsClosed")
                         .HasColumnType("bit");
 
@@ -770,6 +865,71 @@ namespace LTSBackend.Migrations
                     b.HasKey("StatusID");
 
                     b.ToTable("CaseStatus");
+
+                    b.HasData(
+                        new
+                        {
+                            StatusID = 1,
+                            ColorCode = "#0066CC",
+                            IsActive = true,
+                            IsClosed = false,
+                            SequenceNo = 1,
+                            StatusName = "New"
+                        },
+                        new
+                        {
+                            StatusID = 2,
+                            ColorCode = "#FF9900",
+                            IsActive = true,
+                            IsClosed = false,
+                            SequenceNo = 2,
+                            StatusName = "Pending"
+                        },
+                        new
+                        {
+                            StatusID = 3,
+                            ColorCode = "#00CC66",
+                            IsActive = true,
+                            IsClosed = false,
+                            SequenceNo = 3,
+                            StatusName = "Active"
+                        },
+                        new
+                        {
+                            StatusID = 4,
+                            ColorCode = "#FF6600",
+                            IsActive = true,
+                            IsClosed = false,
+                            SequenceNo = 4,
+                            StatusName = "Hearing Scheduled"
+                        },
+                        new
+                        {
+                            StatusID = 5,
+                            ColorCode = "#9900CC",
+                            IsActive = true,
+                            IsClosed = false,
+                            SequenceNo = 5,
+                            StatusName = "Judgment Reserved"
+                        },
+                        new
+                        {
+                            StatusID = 6,
+                            ColorCode = "#666666",
+                            IsActive = true,
+                            IsClosed = true,
+                            SequenceNo = 6,
+                            StatusName = "Closed"
+                        },
+                        new
+                        {
+                            StatusID = 7,
+                            ColorCode = "#999999",
+                            IsActive = true,
+                            IsClosed = true,
+                            SequenceNo = 7,
+                            StatusName = "Archived"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.Court", b =>
@@ -803,6 +963,72 @@ namespace LTSBackend.Migrations
                     b.HasKey("CourtID");
 
                     b.ToTable("Courts");
+
+                    b.HasData(
+                        new
+                        {
+                            CourtID = 1,
+                            Address = "Constitution Avenue, Islamabad",
+                            CourtName = "Supreme Court of Pakistan",
+                            CourtType = "Federal",
+                            Jurisdiction = "National"
+                        },
+                        new
+                        {
+                            CourtID = 2,
+                            Address = "H-8/4, Islamabad",
+                            CourtName = "Islamabad High Court",
+                            CourtType = "High Court",
+                            Jurisdiction = "Islamabad Capital Territory"
+                        },
+                        new
+                        {
+                            CourtID = 3,
+                            Address = "The Mall, Lahore",
+                            CourtName = "Lahore High Court",
+                            CourtType = "High Court",
+                            Jurisdiction = "Punjab"
+                        },
+                        new
+                        {
+                            CourtID = 4,
+                            Address = "Constitution Avenue, Karachi",
+                            CourtName = "Sindh High Court",
+                            CourtType = "High Court",
+                            Jurisdiction = "Sindh"
+                        },
+                        new
+                        {
+                            CourtID = 5,
+                            Address = "Peshawar",
+                            CourtName = "Peshawar High Court",
+                            CourtType = "High Court",
+                            Jurisdiction = "Khyber Pakhtunkhwa"
+                        },
+                        new
+                        {
+                            CourtID = 6,
+                            Address = "Quetta",
+                            CourtName = "Quetta High Court",
+                            CourtType = "High Court",
+                            Jurisdiction = "Balochistan"
+                        },
+                        new
+                        {
+                            CourtID = 7,
+                            Address = "Thokar Niaz Baig, Lahore",
+                            CourtName = "District Court Lahore",
+                            CourtType = "District Court",
+                            Jurisdiction = "Lahore District"
+                        },
+                        new
+                        {
+                            CourtID = 8,
+                            Address = "Karachi",
+                            CourtName = "District Court Karachi",
+                            CourtType = "District Court",
+                            Jurisdiction = "Karachi District"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.Department", b =>
@@ -813,6 +1039,10 @@ namespace LTSBackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DepartmentID"));
 
+                    b.Property<string>("DepartmentCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("DepartmentName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -822,9 +1052,49 @@ namespace LTSBackend.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.HasKey("DepartmentID");
 
                     b.ToTable("Departments");
+
+                    b.HasData(
+                        new
+                        {
+                            DepartmentID = 1,
+                            DepartmentCode = "FIN",
+                            DepartmentName = "Finance Department",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            DepartmentID = 2,
+                            DepartmentCode = "REV",
+                            DepartmentName = "Revenue Department",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            DepartmentID = 3,
+                            DepartmentCode = "LAW",
+                            DepartmentName = "Law Department",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            DepartmentID = 4,
+                            DepartmentCode = "DEF",
+                            DepartmentName = "Defense Department",
+                            IsActive = true
+                        },
+                        new
+                        {
+                            DepartmentID = 5,
+                            DepartmentCode = "INT",
+                            DepartmentName = "Interior Department",
+                            IsActive = true
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.DocumentType", b =>
@@ -835,6 +1105,10 @@ namespace LTSBackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DocumentTypeID"));
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("TypeName")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -843,6 +1117,56 @@ namespace LTSBackend.Migrations
                     b.HasKey("DocumentTypeID");
 
                     b.ToTable("DocumentTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            DocumentTypeID = 1,
+                            Description = "Main petition/plaint document",
+                            TypeName = "Petition"
+                        },
+                        new
+                        {
+                            DocumentTypeID = 2,
+                            Description = "Sworn affidavit",
+                            TypeName = "Affidavit"
+                        },
+                        new
+                        {
+                            DocumentTypeID = 3,
+                            Description = "Order issued by court",
+                            TypeName = "Court Order"
+                        },
+                        new
+                        {
+                            DocumentTypeID = 4,
+                            Description = "Supporting evidence documents",
+                            TypeName = "Evidence"
+                        },
+                        new
+                        {
+                            DocumentTypeID = 5,
+                            Description = "Reply to petition/arguments",
+                            TypeName = "Reply"
+                        },
+                        new
+                        {
+                            DocumentTypeID = 6,
+                            Description = "Final judgment document",
+                            TypeName = "Judgment"
+                        },
+                        new
+                        {
+                            DocumentTypeID = 7,
+                            Description = "Legal notices",
+                            TypeName = "Notice"
+                        },
+                        new
+                        {
+                            DocumentTypeID = 8,
+                            Description = "Appeal documents",
+                            TypeName = "Appeal"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.Firm", b =>
@@ -936,6 +1260,32 @@ namespace LTSBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("Firms");
+
+                    b.HasData(
+                        new
+                        {
+                            FirmID = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = 0,
+                            FirmCode = "DEMO",
+                            FirmName = "Demo Law Firm",
+                            IsBlocked = false,
+                            IsDeleted = false,
+                            MigrationNotes = "Development/Testing Firm",
+                            MigrationStatus = "None"
+                        },
+                        new
+                        {
+                            FirmID = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = 0,
+                            FirmCode = "TEST",
+                            FirmName = "Test Law Firm",
+                            IsBlocked = false,
+                            IsDeleted = false,
+                            MigrationNotes = "QA Testing Firm",
+                            MigrationStatus = "None"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.LoginHistory", b =>
@@ -1019,7 +1369,7 @@ namespace LTSBackend.Migrations
                         new
                         {
                             NotificationTypeID = 1,
-                            Description = "Reminder for an approaching case deadline",
+                            Description = "Reminder for approaching case deadline",
                             IsActive = true,
                             IsEmail = true,
                             IsInApp = true,
@@ -1029,7 +1379,7 @@ namespace LTSBackend.Migrations
                         new
                         {
                             NotificationTypeID = 2,
-                            Description = "Reminder for an upcoming court hearing",
+                            Description = "Reminder for upcoming court hearing",
                             IsActive = true,
                             IsEmail = true,
                             IsInApp = true,
@@ -1039,7 +1389,7 @@ namespace LTSBackend.Migrations
                         new
                         {
                             NotificationTypeID = 3,
-                            Description = "Notification when a case is assigned to a user",
+                            Description = "Notification when case is assigned",
                             IsActive = true,
                             IsEmail = true,
                             IsInApp = true,
@@ -1049,12 +1399,22 @@ namespace LTSBackend.Migrations
                         new
                         {
                             NotificationTypeID = 4,
-                            Description = "Notification when a new document is uploaded to a case",
+                            Description = "Notification when document uploaded to case",
                             IsActive = true,
                             IsEmail = false,
                             IsInApp = true,
                             IsSMS = false,
                             TypeName = "DocumentUploaded"
+                        },
+                        new
+                        {
+                            NotificationTypeID = 5,
+                            Description = "Notification when case status changes",
+                            IsActive = true,
+                            IsEmail = true,
+                            IsInApp = true,
+                            IsSMS = false,
+                            TypeName = "CaseStatusChanged"
                         });
                 });
 
@@ -1065,6 +1425,10 @@ namespace LTSBackend.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PermissionID"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PermissionName")
                         .IsRequired()
@@ -1082,156 +1446,187 @@ namespace LTSBackend.Migrations
                         new
                         {
                             PermissionID = 101,
+                            Description = "Create, block, remove firms",
                             PermissionName = "ManageFirms"
                         },
                         new
                         {
                             PermissionID = 102,
+                            Description = "View system-wide audit logs",
                             PermissionName = "ViewSystemAuditLogs"
                         },
                         new
                         {
                             PermissionID = 103,
+                            Description = "Manage firm data migration",
                             PermissionName = "ManageDataMigration"
                         },
                         new
                         {
                             PermissionID = 104,
+                            Description = "Manage all system users",
                             PermissionName = "ManageSystemUsers"
                         },
                         new
                         {
                             PermissionID = 201,
+                            Description = "Create and manage firm users",
                             PermissionName = "ManageFirmUsers"
                         },
                         new
                         {
                             PermissionID = 202,
+                            Description = "View all cases in firm",
                             PermissionName = "ViewFirmCaseDirectory"
                         },
                         new
                         {
                             PermissionID = 203,
+                            Description = "Assign lawyers to cases",
                             PermissionName = "AssignLawyersToCases"
                         },
                         new
                         {
                             PermissionID = 204,
+                            Description = "Manage firm settings and billing",
                             PermissionName = "ManageFirmSettings"
                         },
                         new
                         {
                             PermissionID = 205,
+                            Description = "Delete cases",
                             PermissionName = "DeleteCases"
                         },
                         new
                         {
+                            PermissionID = 402,
+                            Description = "Upload documents",
+                            PermissionName = "UploadDocuments"
+                        },
+                        new
+                        {
                             PermissionID = 301,
+                            Description = "View firm cases",
                             PermissionName = "ViewFirmCases"
                         },
                         new
                         {
                             PermissionID = 302,
+                            Description = "Create new cases",
                             PermissionName = "CreateCases"
                         },
                         new
                         {
                             PermissionID = 303,
+                            Description = "Update case information",
                             PermissionName = "UpdateCases"
                         },
                         new
                         {
                             PermissionID = 304,
+                            Description = "Assign cases to lawyers",
                             PermissionName = "AssignCases"
                         },
                         new
                         {
                             PermissionID = 305,
+                            Description = "View all case documents",
                             PermissionName = "ViewAllDocuments"
                         },
                         new
                         {
                             PermissionID = 306,
+                            Description = "Download documents",
                             PermissionName = "DownloadDocuments"
                         },
                         new
                         {
                             PermissionID = 307,
+                            Description = "Approve critical filings",
                             PermissionName = "ApproveFilings"
                         },
                         new
                         {
                             PermissionID = 308,
+                            Description = "View firm analytics and reports",
                             PermissionName = "ViewFirmAnalytics"
                         },
                         new
                         {
                             PermissionID = 401,
+                            Description = "View assigned cases only",
                             PermissionName = "ViewAssignedCases"
                         },
                         new
                         {
-                            PermissionID = 402,
-                            PermissionName = "UploadDocuments"
-                        },
-                        new
-                        {
                             PermissionID = 403,
+                            Description = "Download assigned case documents",
                             PermissionName = "DownloadAssignedDocuments"
                         },
                         new
                         {
                             PermissionID = 404,
+                            Description = "Add notes to cases",
                             PermissionName = "AddCaseNotes"
                         },
                         new
                         {
                             PermissionID = 405,
+                            Description = "Track case deadlines",
                             PermissionName = "TrackDeadlines"
                         },
                         new
                         {
                             PermissionID = 406,
+                            Description = "Log billable hours",
                             PermissionName = "LogBillableHours"
                         },
                         new
                         {
                             PermissionID = 501,
+                            Description = "Enter case data",
                             PermissionName = "EnterCaseData"
                         },
                         new
                         {
                             PermissionID = 502,
+                            Description = "Upload case documents",
                             PermissionName = "UploadCaseDocuments"
                         },
                         new
                         {
                             PermissionID = 503,
+                            Description = "View documents if permitted",
                             PermissionName = "ViewDocumentsIfPermitted"
                         },
                         new
                         {
                             PermissionID = 504,
+                            Description = "Download documents if permitted",
                             PermissionName = "DownloadDocumentsIfPermitted"
                         },
                         new
                         {
                             PermissionID = 505,
+                            Description = "Maintain case records",
                             PermissionName = "MaintainCaseRecords"
                         },
                         new
                         {
                             PermissionID = 601,
+                            Description = "View documents (read-only)",
                             PermissionName = "ViewDocumentsReadOnly"
                         },
                         new
                         {
                             PermissionID = 602,
+                            Description = "Draft legal documents",
                             PermissionName = "DraftDocuments"
                         },
                         new
                         {
                             PermissionID = 603,
+                            Description = "Perform legal research",
                             PermissionName = "PerformResearch"
                         });
                 });
@@ -1279,6 +1674,12 @@ namespace LTSBackend.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystemRole")
+                        .HasColumnType("bit");
+
                     b.Property<string>("RoleName")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1296,36 +1697,48 @@ namespace LTSBackend.Migrations
                         {
                             RoleID = 1,
                             Description = "System-wide management and data custody",
+                            IsActive = true,
+                            IsSystemRole = true,
                             RoleName = "SuperAdmin"
                         },
                         new
                         {
                             RoleID = 2,
                             Description = "Workspace owner - manages specific law firm",
+                            IsActive = true,
+                            IsSystemRole = false,
                             RoleName = "FirmAdmin"
                         },
                         new
                         {
                             RoleID = 3,
                             Description = "Senior lawyer - supervises case teams",
+                            IsActive = true,
+                            IsSystemRole = false,
                             RoleName = "Partner"
                         },
                         new
                         {
                             RoleID = 4,
                             Description = "Day-to-day legal work",
+                            IsActive = true,
+                            IsSystemRole = false,
                             RoleName = "AssociateLawyer"
                         },
                         new
                         {
                             RoleID = 5,
                             Description = "Legal clerk / Data entry operator",
+                            IsActive = true,
+                            IsSystemRole = false,
                             RoleName = "Moharrir"
                         },
                         new
                         {
                             RoleID = 6,
                             Description = "Temporary staff / Junior assistant",
+                            IsActive = true,
+                            IsSystemRole = false,
                             RoleName = "InternParalegal"
                         });
                 });
@@ -1680,6 +2093,97 @@ namespace LTSBackend.Migrations
                     b.HasIndex("RoleID");
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            UserID = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Designation = "System Administrator",
+                            Email = "superadmin@lts.pk",
+                            EmployeeNo = "",
+                            FailedLoginAttempts = 0,
+                            FullName = "Super Administrator",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsExternal = false,
+                            PasswordHash = "$2a$11$placeholder_superadmin_hash_replace_in_production"
+                        },
+                        new
+                        {
+                            UserID = 2,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Designation = "Firm Administrator",
+                            Email = "admin@demolaw.pk",
+                            EmployeeNo = "",
+                            FailedLoginAttempts = 0,
+                            FirmID = 1,
+                            FullName = "Firm Administrator",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsExternal = false,
+                            PasswordHash = "$2a$11$placeholder_firmadmin_hash_replace_in_production"
+                        },
+                        new
+                        {
+                            UserID = 3,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Designation = "Senior Partner",
+                            Email = "partner@demolaw.pk",
+                            EmployeeNo = "",
+                            FailedLoginAttempts = 0,
+                            FirmID = 1,
+                            FullName = "Muhammad Ashraf (Partner)",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsExternal = false,
+                            PasswordHash = "$2a$11$placeholder_partner_hash_replace_in_production"
+                        },
+                        new
+                        {
+                            UserID = 4,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Designation = "Associate Lawyer",
+                            Email = "associate@demolaw.pk",
+                            EmployeeNo = "",
+                            FailedLoginAttempts = 0,
+                            FirmID = 1,
+                            FullName = "Ayesha Khan (Associate)",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsExternal = false,
+                            PasswordHash = "$2a$11$placeholder_associate_hash_replace_in_production"
+                        },
+                        new
+                        {
+                            UserID = 5,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Designation = "Legal Clerk",
+                            Email = "moharrir@demolaw.pk",
+                            EmployeeNo = "",
+                            FailedLoginAttempts = 0,
+                            FirmID = 1,
+                            FullName = "Hassan Ali (Moharrir)",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsExternal = false,
+                            PasswordHash = "$2a$11$placeholder_moharrir_hash_replace_in_production"
+                        },
+                        new
+                        {
+                            UserID = 6,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Designation = "Paralegal Intern",
+                            Email = "intern@demolaw.pk",
+                            EmployeeNo = "",
+                            FailedLoginAttempts = 0,
+                            FirmID = 1,
+                            FullName = "Amna Saeed (Intern)",
+                            IsActive = true,
+                            IsDeleted = false,
+                            IsExternal = false,
+                            PasswordHash = "$2a$11$placeholder_intern_hash_replace_in_production"
+                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.UserOtp", b =>

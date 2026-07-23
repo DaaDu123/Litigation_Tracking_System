@@ -3,8 +3,8 @@ using LTSBackend.Models.Cases;
 using LTSBackend.Models.Masters;
 using LTSBackend.Models.Security;
 using Microsoft.EntityFrameworkCore;
-using PermissionEnum = LTSBackend.Comman.Enum.PermissionEnum;
 using UserRole = LTSBackend.Comman.Enum.UserRole;
+using LTSBackend.Comman.Enum;
 
 namespace LTSBackend.Data;
 
@@ -375,6 +375,13 @@ public class AppDbContext : DbContext
     // ====================================================================================
     // FIRMS - Multi-tenant workspace seeds
     // ====================================================================================
+    // NOTE: Seed data (HasData) must be deterministic. Using DateTime.UtcNow here
+    // (or as a property's default initializer) bakes a different value into the
+    // model every single time the project is built, which makes EF Core think the
+    // model has "pending changes" forever, even with no real schema change.
+    // A fixed constant keeps the seeded rows stable across builds/migrations.
+    private static readonly DateTime SeedTimestamp = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     private static void SeedFirms(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Firm>().HasData(
@@ -384,7 +391,8 @@ public class AppDbContext : DbContext
                 FirmName = "Demo Law Firm",
                 FirmCode = "DEMO",
                 MigrationStatus = "None",
-                MigrationNotes = "Development/Testing Firm"
+                MigrationNotes = "Development/Testing Firm",
+                CreatedAt = SeedTimestamp
             },
             new Firm
             {
@@ -392,7 +400,8 @@ public class AppDbContext : DbContext
                 FirmName = "Test Law Firm",
                 FirmCode = "TEST",
                 MigrationStatus = "None",
-                MigrationNotes = "QA Testing Firm"
+                MigrationNotes = "QA Testing Firm",
+                CreatedAt = SeedTimestamp
             }
         );
     }
@@ -416,7 +425,7 @@ public class AppDbContext : DbContext
                 Designation = "System Administrator",
                 IsExternal = false,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = SeedTimestamp
             },
             // FirmAdmin - Demo Firm Manager
             new User
@@ -429,7 +438,7 @@ public class AppDbContext : DbContext
                 Designation = "Firm Administrator",
                 IsExternal = false,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = SeedTimestamp
             },
             // Partner - Senior Lawyer
             new User
@@ -442,7 +451,7 @@ public class AppDbContext : DbContext
                 Designation = "Senior Partner",
                 IsExternal = false,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = SeedTimestamp
             },
             // Associate Lawyer
             new User
@@ -455,7 +464,7 @@ public class AppDbContext : DbContext
                 Designation = "Associate Lawyer",
                 IsExternal = false,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = SeedTimestamp
             },
             // Moharrir - Legal Clerk
             new User
@@ -468,7 +477,7 @@ public class AppDbContext : DbContext
                 Designation = "Legal Clerk",
                 IsExternal = false,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = SeedTimestamp
             },
             // Intern / Paralegal
             new User
@@ -481,7 +490,7 @@ public class AppDbContext : DbContext
                 Designation = "Paralegal Intern",
                 IsExternal = false,
                 IsActive = true,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = SeedTimestamp
             }
         );
     }
