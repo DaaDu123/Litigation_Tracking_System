@@ -1,19 +1,10 @@
-﻿using System.Net;
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 using LTSFrontend.Core.Exceptions;
 using LTSFrontend.Core.Models;
 
 namespace LTSFrontend.Core.Http
 {
-    /// <summary>
-    /// Thin wrapper around HttpClient that talks to LTSBackend.
-    /// - Automatically unwraps the ApiResponse&lt;T&gt; envelope.
-    /// - Throws ApiException with the backend's message/errors on failure.
-    /// - Keeps cookies (the refresh-token HttpOnly cookie) alive for the
-    ///   lifetime of this instance, which is Scoped -> one per user circuit.
-    /// Registered as Scoped in ServiceCollectionExtensions.
-    /// </summary>
     public class ApiClient
     {
         public HttpClient Http { get; }
@@ -61,22 +52,23 @@ namespace LTSFrontend.Core.Http
             catch (HttpRequestException ex)
             {
                 throw new ApiException(
-                    "Backend tak connect nahi ho saka. Please make sure LTSBackend API is running (" +
-                    Http.BaseAddress + ") aur network settings theek hain.", null, new() { ex.Message });
+                    "Backend se connect nahi ho saka. Ensure LTSBackend API is running on " +
+                    Http.BaseAddress, null, new() { ex.Message });
             }
 
             var raw = await response.Content.ReadAsStringAsync(ct);
 
-            ApiResponse<T>? parsed;
-            try
+            ApiResponse<T>? parsed = null;
+            if (!string.IsNullOrWhiteSpace(raw))
             {
-                parsed = string.IsNullOrWhiteSpace(raw)
-                    ? null
-                    : JsonSerializer.Deserialize<ApiResponse<T>>(raw, JsonOptions);
-            }
-            catch (JsonException)
-            {
-                parsed = null;
+                try
+                {
+                    parsed = JsonSerializer.Deserialize<ApiResponse<T>>(raw, JsonOptions);
+                }
+                catch (JsonException)
+                {
+                    parsed = null;
+                }
             }
 
             if (!response.IsSuccessStatusCode)
@@ -86,9 +78,15 @@ namespace LTSFrontend.Core.Http
                 throw new ApiException(message, (int)response.StatusCode, parsed?.Errors);
             }
 
+            // If expected return type is bool and response is successful with null/empty content
+            if (typeof(T) == typeof(bool) && parsed == null)
+            {
+                return (T)(object)true;
+            }
+
             if (parsed == null)
             {
-                throw new ApiException("Server se ghalat response mila (invalid JSON).", (int)response.StatusCode);
+                throw new ApiException("Server se invalid response mila.", (int)response.StatusCode);
             }
 
             if (!parsed.Success)

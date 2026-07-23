@@ -12,4 +12,7 @@ public class DocumentType
     [Required]
     [MaxLength(160)]
     public string TypeName { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
 }

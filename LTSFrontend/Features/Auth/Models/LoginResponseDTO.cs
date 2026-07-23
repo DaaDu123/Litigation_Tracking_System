@@ -1,6 +1,11 @@
-﻿namespace LTSFrontend.Features.Auth.Models
+namespace LTSFrontend.Features.Auth.Models
 {
     public class LoginResponseDTO
     {
+        public int UserID { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string AccessToken { get; set; } = string.Empty;
+        public DateTime AccessTokenExpiry { get; set; }
     }
 }

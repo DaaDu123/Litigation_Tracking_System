@@ -1,8 +1,11 @@
 ﻿@inherits LayoutComponentBase
+@using LTSFrontend.Core.Auth
 @using LTSFrontend.Features.Auth.Services
 @using LTSFrontend.State
+@using Microsoft.AspNetCore.Components.Authorization
 @inject UserSessionState Session
 @inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
 <div class="lts-app-shell">
@@ -48,7 +51,11 @@
 @code {
     private async Task HandleLogoutAsync()
     {
-        //await AuthService.LogoutAsync();
+        await AuthService.LogoutAsync();
+
+        var provider = (CustomAuthStateProvider)AuthStateProvider;
+        await provider.MarkUserAsLoggedOutAsync();
+
         Navigation.NavigateTo("/login", forceLoad: true);
     }
 }

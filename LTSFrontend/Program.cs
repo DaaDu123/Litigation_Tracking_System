@@ -1,5 +1,6 @@
 using LTSFrontend;
 using LTSFrontend.Core.Extensions;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,17 +11,32 @@ builder.Services.AddRazorComponents()
 // LTS auth + API client + feature services
 builder.Services.AddLtsFrontendServices(builder.Configuration);
 
+// Authentication Service Registration
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/login";
+        options.AccessDeniedPath = "/access-denied";
+    });
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+// Authentication & Authorization Middlewares
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 

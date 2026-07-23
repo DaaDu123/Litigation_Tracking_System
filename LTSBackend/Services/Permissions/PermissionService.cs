@@ -76,7 +76,7 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
             // Super Admin - sab permissions
             if (user.GetRole() == UserRole.SuperAdmin)
             {
-                return Enum.GetNames(typeof(Permission)).ToList();
+                return Enum.GetNames(typeof(PermissionEnum)).ToList();
             }
 
             // Role ke permissions

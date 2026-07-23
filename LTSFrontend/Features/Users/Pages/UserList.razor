@@ -1,5 +1,166 @@
-﻿<h3>UserList</h3>
+﻿@page "/users"
+@attribute [Authorize(Roles = "Partner,FirmAdmin,SuperAdmin")]
+@using LTSFrontend.Core.Exceptions
+@using LTSFrontend.Features.Users.Models
+@using LTSFrontend.Features.Users.Services
+@using LTSFrontend.State
+@using Microsoft.AspNetCore.Authorization
+@inject IUserService UserService
+@inject UserSessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>User Management - LTS</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">User Management</h4>
+    @if (CanManageUsers)
+    {
+        <button class="btn btn-primary" @onclick="GoToCreate">
+            <i class="bi bi-plus-lg me-1"></i> Add User
+        </button>
+    }
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+
+<div class="lts-card">
+    <div class="mb-3">
+        <input type="text" class="form-control" style="max-width: 320px;"
+               placeholder="Search by name or email..." @bind="_searchTerm" @bind:event="oninput" />
+    </div>
+
+    @if (_isLoading)
+    {
+        <p class="text-muted mb-0"><span class="spinner-border spinner-border-sm me-2"></span>Loading users...</p>
+    }
+    else if (FilteredUsers.Count == 0)
+    {
+        <p class="text-muted mb-0">No users found.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        @if (CanManageUsers)
+                        {
+                            <th class="text-end">Actions</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in FilteredUsers)
+                    {
+                        <tr>
+                            <td>@user.FullName</td>
+                            <td>@user.Email</td>
+                            <td>@(user.RoleName ?? "-")</td>
+                            <td>@(user.Department ?? "-")</td>
+                            <td>
+                                @if (user.IsActive)
+                                {
+                                    <span class="badge text-bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-secondary">Inactive</span>
+                                }
+                            </td>
+                            @if (CanManageUsers)
+                            {
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-secondary me-1"
+                                            @onclick="() => GoToEdit(user.UserID)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            disabled="@(user.UserID == Session.UserID)"
+                                            @onclick="() => HandleDeleteAsync(user)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
 
 @code {
+    private List<UserDTO> _users = new();
+    private string _searchTerm = string.Empty;
+    private bool _isLoading = true;
+    private string? _errorMessage;
 
+    private bool CanManageUsers => Session.Role is "FirmAdmin" or "SuperAdmin";
+
+    private List<UserDTO> FilteredUsers =>
+        string.IsNullOrWhiteSpace(_searchTerm)
+            ? _users
+            : _users.Where(u =>
+                u.FullName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                u.Email.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        try
+        {
+            _users = await UserService.GetAllAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.GetFullMessage();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "Users load nahi ho sake. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleDeleteAsync(UserDTO user)
+    {
+        if (user.UserID == Session.UserID)
+            return;
+
+        _errorMessage = null;
+        try
+        {
+            await UserService.DeleteAsync(user.UserID);
+            await LoadUsersAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.GetFullMessage();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "User deactivate nahi ho saka. Please try again.";
+        }
+    }
+
+    private void GoToCreate() => Navigation.NavigateTo("/users/create");
+
+    private void GoToEdit(int userId) => Navigation.NavigateTo($"/users/edit/{userId}");
 }

@@ -1,0 +1,16 @@
+﻿@page "/"
+@attribute [Authorize]
+@using LTSFrontend.State
+@using Microsoft.AspNetCore.Authorization
+@inject UserSessionState Session
+
+<PageTitle>Dashboard - LTS</PageTitle>
+
+<div class="lts-card">
+    <h4>Welcome, @Session.FullName!</h4>
+    <p class="text-muted mb-0">
+        You're signed in as <strong>@(Session.Role ?? "User")</strong>.
+        Role-specific dashboards are coming next — for now you can head to
+        <a href="/users">User Management</a> if your role allows it.
+    </p>
+</div>

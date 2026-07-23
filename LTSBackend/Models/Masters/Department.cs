@@ -15,4 +15,9 @@ public class Department
 
     [MaxLength(255)]
     public string? Description { get; set; }
+
+    [MaxLength(20)]
+    public string? DepartmentCode { get; set; }
+
+    public bool IsActive { get; set; } = true;
 }

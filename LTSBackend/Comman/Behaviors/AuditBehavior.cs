@@ -6,8 +6,7 @@ using Microsoft.AspNetCore.Http;
 namespace LTSBackend.Comman.Behaviors;
 
 public class AuditBehavior<TRequest, TResponse>(IAuditService _auditService, IAuditLogService _auditLogService, IHttpContextAccessor httpContextAccessor,
-        ILogger<AuditBehavior<TRequest, TResponse>> _logger) : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull
+        ILogger<AuditBehavior<TRequest, TResponse>> _logger) : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {

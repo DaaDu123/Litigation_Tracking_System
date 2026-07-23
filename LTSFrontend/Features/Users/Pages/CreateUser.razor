@@ -1,5 +1,128 @@
-﻿<h3>CreateUser</h3>
+﻿@page "/users/create"
+@attribute [Authorize(Roles = "FirmAdmin,SuperAdmin")]
+@using LTSFrontend.Core.Enums
+@using LTSFrontend.Core.Exceptions
+@using LTSFrontend.Features.Users.Models
+@using LTSFrontend.Features.Users.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@inject IUserService UserService
+@inject NavigationManager Navigation
+
+<PageTitle>Add User - LTS</PageTitle>
+
+<div class="d-flex align-items-center gap-2 mb-3">
+    <button class="btn btn-sm btn-outline-secondary" @onclick="GoBack">
+        <i class="bi bi-arrow-left"></i>
+    </button>
+    <h4 class="mb-0">Add User</h4>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger" style="white-space: pre-line;">@_errorMessage</div>
+}
+
+<div class="lts-card" style="max-width: 640px;">
+    <EditForm Model="_model" OnValidSubmit="HandleCreateAsync">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-control" @bind="_model.FullName" @bind:event="oninput" required />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" @bind="_model.Email" @bind:event="oninput" required />
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" placeholder="At least 8 characters, mixed case, number & symbol"
+                       @bind="_model.Password" @bind:event="oninput" required />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Role</label>
+                <select class="form-select" @bind="_model.RoleID">
+                    <option value="">-- Select Role --</option>
+                    @foreach (var role in UserRoleExtensions.All)
+                    {
+                        <option value="@role.Id">@role.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Phone <span class="text-muted fw-normal">(optional)</span></label>
+                <input type="text" class="form-control" @bind="_model.Phone" @bind:event="oninput" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Department <span class="text-muted fw-normal">(optional)</span></label>
+                <input type="text" class="form-control" @bind="_model.Department" @bind:event="oninput" />
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Profile Image <span class="text-muted fw-normal">(optional)</span></label>
+            <InputFile class="form-control" OnChange="HandleFileSelected" accept=".jpg,.jpeg,.png,.webp" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary" disabled="@_isBusy">
+                @if (_isBusy)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                Save
+            </button>
+            <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">Cancel</button>
+        </div>
+    </EditForm>
+</div>
 
 @code {
+    private readonly CreateUserDTO _model = new();
+    private IBrowserFile? _profileImage;
+    private bool _isBusy;
+    private string? _errorMessage;
 
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _profileImage = e.File;
+    }
+
+    private async Task HandleCreateAsync()
+    {
+        _errorMessage = null;
+
+        if (_model.RoleID is null or <= 0)
+        {
+            _errorMessage = "Please select a role.";
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await UserService.CreateAsync(_model, _profileImage);
+            Navigation.NavigateTo("/users");
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.GetFullMessage();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/users");
 }

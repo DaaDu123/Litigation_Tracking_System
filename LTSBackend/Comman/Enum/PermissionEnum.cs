@@ -1,6 +1,6 @@
 ﻿namespace LTSBackend.Comman.Enum;
 
-public enum Permission
+public enum PermissionEnum
 {
     // ===== SUPER ADMIN PERMISSIONS =====
     /// <summary>

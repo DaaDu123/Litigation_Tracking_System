@@ -12,4 +12,7 @@ public class CaseStage
     [Required]
     [MaxLength(150)]
     public string StageName { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
 }
