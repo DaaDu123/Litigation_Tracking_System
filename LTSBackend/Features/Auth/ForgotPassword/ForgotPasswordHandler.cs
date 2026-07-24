@@ -23,7 +23,7 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
         var genericResponse = new ForgotPasswordResponseDTO
         {
             Email = request.Email,
-            Message = "Agar yeh email hamare system mein registered hai, to OTP code bhej diya gaya hai. Spam/Junk folder bhi check kare."
+            Message = "If this email is registered in our system, an OTP code has been sent. Please also check your spam/junk folder."
         };
 
         // ================================================
@@ -36,17 +36,13 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
 
         if (user == null)
         {
-            _logger.LogWarning(
-                "Forgot password: No user found for {Email} (generic response return kar rahe hain)",
-                request.Email);
+            _logger.LogWarning("Forgot password: No user found for {Email} (returning a generic response)",request.Email);
             return genericResponse;
         }
 
         if (!user.IsActive)
         {
-            _logger.LogWarning(
-                "Forgot password: User inactive hai: {Email} (generic response return kar rahe hain)",
-                request.Email);
+            _logger.LogWarning("Forgot password: User is inactive: {Email} (returning generic response)",request.Email);
             return genericResponse;
         }
 
