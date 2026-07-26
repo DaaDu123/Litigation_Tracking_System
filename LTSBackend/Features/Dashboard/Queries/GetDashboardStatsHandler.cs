@@ -6,56 +6,27 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Dashboard.Queries;
 
-public class GetDashboardStatsHandler : IRequestHandler<GetDashboardStatsQuery, DashboardDTO>
+public class GetDashboardStatsHandler(AppDbContext _context, ILogger<GetDashboardStatsHandler> _logger) : IRequestHandler<GetDashboardStatsQuery, DashboardDTO>
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<GetDashboardStatsHandler> _logger;
-
-    public GetDashboardStatsHandler(
-        AppDbContext context,
-        ILogger<GetDashboardStatsHandler> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
-    public async Task<DashboardDTO> Handle(
-        GetDashboardStatsQuery request,
-        CancellationToken cancellationToken)
+    public async Task<DashboardDTO> Handle(GetDashboardStatsQuery request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching dashboard statistics");
-
         // ================================================
         // Fetch all required statistics
         // ================================================
         var dto = new DashboardDTO
         {
-            TotalUsers = await _context.Users
-                .CountAsync(cancellationToken),
+            TotalUsers = await _context.Users.CountAsync(cancellationToken),
 
-            ActiveUsers = await _context.Users
-                .CountAsync(x => x.IsActive && !x.IsDeleted, cancellationToken),
+            ActiveUsers = await _context.Users.CountAsync(x => x.IsActive && !x.IsDeleted, cancellationToken),
 
-            TotalRoles = await _context.Roles
-                .CountAsync(cancellationToken),
+            TotalRoles = await _context.Roles.CountAsync(cancellationToken),
 
-            TotalPermissions = await _context.Permissions
-                .CountAsync(cancellationToken),
+            TotalPermissions = await _context.Permissions.CountAsync(cancellationToken),
 
-            TotalAuditLogs = await _context.AuditLogs
-                .CountAsync(cancellationToken),
+            TotalAuditLogs = await _context.AuditLogs.CountAsync(cancellationToken),
 
-            // ================================================
-            // FIX: previously only checked !IsRevoked, which also
-            // counts tokens that have naturally expired but were
-            // never explicitly revoked (nothing in the codebase
-            // flips IsRevoked on natural expiry — only explicit
-            // logout / refresh-rotation / password-reset do that).
-            // Added ExpiryDate check so this reflects genuinely
-            // active sessions.
-            // ================================================
-            TotalRefreshTokens = await _context.RefreshTokens
-                .CountAsync(x => !x.IsRevoked && x.ExpiryDate > DateTime.UtcNow, cancellationToken),
+          TotalRefreshTokens = await _context.RefreshTokens.CountAsync(x => !x.IsRevoked && x.ExpiryDate > DateTime.UtcNow, cancellationToken),
 
             RecentActivities = await _context.AuditLogs
                 .AsNoTracking()

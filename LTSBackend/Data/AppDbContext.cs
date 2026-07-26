@@ -515,14 +515,14 @@ public class AppDbContext : DbContext
     private static void SeedCourts(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Court>().HasData(
-            new Court { CourtID = 1, CourtName = "Supreme Court of Pakistan", CourtType = "Federal", Jurisdiction = "National", Address = "Constitution Avenue, Islamabad" },
-            new Court { CourtID = 2, CourtName = "Islamabad High Court", CourtType = "High Court", Jurisdiction = "Islamabad Capital Territory", Address = "H-8/4, Islamabad" },
-            new Court { CourtID = 3, CourtName = "Lahore High Court", CourtType = "High Court", Jurisdiction = "Punjab", Address = "The Mall, Lahore" },
-            new Court { CourtID = 4, CourtName = "Sindh High Court", CourtType = "High Court", Jurisdiction = "Sindh", Address = "Constitution Avenue, Karachi" },
-            new Court { CourtID = 5, CourtName = "Peshawar High Court", CourtType = "High Court", Jurisdiction = "Khyber Pakhtunkhwa", Address = "Peshawar" },
-            new Court { CourtID = 6, CourtName = "Quetta High Court", CourtType = "High Court", Jurisdiction = "Balochistan", Address = "Quetta" },
-            new Court { CourtID = 7, CourtName = "District Court Lahore", CourtType = "District Court", Jurisdiction = "Lahore District", Address = "Thokar Niaz Baig, Lahore" },
-            new Court { CourtID = 8, CourtName = "District Court Karachi", CourtType = "District Court", Jurisdiction = "Karachi District", Address = "Karachi" }
+            new Court { CourtID = 1, CourtName = "Supreme Court of Pakistan", CourtType = "Federal", Jurisdiction = "National", Address = "Constitution Avenue, Islamabad", IsActive = true, CreatedDate = SeedTimestamp },
+            new Court { CourtID = 2, CourtName = "Islamabad High Court", CourtType = "High Court", Jurisdiction = "Islamabad Capital Territory", Address = "H-8/4, Islamabad", IsActive = true, CreatedDate = SeedTimestamp },
+            new Court { CourtID = 3, CourtName = "Lahore High Court", CourtType = "High Court", Jurisdiction = "Punjab", Address = "The Mall, Lahore", IsActive = true, CreatedDate = SeedTimestamp },
+            new Court { CourtID = 4, CourtName = "Sindh High Court", CourtType = "High Court", Jurisdiction = "Sindh", Address = "Constitution Avenue, Karachi", IsActive = true, CreatedDate = SeedTimestamp },
+            new Court { CourtID = 5, CourtName = "Peshawar High Court", CourtType = "High Court", Jurisdiction = "Khyber Pakhtunkhwa", Address = "Peshawar", IsActive = true, CreatedDate = SeedTimestamp },
+            new Court { CourtID = 6, CourtName = "Quetta High Court", CourtType = "High Court", Jurisdiction = "Balochistan", Address = "Quetta", IsActive = true, CreatedDate = SeedTimestamp },
+            new Court { CourtID = 7, CourtName = "District Court Lahore", CourtType = "District Court", Jurisdiction = "Lahore District", Address = "Thokar Niaz Baig, Lahore", IsActive = true, CreatedDate = SeedTimestamp },
+            new Court { CourtID = 8, CourtName = "District Court Karachi", CourtType = "District Court", Jurisdiction = "Karachi District", Address = "Karachi", IsActive = true, CreatedDate = SeedTimestamp }
         );
     }
 

@@ -19,13 +19,14 @@ public class CourtsController(IMediator mediator) : ControllerBase
 {
     // =====================================================
     // GET ALL COURTS
-    // Any authenticated user can read master data - required
-    // for populating dropdowns on Case / Hearing forms etc.
+    // Any authenticated user can read master data.
+    // Default: activeOnly=true (dropdown use case)
+    // Admin panel: activeOnly=false pass karo sab dekhne ke liye
     // =====================================================
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] string? searchText)
+    public async Task<IActionResult> GetAll([FromQuery] string? searchText,[FromQuery] bool activeOnly = true)
     {
-        var courts = await mediator.Send(new GetAllCourtsQuery(searchText));
+        var courts = await mediator.Send(new GetAllCourtsQuery(searchText, activeOnly));
         return Ok(ApiResponse<List<CourtDTO>>.SuccessResponse(courts));
     }
 

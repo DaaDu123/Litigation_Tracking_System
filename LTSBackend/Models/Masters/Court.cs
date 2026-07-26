@@ -13,15 +13,16 @@ public class Court
     [MaxLength(150)]
     public string CourtName { get; set; } = string.Empty;
 
-    [Required]
     [MaxLength(100)]
-    public string CourtType { get; set; } = string.Empty;
+    public string? CourtType { get; set; }
 
-    [Required]
-    [MaxLength(150)]
-    public string Jurisdiction { get; set; } = string.Empty;
+    [MaxLength(200)]
+    public string? Jurisdiction { get; set; }
 
-    [Required]
     [MaxLength(255)]
-    public string Address { get; set; } = string.Empty;
+    public string? Address { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 }

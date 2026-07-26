@@ -1,5 +1,4 @@
-﻿using LTSBackend.Features.Cases.DTOs;
-using MediatR;
+﻿using MediatR;
 
 namespace LTSBackend.Features.Cases.Commands.CreateCase;
 
@@ -18,6 +17,6 @@ public record CreateCaseCommand(
     decimal ClaimedAmount,
     decimal PotentialLiability,
     string? FinancialImplication,
-    int ResponsibleDepartmentID,
-    int CurrentLegalOfficerID
+    int? ResponsibleDepartmentID,
+    int? CurrentLegalOfficerID
 ) : IRequest<long>;

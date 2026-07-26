@@ -28,8 +28,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         int firmId = _currentUser.FirmID.Value;
 
         // ================================================
-        // 1. Check agar Case Number pehle se exist karta hai
-        //    (scoped to this firm - other firms may reuse numbers)
+        // 1. Case Number uniqueness check (firm-scoped)
         // ================================================
         bool caseExists = await _context.Cases
             .AsNoTracking()
@@ -44,21 +43,18 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             });
         }
 
-        // ================================================
-        // 2. Verify ke Court exist karta hai
-        // ================================================
         var court = await _context.Courts
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.CourtID == request.CourtID, cancellationToken);
+            .FirstOrDefaultAsync(x => x.CourtID == request.CourtID && x.IsActive, cancellationToken);
 
         if (court == null)
         {
-            _logger.LogWarning("Court nahi mila: {CourtID}", request.CourtID);
-            throw new NotFoundException($"Court ID {request.CourtID} nahi mila");
+            _logger.LogWarning("Court nahi mila ya inactive hai: {CourtID}", request.CourtID);
+            throw new NotFoundException($"Court ID {request.CourtID} nahi mila ya inactive hai");
         }
 
         // ================================================
-        // 3. Verify ke Category exist karta hai
+        // 3. Category exist check
         // ================================================
         var category = await _context.CaseCategories
             .AsNoTracking()
@@ -71,38 +67,43 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         // ================================================
-        // 4. Verify ke Department exist karta hai
-        // ================================================
-        var department = await _context.Departments
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.DepartmentID == request.ResponsibleDepartmentID, cancellationToken);
-
-        if (department == null)
+  // ================================================
+        if (request.ResponsibleDepartmentID.HasValue)
         {
-            _logger.LogWarning("Department nahi mila: {DepartmentID}", request.ResponsibleDepartmentID);
-            throw new NotFoundException($"Department ID {request.ResponsibleDepartmentID} nahi mila");
+            var department = await _context.Departments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.DepartmentID == request.ResponsibleDepartmentID.Value && x.IsActive,cancellationToken);
+
+            if (department == null)
+            {
+                _logger.LogWarning("Department nahi mila ya inactive: {DepartmentID}", request.ResponsibleDepartmentID);
+                throw new NotFoundException($"Department ID {request.ResponsibleDepartmentID} nahi mila ya inactive hai");
+            }
         }
 
         // ================================================
-        // 5. Verify ke Legal Officer exist karta hai
+        // 5. Legal Officer check — ONLY agar value di gayi ho
         // ================================================
-        var legalOfficer = await _context.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                x => x.UserID == request.CurrentLegalOfficerID &&
-                     x.IsActive &&
-                     !x.IsDeleted &&
-                     x.FirmID == firmId,
-                cancellationToken);
-
-        if (legalOfficer == null)
+        if (request.CurrentLegalOfficerID.HasValue)
         {
-            _logger.LogWarning("Legal Officer nahi mila: {LegalOfficerID}", request.CurrentLegalOfficerID);
-            throw new NotFoundException($"Legal Officer ID {request.CurrentLegalOfficerID} nahi mila");
+            var legalOfficer = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.UserID == request.CurrentLegalOfficerID.Value &&
+                         x.IsActive &&
+                         !x.IsDeleted &&
+                         x.FirmID == firmId,
+                    cancellationToken);
+
+            if (legalOfficer == null)
+            {
+                _logger.LogWarning("Legal Officer nahi mila: {LegalOfficerID}", request.CurrentLegalOfficerID);
+                throw new NotFoundException($"Legal Officer ID {request.CurrentLegalOfficerID} nahi mila");
+            }
         }
 
         // ================================================
-        // 6. Get default status (New)
+        // 6. Default Status = "New"
         // ================================================
         var defaultStatus = await _context.CaseStatuses
             .AsNoTracking()
@@ -115,7 +116,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         // ================================================
-        // 7. Get default stage (Filing)
+        // 7. Default Stage = "Filing"
         // ================================================
         var defaultStage = await _context.CaseStages
             .AsNoTracking()
@@ -128,17 +129,12 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         // ================================================
-        // 8. Generate unique Internal Reference Number
-        //    FIX: previously used `new Random()` per call, which can
-        //    produce colliding sequences under concurrent requests
-        //    (time-based seeding). Now uses Random.Shared (thread-safe)
-        //    plus a DB uniqueness retry loop, since InternalReferenceNo
-        //    has a UNIQUE constraint at the database level.
+        // 8. Unique Internal Reference Number generate karo
         // ================================================
         string internalRefNo = await GenerateUniqueInternalReferenceNoAsync(cancellationToken);
 
         // ================================================
-        // 9. Create new Case
+        // 9. Case object banao
         // ================================================
         var newCase = new Case
         {
@@ -174,7 +170,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             newCase.CaseID, internalRefNo);
 
         // ================================================
-        // 10. Create initial Status History
+        // 10. Initial Status History
         // ================================================
         var statusHistory = new CaseStatusHistory
         {
@@ -189,7 +185,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         _context.CaseStatusHistories.Add(statusHistory);
 
         // ================================================
-        // 11. Create Audit Log
+        // 11. Audit Log
         // ================================================
         var auditLog = _auditService.Create(currentUserId, $"Case Create: {newCase.CaseNumber}");
         _context.AuditLogs.Add(auditLog);
@@ -203,8 +199,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
     private int GetCurrentUserId()
     {
-        int currentUserId = 1; // Default fallback
-
+        int currentUserId = 1;
         try
         {
             var httpContext = _httpContextAccessor.HttpContext;
@@ -221,24 +216,15 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         {
             _logger.LogWarning(ex, "Failed to get current user ID from context");
         }
-
         return currentUserId;
     }
 
-    /// <summary>
-    /// Generates an InternalReferenceNo and verifies against the DB that
-    /// it isn't already taken, retrying a few times before giving up.
-    /// InternalReferenceNo is UNIQUE at the DB level, so a collision here
-    /// would otherwise surface as an unhandled DbUpdateException.
-    /// </summary>
     private async Task<string> GenerateUniqueInternalReferenceNoAsync(CancellationToken cancellationToken)
     {
         const int maxAttempts = 5;
-
         for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
             var candidate = GenerateInternalReferenceNo();
-
             bool alreadyExists = await _context.Cases
                 .AsNoTracking()
                 .AnyAsync(x => x.InternalReferenceNo == candidate, cancellationToken);
@@ -248,12 +234,11 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
                 return candidate;
             }
 
-            _logger.LogWarning("InternalReferenceNo collision detected on attempt {Attempt}: {Candidate}", attempt, candidate);
+            _logger.LogWarning("InternalReferenceNo collision on attempt {Attempt}: {Candidate}", attempt, candidate);
         }
-
-        // Extremely unlikely fallback: append a GUID fragment to guarantee uniqueness
         return $"CASE-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..24];
     }
+
     private static string GenerateInternalReferenceNo()
     {
         var now = DateTime.UtcNow;
@@ -264,9 +249,6 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
     private static string GenerateRandomString(int length)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        // FIX: Random.Shared is thread-safe and avoids the identical-seed
-        // collision risk of creating `new Random()` on every call under
-        // concurrent requests.
         return new string(Enumerable.Range(0, length)
             .Select(_ => chars[Random.Shared.Next(chars.Length)])
             .ToArray());

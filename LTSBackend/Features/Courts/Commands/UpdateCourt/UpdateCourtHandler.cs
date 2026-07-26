@@ -14,9 +14,9 @@ public sealed class UpdateCourtHandler(AppDbContext _context, ILogger<UpdateCour
         request = request with
         {
             CourtName = request.CourtName.Trim(),
-            CourtType = request.CourtType.Trim(),
-            Jurisdiction = request.Jurisdiction.Trim(),
-            Address = request.Address.Trim()
+            CourtType = request.CourtType?.Trim(),
+            Jurisdiction = request.Jurisdiction?.Trim(),
+            Address = request.Address?.Trim()
         };
 
         // ================================================
@@ -31,7 +31,7 @@ public sealed class UpdateCourtHandler(AppDbContext _context, ILogger<UpdateCour
         }
 
         // ================================================
-        // 2. Ensure new name is unique (excluding self)
+        // 2. Name uniqueness check (self-excluding)
         // ================================================
         bool nameExists = await _context.Courts.AnyAsync(x => x.CourtID != request.CourtID && x.CourtName.ToLower() == request.CourtName.ToLower(),cancellationToken);
 
@@ -51,6 +51,7 @@ public sealed class UpdateCourtHandler(AppDbContext _context, ILogger<UpdateCour
         court.CourtType = request.CourtType;
         court.Jurisdiction = request.Jurisdiction;
         court.Address = request.Address;
+        court.IsActive = request.IsActive;
 
         await _context.SaveChangesAsync(cancellationToken);
 

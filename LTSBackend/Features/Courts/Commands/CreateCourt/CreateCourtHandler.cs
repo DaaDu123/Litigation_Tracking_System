@@ -15,9 +15,9 @@ public sealed class CreateCourtHandler(AppDbContext _context, ILogger<CreateCour
         request = request with
         {
             CourtName = request.CourtName.Trim(),
-            CourtType = request.CourtType.Trim(),
-            Jurisdiction = request.Jurisdiction.Trim(),
-            Address = request.Address.Trim()
+            CourtType = request.CourtType?.Trim(),
+            Jurisdiction = request.Jurisdiction?.Trim(),
+            Address = request.Address?.Trim()
         };
 
         // ================================================
@@ -42,7 +42,9 @@ public sealed class CreateCourtHandler(AppDbContext _context, ILogger<CreateCour
             CourtName = request.CourtName,
             CourtType = request.CourtType,
             Jurisdiction = request.Jurisdiction,
-            Address = request.Address
+            Address = request.Address,
+            IsActive = request.IsActive,
+            CreatedDate = DateTime.UtcNow
         };
 
         _context.Courts.Add(court);

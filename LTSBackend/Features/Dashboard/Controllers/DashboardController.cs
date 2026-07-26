@@ -10,17 +10,8 @@ namespace LTSBackend.Features.Dashboard.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [HasPermission("ViewDashboard")]
-public class DashboardController : ControllerBase
+public class DashboardController(IMediator _mediator, ILogger<DashboardController> _logger) : ControllerBase
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<DashboardController> _logger;
-
-    public DashboardController(IMediator mediator, ILogger<DashboardController> logger)
-    {
-        _mediator = mediator;
-        _logger = logger;
-    }
-
     // =====================================================
     // GET DASHBOARD STATISTICS
     // =====================================================
@@ -29,11 +20,7 @@ public class DashboardController : ControllerBase
     public async Task<IActionResult> GetStats()
     {
         _logger.LogInformation("Get dashboard stats request");
-
         var result = await _mediator.Send(new GetDashboardStatsQuery());
-
-        return Ok(ApiResponse<DashboardDTO>.SuccessResponse(
-            result,
-            "Dashboard statistics fetched successfully."));
+        return Ok(ApiResponse<DashboardDTO>.SuccessResponse(result,"Dashboard statistics fetched successfully."));
     }
 }

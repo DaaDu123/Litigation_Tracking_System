@@ -40,11 +40,13 @@ public class CreateCaseValidator : AbstractValidator<CreateCaseCommand>
 
         RuleFor(x => x.ResponsibleDepartmentID)
             .GreaterThan(0)
-            .WithMessage("Valid Department zaroori hai");
+            .WithMessage("Valid Department zaroori hai — 0 ya negative ID nahi")
+            .When(x => x.ResponsibleDepartmentID.HasValue);
 
         RuleFor(x => x.CurrentLegalOfficerID)
             .GreaterThan(0)
-            .WithMessage("Valid Legal Officer zaroori hai");
+            .WithMessage("Valid Legal Officer zaroori hai — 0 ya negative ID nahi")
+            .When(x => x.CurrentLegalOfficerID.HasValue);
 
         RuleFor(x => x.FilingDate)
             .NotEmpty()

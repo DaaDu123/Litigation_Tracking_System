@@ -13,21 +13,18 @@ public class CreateCourtValidator : AbstractValidator<CreateCourtCommand>
             .WithMessage("Court name cannot exceed 150 characters.");
 
         RuleFor(x => x.CourtType)
-            .NotEmpty()
-            .WithMessage("Court type is required.")
             .MaximumLength(100)
-            .WithMessage("Court type cannot exceed 100 characters.");
+            .WithMessage("Court type cannot exceed 100 characters.")
+            .When(x => !string.IsNullOrEmpty(x.CourtType));
 
         RuleFor(x => x.Jurisdiction)
-            .NotEmpty()
-            .WithMessage("Jurisdiction is required.")
-            .MaximumLength(150)
-            .WithMessage("Jurisdiction cannot exceed 150 characters.");
+            .MaximumLength(200)
+            .WithMessage("Jurisdiction cannot exceed 200 characters.")
+            .When(x => !string.IsNullOrEmpty(x.Jurisdiction));
 
         RuleFor(x => x.Address)
-            .NotEmpty()
-            .WithMessage("Address is required.")
-            .MaximumLength(255)
-            .WithMessage("Address cannot exceed 255 characters.");
+            .MaximumLength(500)
+            .WithMessage("Address cannot exceed 500 characters.")
+            .When(x => !string.IsNullOrEmpty(x.Address));
     }
 }

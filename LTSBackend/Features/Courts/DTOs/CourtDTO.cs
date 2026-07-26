@@ -6,9 +6,13 @@ public class CourtDTO
 
     public string CourtName { get; set; } = string.Empty;
 
-    public string CourtType { get; set; } = string.Empty;
+    public string? CourtType { get; set; }
 
-    public string Jurisdiction { get; set; } = string.Empty;
+    public string? Jurisdiction { get; set; }
 
-    public string Address { get; set; } = string.Empty;
+    public string? Address { get; set; }
+
+    public bool IsActive { get; set; }
+
+    public DateTime CreatedDate { get; set; }
 }

@@ -9,17 +9,22 @@ public sealed class GetAllCourtsHandler(AppDbContext _context, ILogger<GetAllCou
 {
     public async Task<List<CourtDTO>> Handle(GetAllCourtsQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Fetching all courts (SearchText={SearchText})", request.SearchText);
+        _logger.LogInformation("Fetching all courts (SearchText={SearchText}, ActiveOnly={ActiveOnly})", request.SearchText, request.ActiveOnly);
 
         var query = _context.Courts.AsNoTracking().AsQueryable();
+
+        if (request.ActiveOnly)
+        {
+            query = query.Where(x => x.IsActive);
+        }
 
         if (!string.IsNullOrWhiteSpace(request.SearchText))
         {
             var search = request.SearchText.Trim().ToLower();
             query = query.Where(x =>
                 x.CourtName.ToLower().Contains(search) ||
-                x.CourtType.ToLower().Contains(search) ||
-                x.Jurisdiction.ToLower().Contains(search));
+                (x.CourtType != null && x.CourtType.ToLower().Contains(search)) ||
+                (x.Jurisdiction != null && x.Jurisdiction.ToLower().Contains(search)));
         }
 
         var courts = await query.OrderBy(x => x.CourtName)
@@ -29,7 +34,9 @@ public sealed class GetAllCourtsHandler(AppDbContext _context, ILogger<GetAllCou
                 CourtName = x.CourtName,
                 CourtType = x.CourtType,
                 Jurisdiction = x.Jurisdiction,
-                Address = x.Address
+                Address = x.Address,
+                IsActive = x.IsActive,
+                CreatedDate = x.CreatedDate
             })
             .ToListAsync(cancellationToken);
 

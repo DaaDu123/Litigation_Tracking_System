@@ -26,7 +26,9 @@ public sealed class GetCourtByIdHandler(AppDbContext _context, ILogger<GetCourtB
             CourtName = court.CourtName,
             CourtType = court.CourtType,
             Jurisdiction = court.Jurisdiction,
-            Address = court.Address
+            Address = court.Address,
+            IsActive = court.IsActive,
+            CreatedDate = court.CreatedDate
         };
     }
 }
