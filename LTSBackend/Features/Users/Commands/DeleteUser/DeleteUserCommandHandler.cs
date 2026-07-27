@@ -39,11 +39,11 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         if (user.UserID == request.ActingUserID)
         {
             _logger.LogWarning("User {UserId} attempted to deactivate their own account", request.ActingUserID);
-            throw new ValidationException(["Aap apna khud ka account deactivate nahi kar sakte."]);
+            throw new ValidationException(["You cannot deactivate your own account."]);
         }
         // ================================================
-        // 2c. Hierarchy check — sirf apne se neeche ke role
-        // wale user ko deactivate kar sakte hain
+        // 2c. Hierarchy check — can only deactivate users
+        // whose role is below the acting user's own role
         // ================================================
         var actingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserID == request.ActingUserID, cancellationToken);
         var targetRole = user.GetRole();

@@ -110,7 +110,7 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
 
         // ================================================
         // 7. CRITICAL: Handle Moharrir blind upload feature
-        //    Agar Moharrir restricted mode mein hai to NO DocumentPermission entry
+        //    If the Moharrir is in restricted mode, create NO DocumentPermission entry
         //    "Blind upload" = write-only, can't view/download after upload
         // ================================================
         bool isMohallirRestricted = await _permissionService.IsMohallirRestrictedAsync(request.UserID, cancellationToken);

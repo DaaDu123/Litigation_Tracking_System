@@ -32,11 +32,11 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         if (caseToUpdate == null)
         {
             _logger.LogWarning("Case nahi mila: {CaseID}", request.CaseID);
-            throw new NotFoundException($"Case ID {request.CaseID} nahi mila");
+            throw new NotFoundException($"Case ID {request.CaseID} not found");
         }
 
         // ================================================
-        // 2. Validate Court agar change ho raha hai
+        // 2. Validate Court if it is being changed
         // ================================================
         if (request.CourtID.HasValue && request.CourtID > 0)
         {
@@ -54,7 +54,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         // ================================================
-        // 3. Validate Category agar change ho raha hai
+        // 3. Validate Category if it is being changed
         // ================================================
         if (request.CategoryID.HasValue && request.CategoryID > 0)
         {
@@ -72,7 +72,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         // ================================================
-        // 4. Validate Stage agar change ho raha hai
+        // 4. Validate Stage if it is being changed
         // ================================================
         if (request.StageID.HasValue && request.StageID > 0)
         {
@@ -90,7 +90,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         // ================================================
-        // 5. Validate Legal Officer agar change ho raha hai
+        // 5. Validate Legal Officer if it is being changed
         // ================================================
         if (request.CurrentLegalOfficerID.HasValue && request.CurrentLegalOfficerID > 0)
         {
@@ -116,7 +116,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         // ================================================
         if (!string.IsNullOrEmpty(request.CaseNumber))
         {
-            // Check agar doosra case same number use kar raha hai
+            // Check whether another case is already using the same number
             bool duplicateExists = await _context.Cases
                 .AsNoTracking()
                 .AnyAsync(x => x.CaseNumber == request.CaseNumber &&

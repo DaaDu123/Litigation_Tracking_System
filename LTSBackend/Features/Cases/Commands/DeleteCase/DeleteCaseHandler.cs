@@ -29,16 +29,16 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         if (caseToDelete == null)
         {
-            _logger.LogWarning("Case nahi mila: {CaseID}", request.CaseID);
-            throw new NotFoundException($"Case ID {request.CaseID} nahi mila");
+            _logger.LogWarning("Case not found: {CaseID}", request.CaseID);
+            throw new NotFoundException($"Case ID {request.CaseID} not found");
         }
 
         // ================================================
-        // 2. Check agar Case archived hai
+        // 2. Check whether the Case is archived
         // ================================================
         if (caseToDelete.IsArchived)
         {
-            _logger.LogWarning("Archived case delete nahi ho sakta: {CaseID}", request.CaseID);
+            _logger.LogWarning("An archived case cannot be deleted: {CaseID}", request.CaseID);
             throw new ValidationException([
                 "Archived cases delete nahi ho sakte. Pehle unarchive kare"
             ]);

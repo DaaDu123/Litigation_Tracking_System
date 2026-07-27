@@ -8,7 +8,7 @@ namespace LTSBackend.Services.DocumentPermissions;
 public interface IDocumentPermissionService
 {
     /// <summary>
-    /// Check agar user ko document access hai (View/Download/Upload)
+    /// Checks whether the user has document access (View/Download/Upload)
     /// </summary>
     /// <param name="userId">User ID</param>
     /// <param name="documentId">Document ID</param>
@@ -16,12 +16,12 @@ public interface IDocumentPermissionService
     Task<bool> CanUserAccessDocumentAsync(int userId, long documentId, string action, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check agar Moharrir ke paas elevated access hai (view/download allowed)
+    /// Checks whether the Moharrir has elevated access (view/download allowed)
     /// </summary>
     Task<bool> HasMohallirElevatedAccessAsync(int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check agar Moharrir restricted mode mein hai (blind upload only)
+    /// Checks whether the Moharrir is in restricted mode (blind upload only)
     /// </summary>
     Task<bool> IsMohallirRestrictedAsync(int userId, CancellationToken cancellationToken = default);
 

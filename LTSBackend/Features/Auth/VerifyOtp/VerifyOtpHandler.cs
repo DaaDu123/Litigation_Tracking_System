@@ -22,7 +22,7 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
         _logger.LogInformation("OTP verification attempt for email: {Email}", request.Email);
 
         // ================================================
-        // 1. Find and validate OTP (Purpose = Registration zaroori hai)
+        // 1. Find and validate OTP (Purpose must be Registration)
         // ================================================
         var otp = await _context.UserOtps
             .FirstOrDefaultAsync(x =>

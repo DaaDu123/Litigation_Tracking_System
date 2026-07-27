@@ -72,11 +72,42 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehavior
 #endregion
 
 #region JWT Authentication Configuration
+// SECURITY: appsettings.json only ships placeholder values (see the
+// "CHANGE_ME_..." markers). The real secret must be supplied at deploy
+// time via an environment variable — ASP.NET Core's configuration system
+// automatically overlays environment variables over appsettings.json using
+// "__" as the section separator, so set:
+//   JwtSettings__SecretKey   (e.g. `openssl rand -base64 48`, or
+//                              `[Convert]::ToBase64String((1..48|%{Get-Random -Max 256}))` on Windows)
+// For local development, prefer `dotnet user-secrets set "JwtSettings:SecretKey" "<value>"`
+// inside this project folder instead of editing appsettings.json.
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var jwtSecret = jwtSettings["SecretKey"];
 
+const string PlaceholderJwtSecret = "CHANGE_ME_GENERATE_A_RANDOM_32BYTE_SECRET";
+
 if (string.IsNullOrWhiteSpace(jwtSecret))
-    throw new InvalidOperationException("JwtSettings:SecretKey is missing. Check appsettings.json");
+{
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey is not configured. Set it via the JwtSettings__SecretKey " +
+        "environment variable or `dotnet user-secrets` — never commit a real secret to appsettings.json.");
+}
+
+if (jwtSecret == PlaceholderJwtSecret)
+{
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey is still set to the placeholder value from appsettings.json. " +
+        "Generate a random secret and set it via the JwtSettings__SecretKey environment variable " +
+        "(or `dotnet user-secrets set \"JwtSettings:SecretKey\" \"<value>\"` for local dev).");
+}
+
+// HS256 requires a key of at least 256 bits (32 bytes) to be cryptographically sound.
+if (Encoding.UTF8.GetByteCount(jwtSecret) < 32)
+{
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey must be at least 32 bytes (256 bits) for HS256. " +
+        "Generate a longer random secret, e.g. `openssl rand -base64 48`.");
+}
 
 builder.Services.Configure<JwtSettings>(jwtSettings);
 
@@ -277,6 +308,26 @@ builder.Services.AddSwaggerGen(c =>
 #endregion
 
 var app = builder.Build();
+
+#region Startup Configuration Checks
+// SECURITY: EmailSettings:SenderEmail / AppPassword ship as placeholders in
+// appsettings.json (see JwtSettings comment above for the same pattern).
+// Email delivery isn't fatal to the API's core security, so we warn instead
+// of throwing — but this must be fixed before OTP/password-reset emails are
+// expected to work. Set EmailSettings__SenderEmail and
+// EmailSettings__AppPassword via environment variables or user-secrets
+// (use a Gmail App Password, never the account's real login password).
+var emailSenderEmail = app.Configuration["EmailSettings:SenderEmail"];
+var emailAppPassword = app.Configuration["EmailSettings:AppPassword"];
+if (string.IsNullOrWhiteSpace(emailSenderEmail) || emailSenderEmail.StartsWith("CHANGE_ME") ||
+    string.IsNullOrWhiteSpace(emailAppPassword) || emailAppPassword.StartsWith("CHANGE_ME"))
+{
+    app.Logger.LogWarning(
+        "EmailSettings:SenderEmail / AppPassword are not configured (still placeholders). " +
+        "OTP and password-reset emails will fail until these are set via environment " +
+        "variables (EmailSettings__SenderEmail, EmailSettings__AppPassword) or user-secrets.");
+}
+#endregion
 
 #region Middleware Pipeline - 🔴 CRITICAL: ORDER MATTERS
 // 1. Exception handling (must be first)

@@ -18,7 +18,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         _logger.LogInformation("Create user request for email: {Email}", request.Email);
 
         // ================================================
-        // 1. Check agar email pehle se exist karta hai
+        // 1. Check whether the email already exists
         // ================================================
         bool emailExists = await _context.Users
             .AsNoTracking()
@@ -27,22 +27,22 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         if (emailExists)
         {
             _logger.LogWarning("User creation failed: Email already exists: {Email}", request.Email);
-            throw new ValidationException([$"Email '{request.Email}' pehle se exist karta hai"]);
+            throw new ValidationException([$"Email '{request.Email}' already exists"]);
         }
 
         // ================================================
-        // 2. Verify ke Role valid hai aur exist karta hai
+        // 2. Verify that the Role is valid and exists
         // ================================================
         if (!request.RoleID.HasValue || request.RoleID <= 0)
         {
             _logger.LogWarning("User creation failed: Invalid RoleID");
-            throw new ValidationException(["Valid Role zaroori hai"]);
+            throw new ValidationException(["A valid Role is required"]);
         }
 
         if (!System.Enum.IsDefined(typeof(UserRole), request.RoleID.Value))
         {
             _logger.LogWarning("User creation failed: Invalid RoleID: {RoleID}", request.RoleID);
-            throw new ValidationException([$"Invalid role. Role ID {request.RoleID} exist nahi karta"]);
+            throw new ValidationException([$"Invalid role. Role ID {request.RoleID} does not exist"]);
         }
 
         bool roleExists = await _context.Roles
@@ -52,12 +52,12 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         if (!roleExists)
         {
             _logger.LogWarning("User creation failed: Role not found: {RoleID}", request.RoleID);
-            throw new NotFoundException($"Role ID {request.RoleID} nahi mila");
+            throw new NotFoundException($"Role ID {request.RoleID} not found");
         }
 
         // ================================================
-        // 2b. Enforce role hierarchy — acting user apne se
-        // upar ya SuperAdmin assign nahi kar sakta
+        // 2b. Enforce role hierarchy — the acting user cannot
+        // assign a role above their own or assign SuperAdmin
         // ================================================
         var actingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserID == request.ActingUserID, cancellationToken);
         var actingRole = actingUser?.GetRole();
@@ -89,7 +89,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         _logger.LogInformation("Role fetched: {RoleName}", role?.RoleName);
 
         // ================================================
-        // 4. Validate Department agar diya gaya hai
+        // 4. Validate Department if one was provided
         // ================================================
         if (!string.IsNullOrEmpty(request.Department))
         {
@@ -158,7 +158,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
 
         _logger.LogInformation("User created successfully with ID: {UserID} and Role: {RoleName}", newUser.UserID, role?.RoleName);
 
-        // Manual audit log yahan nahi — AuditBehavior pipeline already isay handle karta hai.
+        // No manual audit log here — the AuditBehavior pipeline already handles this.
 
         return newUser.UserID;
     }

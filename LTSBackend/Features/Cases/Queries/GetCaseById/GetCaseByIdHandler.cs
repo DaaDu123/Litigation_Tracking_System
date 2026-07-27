@@ -1,17 +1,18 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.Cases.DTOs;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Cases.Queries.GetCaseById;
 
-public class GetCaseByIdHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<GetCaseByIdHandler> _logger) : IRequestHandler<GetCaseByIdQuery, CaseDTO?>
+public class GetCaseByIdHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService, ILogger<GetCaseByIdHandler> _logger) : IRequestHandler<GetCaseByIdQuery, CaseDTO?>
 {
     public async Task<CaseDTO?> Handle(GetCaseByIdQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Case fetch kia ja raha hai: {CaseID}", request.CaseID);
+        _logger.LogInformation("Fetching case: {CaseID}", request.CaseID);
 
         // ================================================
         // 1. Find case with all relations (firm-scoped)
@@ -35,13 +36,44 @@ public class GetCaseByIdHandler(AppDbContext _context, ICurrentUserService _curr
 
         if (caseRecord == null)
         {
-            _logger.LogWarning("Case nahi mila: {CaseID}", request.CaseID);
-            throw new NotFoundException($"Case ID {request.CaseID} nahi mila");
+            _logger.LogWarning("Case not found: {CaseID}", request.CaseID);
+            throw new NotFoundException($"Case ID {request.CaseID} not found");
+        }
+
+        // ================================================
+        // 1b. SECURITY FIX (BOLA): the query above only enforces firm-level
+        //     (tenant) scoping. Per the Roles & Permissions Matrix, only
+        //     SuperAdmin / FirmAdmin / Partner may view every case in the
+        //     firm's directory — AssociateLawyer, Moharrir, and
+        //     InternParalegal must only be able to open cases they are
+        //     actively assigned to. Previously this endpoint had no
+        //     assignment check at all, so any authenticated firm user
+        //     could read any case in the firm just by guessing/incrementing
+        //     the CaseID. We return 404 (not 403) so an unassigned case's
+        //     existence isn't disclosed to a user who shouldn't see it.
+        // ================================================
+        if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+        {
+            bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+
+            if (!hasFullVisibility)
+            {
+                bool isAssigned = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, request.CaseID, cancellationToken);
+
+                if (!isAssigned)
+                {
+                    _logger.LogWarning(
+                        "Access denied: User {UserId} is not assigned to case {CaseID}",
+                        _currentUser.UserID.Value,
+                        request.CaseID);
+                    throw new NotFoundException($"Case ID {request.CaseID} not found");
+                }
+            }
         }
 
         // ================================================
         // 2. Map to DTO
-        //    FIX: Department / LegalOfficer are nullable FKs (per schema),
+        //    Department / LegalOfficer are nullable FKs (per schema),
         //    accessed with null-conditional to avoid NullReferenceException.
         // ================================================
         var caseDto = new CaseDTO

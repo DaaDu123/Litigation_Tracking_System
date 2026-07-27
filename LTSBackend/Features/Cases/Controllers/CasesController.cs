@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Authorization;
 using LTSBackend.Features.Cases.Commands.CreateCase;
 using LTSBackend.Features.Cases.Commands.DeleteCase;
@@ -24,16 +24,15 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
     // GET ALL CASES
     // =====================================================
     /// <summary>
-    /// Role-based: 
-    /// - SuperAdmin: tamam cases
-    /// - FirmAdmin: apne firm ke cases
-    /// - Partner: assigned cases
-    /// - AssociateLawyer: assigned cases only
-    /// - Moharrir: assigned cases
-    /// - InternParalegal: nahi access (403 Forbidden)
+    /// Role-based visibility (enforced in GetAllCasesHandler, not just here):
+    /// - SuperAdmin: all cases, every firm
+    /// - FirmAdmin: every case within their own firm
+    /// - Partner: every case within their own firm ("View Firm Case Directory")
+    /// - AssociateLawyer / Moharrir / InternParalegal: only cases they are
+    ///   actively assigned to (CaseAssignments), scoped inside the handler
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = RoleNames.AllFirmUsers)]
+    [Authorize(Roles = RoleNames.AllFirmUsersAndSuperAdmin)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? searchText,
         [FromQuery] int? courtID,
@@ -56,16 +55,15 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
     // GET CASE BY ID
     // =====================================================
     /// <summary>
-    /// Role-based access:
-    /// - SuperAdmin: tamam cases
-    /// - FirmAdmin: apne firm ke cases
-    /// - Partner: assigned cases
-    /// - AssociateLawyer: assigned cases
-    /// - Moharrir: assigned cases
-    /// - InternParalegal: read-only access if assigned
+    /// Role-based access (enforced in GetCaseByIdHandler, not just here):
+    /// - SuperAdmin: any case, any firm
+    /// - FirmAdmin / Partner: any case within their own firm
+    /// - AssociateLawyer / Moharrir / InternParalegal: only if actively
+    ///   assigned to this specific case — otherwise 404 (not 403, so the
+    ///   case's existence isn't disclosed to a user who shouldn't see it)
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = RoleNames.AllFirmUsers)]
+    [Authorize(Roles = RoleNames.AllFirmUsersAndSuperAdmin)]
     public async Task<IActionResult> GetById(long id)
     {
         _logger.LogInformation("Get case by ID: {CaseID}", id);
@@ -75,7 +73,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
 
         if (result == null)
         {
-            return NotFound(ApiResponse<CaseDTO>.FailureResponse("Case nahi mila"));
+            return NotFound(ApiResponse<CaseDTO>.FailureResponse("Case not found"));
         }
 
         return Ok(ApiResponse<CaseDTO>.SuccessResponse(result, "Case successfully fetched"));
@@ -134,7 +132,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
         if (id != dto.CaseID)
         {
             return BadRequest(ApiResponse<bool>.FailureResponse(
-                "URL aur body mein case ID match nahi hain"));
+                "URL and body case ID do not match"));
         }
 
         var command = new UpdateCaseCommand(

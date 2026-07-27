@@ -34,7 +34,7 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         _logger.LogInformation("Password reset attempt for email: {Email}", request.Email);
 
         // ================================================
-        // 1. Find and validate OTP (PURPOSE = PasswordReset zaroori hai)
+        // 1. Find and validate OTP (PURPOSE must be PasswordReset)
         // ================================================
         var otp = await _context.UserOtps
             .FirstOrDefaultAsync(x =>

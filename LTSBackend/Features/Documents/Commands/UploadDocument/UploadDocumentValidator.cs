@@ -40,7 +40,7 @@ public class UploadDocumentValidator : AbstractValidator<UploadDocumentCommand>
     }
 
     /// <summary>
-    /// Check agar file type valid hai
+    /// Checks whether the file type is valid
     /// </summary>
     private static bool IsValidFileType(IFormFile? file)
     {

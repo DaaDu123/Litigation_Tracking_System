@@ -77,12 +77,12 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             if (department == null)
             {
                 _logger.LogWarning("Department nahi mila ya inactive: {DepartmentID}", request.ResponsibleDepartmentID);
-                throw new NotFoundException($"Department ID {request.ResponsibleDepartmentID} nahi mila ya inactive hai");
+                throw new NotFoundException($"Department ID {request.ResponsibleDepartmentID} not found or is inactive");
             }
         }
 
         // ================================================
-        // 5. Legal Officer check — ONLY agar value di gayi ho
+        // 5. Legal Officer check — ONLY if a value was provided
         // ================================================
         if (request.CurrentLegalOfficerID.HasValue)
         {
@@ -134,7 +134,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         string internalRefNo = await GenerateUniqueInternalReferenceNoAsync(cancellationToken);
 
         // ================================================
-        // 9. Case object banao
+        // 9. Build the Case object
         // ================================================
         var newCase = new Case
         {

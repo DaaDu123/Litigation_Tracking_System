@@ -21,7 +21,7 @@ public class CourtsController(IMediator mediator) : ControllerBase
     // GET ALL COURTS
     // Any authenticated user can read master data.
     // Default: activeOnly=true (dropdown use case)
-    // Admin panel: activeOnly=false pass karo sab dekhne ke liye
+    // Admin panel: pass activeOnly=false to see all records
     // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText,[FromQuery] bool activeOnly = true)

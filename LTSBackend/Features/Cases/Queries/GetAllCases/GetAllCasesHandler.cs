@@ -1,18 +1,19 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Data;
 using LTSBackend.Features.Cases.DTOs;
 using LTSBackend.Features.Cases.Queries.GetAllCases;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Cases.Queries.GetAllCases;
 
-public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<GetAllCasesHandler> _logger) : IRequestHandler<GetAllCasesQuery, PagedResult<CaseDTO>>
+public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService, ILogger<GetAllCasesHandler> _logger) : IRequestHandler<GetAllCasesQuery, PagedResult<CaseDTO>>
 {
     public async Task<PagedResult<CaseDTO>> Handle(GetAllCasesQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Cases fetch kiye ja rahe hain - Page: {PageNumber}, Size: {PageSize}",
+        _logger.LogInformation("Fetching cases - Page: {PageNumber}, Size: {PageSize}",
             request.PageNumber,
             request.PageSize);
 
@@ -36,6 +37,32 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
         }
 
         // ================================================
+        // 1b. SECURITY FIX (BOLA): firm-scoping above is necessary but not
+        //     sufficient. Per the Roles & Permissions Matrix, only
+        //     SuperAdmin / FirmAdmin / Partner have "View Firm Case
+        //     Directory" rights — AssociateLawyer, Moharrir, and
+        //     InternParalegal must only see cases they are actively
+        //     assigned to. Previously this handler returned every case in
+        //     the firm to every role. We scope the query itself (rather
+        //     than filtering in memory) so pagination/counts stay correct.
+        // ================================================
+        if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+        {
+            bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+
+            if (!hasFullVisibility)
+            {
+                var userId = _currentUser.UserID.Value;
+                var now = DateTime.UtcNow;
+
+                query = query.Where(x => _context.CaseAssignments.Any(a =>
+                    a.CaseID == x.CaseID &&
+                    a.UserID == userId &&
+                    (a.EndDate == null || a.EndDate > now)));
+            }
+        }
+
+        // ================================================
         // 2. Search filter - Case Number, Title, or Reference
         // ================================================
         if (!string.IsNullOrWhiteSpace(request.SearchText))
@@ -47,7 +74,7 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
                 x.CaseTitle.ToLower().Contains(searchText) ||
                 x.InternalReferenceNo.ToLower().Contains(searchText));
 
-            _logger.LogInformation("Search filter apply kia: {SearchText}", searchText);
+            _logger.LogInformation("Applied search filter: {SearchText}", searchText);
         }
 
         // ================================================
@@ -56,7 +83,7 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
         if (request.CourtID.HasValue && request.CourtID > 0)
         {
             query = query.Where(x => x.CourtID == request.CourtID.Value);
-            _logger.LogInformation("Court filter apply kia: {CourtID}", request.CourtID);
+            _logger.LogInformation("Applied court filter: {CourtID}", request.CourtID);
         }
 
         // ================================================
@@ -65,7 +92,7 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
         if (request.StatusID.HasValue && request.StatusID > 0)
         {
             query = query.Where(x => x.StatusID == request.StatusID.Value);
-            _logger.LogInformation("Status filter apply kia: {StatusID}", request.StatusID);
+            _logger.LogInformation("Applied status filter: {StatusID}", request.StatusID);
         }
 
         // ================================================
@@ -74,7 +101,7 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
         if (!string.IsNullOrWhiteSpace(request.Priority))
         {
             query = query.Where(x => x.Priority == request.Priority);
-            _logger.LogInformation("Priority filter apply kia: {Priority}", request.Priority);
+            _logger.LogInformation("Applied priority filter: {Priority}", request.Priority);
         }
 
         // ================================================
@@ -89,9 +116,8 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
 
         // ================================================
         // 8. Apply pagination
-        //    FIX: ResponsibleDepartmentID / CurrentLegalOfficerID are
-        //    nullable FKs (per schema), so Department / LegalOfficer can
-        //    be null. Guard against NullReferenceException here.
+        //    Department / LegalOfficer are nullable FKs (per schema), so
+        //    guard against NullReferenceException here.
         // ================================================
         var cases = await query
             .OrderByDescending(x => x.CreatedDate)
@@ -124,7 +150,7 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
             .ToListAsync(cancellationToken);
 
         _logger.LogInformation(
-            "{Count} cases fetch hoye of {Total} total",
+            "Fetched {Count} of {Total} total cases",
             cases.Count,
             totalRecords);
 

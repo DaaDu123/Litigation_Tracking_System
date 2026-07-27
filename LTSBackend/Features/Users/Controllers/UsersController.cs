@@ -20,11 +20,11 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
 {
     // =====================================================
     // CREATE USER — FirmAdmin + SuperAdmin
-    // FIX: pehle sirf "FirmAdmin" string tha, SuperAdmin is
-    // check mein include nahi tha (JWT mein aik hi role claim
-    // hoti hai, koi bypass nahi), isliye SuperAdmin 403 pe
-    // atak jata tha. SRS 2.3 "System Admin: Full control of
-    // users and roles" ke mutabiq FirmAdminAndAbove use kiya.
+    // FIX: previously only the "FirmAdmin" string was checked, SuperAdmin
+    // was not included in this check (JWT carries a single role claim,
+    // no bypass possible), so SuperAdmin was hitting 403.
+    // Per SRS 2.3 "System Admin: Full control of
+    // users and roles", switched to FirmAdminAndAbove.
     // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
@@ -72,7 +72,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // UPDATE USER — sirf FirmAdmin
+    // UPDATE USER — FirmAdmin only
     // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
@@ -93,7 +93,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // DELETE USER (Soft Delete) — sirf FirmAdmin
+    // DELETE USER (Soft Delete) — FirmAdmin only
     // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]

@@ -30,9 +30,9 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
     /// - Elevated Moharrir: Can upload AND view/download
     /// 
     /// Role-based: Partner, Associate, Moharrir, InternParalegal can upload
-    /// FIX: SRS (User Mgt Roles Matrix) ke mutabiq Admin (FirmAdmin/
-    /// SuperAdmin) bhi Document Upload kar sakta hai — pehle ye list
-    /// mein nahi tha.
+    /// FIX: Per the SRS (User Mgt Roles Matrix), Admin (FirmAdmin/
+    /// SuperAdmin) can also upload documents — this was previously
+    /// missing from the list.
     /// </summary>
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]

@@ -40,6 +40,13 @@ public static class RoleNames
                                       Moharrir + "," + InternParalegal;
 
     /// <summary>
+    /// All staff INCLUDING Super Admin. Use this on endpoints whose docstring/spec
+    /// says "SuperAdmin: all cases" etc. — AllFirmUsers alone excludes SuperAdmin,
+    /// which previously locked platform owners out of their own read endpoints.
+    /// </summary>
+    public const string AllFirmUsersAndSuperAdmin = AllFirmUsers + "," + SuperAdmin;
+
+    /// <summary>
     /// Document viewers - Lawyers and authorized Moharrir
     /// </summary>
     public const string CanViewDocuments = Partner + "," + AssociateLawyer + "," + Moharrir;

@@ -29,12 +29,12 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
 
         if (caseToUpdate == null)
         {
-            _logger.LogWarning("Case nahi mila: {CaseID}", request.CaseID);
-            throw new NotFoundException($"Case ID {request.CaseID} nahi mila");
+            _logger.LogWarning("Case not found: {CaseID}", request.CaseID);
+            throw new NotFoundException($"Case ID {request.CaseID} not found");
         }
 
         // ================================================
-        // 2. Verify new status exist karta hai
+        // 2. Verify that the new status exists
         // ================================================
         var newStatus = await _context.CaseStatuses
             .AsNoTracking()
@@ -42,16 +42,16 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
 
         if (newStatus == null)
         {
-            _logger.LogWarning("Status nahi mila: {StatusID}", request.NewStatusID);
-            throw new NotFoundException($"Status ID {request.NewStatusID} nahi mila");
+            _logger.LogWarning("Status not found: {StatusID}", request.NewStatusID);
+            throw new NotFoundException($"Status ID {request.NewStatusID} not found");
         }
 
         // ================================================
-        // 3. Check agar same status hai to skip kare
+        // 3. Check whether it is the same status and skip if so
         // ================================================
         if (caseToUpdate.StatusID == request.NewStatusID)
         {
-            _logger.LogWarning("Same status set kara ja raha hai: {CaseID}", request.CaseID);
+            _logger.LogWarning("Attempting to set the same status: {CaseID}", request.CaseID);
             throw new ValidationException(new List<string>
             {
                 "Naya status pehle wala status jaisa hai"

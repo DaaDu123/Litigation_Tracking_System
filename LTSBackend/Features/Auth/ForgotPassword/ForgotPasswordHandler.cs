@@ -15,10 +15,10 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
         _logger.LogInformation("Forgot password requested for email: {Email}", request.Email);
 
         // ================================================
-        // Generic response - hamesha yehi wapas karte hain, chahe
-        // email exist kare ya na kare. Yeh "user enumeration" attack
-        // se bachata hai (koi guess na kar sake ke kaunsi email
-        // registered hai).
+        // Generic response - we always return this regardless of whether
+        // the email exists or not. This protects against "user enumeration"
+        // attacks (so no one can guess which email is
+        // registered).
         // ================================================
         var genericResponse = new ForgotPasswordResponseDTO
         {
@@ -27,7 +27,7 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
         };
 
         // ================================================
-        // 1. User dhoondain - nahi milta to bhi generic response
+        // 1. Look up the user - even if not found, still return the generic response
         // ================================================
         var user = await _context.Users
             .FirstOrDefaultAsync(
@@ -47,8 +47,8 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
         }
 
         // ================================================
-        // 2. Purani unused PasswordReset OTPs remove kare
-        //    (Registration purpose ki OTPs ko touch nahi karte)
+        // 2. Remove old unused PasswordReset OTPs
+        //    (do not touch OTPs for the Registration purpose)
         // ================================================
         var oldOtps = await _context.UserOtps
             .Where(x =>
@@ -99,7 +99,7 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send password-reset OTP email to: {Email}", request.Email);
-            // Don't throw - security ke liye generic response hi rakhte hain
+            // Don't throw - for security we keep returning the generic response
         }
 
         return genericResponse;

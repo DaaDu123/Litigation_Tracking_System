@@ -28,7 +28,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
             var role = user.GetRole();
             // ================================================
-            // 2. Super Admin ko sab kuch access hai (system-wide, no firm scope)
+            // 2. Super Admin has full access to everything (system-wide, no firm scope)
             // ================================================
             if (role == UserRole.SuperAdmin)
             {
@@ -151,7 +151,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
             }
 
             // ================================================
-            // 1. Pehle user-specific grant check karo (highest priority)
+            // 1. Check user-specific grant first (highest priority)
             // ================================================
             var userPermission = await _context.DocumentPermissions
                 .AsNoTracking()
@@ -167,7 +167,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
             }
 
             // ================================================
-            // 2. Warna role-based grant check karo
+            // 2. Otherwise check role-based grant
             // ================================================
             var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserID == userId, cancellationToken);
 
