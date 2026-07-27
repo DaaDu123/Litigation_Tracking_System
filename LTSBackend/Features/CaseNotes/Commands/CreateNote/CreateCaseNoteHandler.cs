@@ -16,7 +16,7 @@ namespace LTSBackend.Features.CaseNotes.Commands.CreateNote
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Note.CaseID, cancellationToken);
             if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Case ID {request.Note.CaseID} nahi mila");
+                throw new NotFoundException($"Case ID {request.Note.CaseID} not found");
 
             int currentUserId = GetCurrentUserId();
 

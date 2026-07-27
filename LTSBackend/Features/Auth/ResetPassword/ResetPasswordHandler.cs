@@ -79,7 +79,7 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
 
         // ================================================
         // 5. NEW: Saare active refresh tokens revoke kare
-        //    (password change hone par purane sessions khatam)
+        //    (old sessions end when the password is changed)
         // ================================================
         var activeTokens = await _context.RefreshTokens
             .Where(x => x.UserID == user.UserID && !x.IsRevoked)

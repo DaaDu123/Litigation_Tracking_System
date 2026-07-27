@@ -15,6 +15,17 @@ namespace LTSBackend.Features.Auth.Login;
 public class LoginHandler(AppDbContext _context, IPasswordService _passwordService, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<LoginHandler> _logger) : IRequestHandler<LoginCommand, LoginResponseDTO>
 {
     private const int MaxFailedAttempts = 5;
+
+    // SECURITY: precomputed once per process — this is never a real user's
+    // password hash, it exists purely so the "user not found" branch below
+    // can run a BCrypt verify of comparable cost to the "user found, wrong
+    // password" branch. Without this, the not-found branch returned almost
+    // instantly while the found-but-wrong-password branch took BCrypt's
+    // (intentionally slow) verify time, letting an attacker enumerate
+    // valid emails purely by measuring response time.
+    private static readonly string DummyPasswordHash =
+        BCrypt.Net.BCrypt.HashPassword("dummy-password-for-timing-normalization");
+
     public async Task<LoginResponseDTO> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Login attempt for email: {Email}", request.Email);
@@ -29,6 +40,9 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
 
         if (user == null)
         {
+            // Run a dummy verify so this branch costs about the same as the
+            // "wrong password" branch below (see DummyPasswordHash comment).
+            _passwordService.VerifyPassword(request.Password, DummyPasswordHash);
             _logger.LogWarning("Login failed: User not found for email: {Email}", request.Email);
             throw new UnauthorizedException("Invalid credentials.");
         }
@@ -78,12 +92,12 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
             if (user.Firm.IsDeleted)
             {
                 _logger.LogWarning("Login failed: Firm {FirmID} is removed", user.FirmID);
-                throw new UnauthorizedException("Ye firm workspace ab active nahi hai.");
+                throw new UnauthorizedException("This firm workspace is no longer active.");
             }
             if (user.Firm.IsBlocked)
             {
                 _logger.LogWarning("Login failed: Firm {FirmID} is blocked", user.FirmID);
-                throw new UnauthorizedException("Aap ki firm ka workspace filhaal blocked hai. Apne administrator se rabta karein.");
+                throw new UnauthorizedException("Your firm's workspace is currently blocked. Please contact your administrator.");
             }
         }
 

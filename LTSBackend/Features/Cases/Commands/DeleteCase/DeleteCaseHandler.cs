@@ -13,7 +13,7 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
 {
     public async Task<bool> Handle(DeleteCaseCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Case delete kia ja raha hai: {CaseID}", request.CaseID);
+        _logger.LogInformation("Deleting case: {CaseID}", request.CaseID);
 
         int currentUserId = GetCurrentUserId();
 
@@ -40,7 +40,7 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
         {
             _logger.LogWarning("An archived case cannot be deleted: {CaseID}", request.CaseID);
             throw new ValidationException([
-                "Archived cases delete nahi ho sakte. Pehle unarchive kare"
+                "Archived cases cannot be deleted. Unarchive it first"
             ]);
         }
 

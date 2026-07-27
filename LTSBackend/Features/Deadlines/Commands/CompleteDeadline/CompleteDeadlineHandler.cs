@@ -21,7 +21,7 @@ namespace LTSBackend.Features.Deadlines.Commands.CompleteDeadline
                 .FirstOrDefaultAsync(d => d.DeadlineID == request.DeadlineID, cancellationToken);
 
             if (deadline == null || (!_currentUser.IsSuperAdmin && deadline.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Deadline ID {request.DeadlineID} nahi mila");
+                throw new NotFoundException($"Deadline ID {request.DeadlineID} not found");
 
             deadline.Completed = true;
             deadline.CompletedDate = DateTime.UtcNow;

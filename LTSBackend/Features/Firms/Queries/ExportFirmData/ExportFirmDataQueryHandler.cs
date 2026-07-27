@@ -15,7 +15,7 @@ public class ExportFirmDataQueryHandler(AppDbContext _context, ILogger<ExportFir
         var firm = await _context.Firms.AsNoTracking()
             .FirstOrDefaultAsync(f => f.FirmID == request.FirmID, cancellationToken);
         if (firm == null)
-            throw new NotFoundException("Firm nahi mili.");
+            throw new NotFoundException("Firm not found.");
 
         var users = await _context.Users.AsNoTracking()
             .Where(u => u.FirmID == request.FirmID)

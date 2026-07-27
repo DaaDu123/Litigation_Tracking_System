@@ -21,7 +21,7 @@ public class CreateFirmCommandHandler(
             .AnyAsync(x => x.FirmCode == request.FirmCode, cancellationToken);
 
         if (codeExists)
-            throw new ValidationException([$"Firm code '{request.FirmCode}' pehle se istemal ho raha hai."]);
+            throw new ValidationException([$"Firm code '{request.FirmCode}' is already in use."]);
 
         // 2. Admin email must be unique across the whole platform
         bool emailExists = await _context.Users
@@ -29,7 +29,7 @@ public class CreateFirmCommandHandler(
             .AnyAsync(x => x.Email == request.AdminEmail, cancellationToken);
 
         if (emailExists)
-            throw new ValidationException([$"Email '{request.AdminEmail}' pehle se exist karta hai."]);
+            throw new ValidationException([$"Email '{request.AdminEmail}' already exists."]);
 
         await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 

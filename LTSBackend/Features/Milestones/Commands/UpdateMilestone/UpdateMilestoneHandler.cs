@@ -18,7 +18,7 @@ namespace LTSBackend.Features.Milestones.Commands.UpdateMilestone
                 .FirstOrDefaultAsync(m => m.MilestoneID == request.Milestone.MilestoneID, cancellationToken);
 
             if (milestone == null || (!_currentUser.IsSuperAdmin && milestone.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Milestone ID {request.Milestone.MilestoneID} nahi mila");
+                throw new NotFoundException($"Milestone ID {request.Milestone.MilestoneID} not found");
 
             milestone.Milestone = request.Milestone.Milestone;
             milestone.MilestoneDate = request.Milestone.MilestoneDate;

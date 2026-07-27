@@ -11,7 +11,7 @@ public class UpdateFirmCommandHandler(AppDbContext _context) : IRequestHandler<U
     {
         var firm = await _context.Firms.FirstOrDefaultAsync(x => x.FirmID == request.FirmID, cancellationToken);
         if (firm == null || firm.IsDeleted)
-            throw new NotFoundException("Firm nahi mili.");
+            throw new NotFoundException("Firm not found.");
 
         firm.FirmName = request.FirmName;
         firm.Address = request.Address;

@@ -26,10 +26,10 @@ namespace LTSBackend.Features.CaseAssignments.Commands.EndAssignment
                 .FirstOrDefaultAsync(a => a.AssignmentID == request.AssignmentID, cancellationToken);
 
             if (assignment == null || (!_currentUser.IsSuperAdmin && assignment.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Assignment ID {request.AssignmentID} nahi mila");
+                throw new NotFoundException($"Assignment ID {request.AssignmentID} not found");
 
             if (assignment.EndDate != null)
-                throw new ValidationException(new List<string> { "Yeh assignment pehle se hi khatam ho chuki hai" });
+                throw new ValidationException(new List<string> { "This assignment has already ended" });
 
             assignment.EndDate = DateTime.UtcNow;
             if (!string.IsNullOrWhiteSpace(request.Remarks))

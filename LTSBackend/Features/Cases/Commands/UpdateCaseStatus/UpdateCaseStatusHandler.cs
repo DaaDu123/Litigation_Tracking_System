@@ -13,7 +13,7 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
 {
     public async Task<bool> Handle(UpdateCaseStatusCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Case status update kia ja raha hai: {CaseID}", request.CaseID);
+        _logger.LogInformation("Updating case status: {CaseID}", request.CaseID);
 
         int currentUserId = GetCurrentUserId();
 
@@ -54,7 +54,7 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
             _logger.LogWarning("Attempting to set the same status: {CaseID}", request.CaseID);
             throw new ValidationException(new List<string>
             {
-                "Naya status pehle wala status jaisa hai"
+                "The new status is the same as the current status"
             });
         }
 

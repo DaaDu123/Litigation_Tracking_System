@@ -8,6 +8,6 @@ public class DeleteCaseValidator : AbstractValidator<DeleteCaseCommand>
     {
         RuleFor(x => x.CaseID)
             .GreaterThan(0)
-            .WithMessage("Valid Case ID zaroori hai");
+            .WithMessage("Valid Case ID is required");
     }
 }

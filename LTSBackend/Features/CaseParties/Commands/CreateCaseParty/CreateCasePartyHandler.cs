@@ -20,7 +20,7 @@ namespace LTSBackend.Features.CaseParties.Commands.CreateCaseParty
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Party.CaseID, cancellationToken);
             if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Case ID {request.Party.CaseID} nahi mila");
+                throw new NotFoundException($"Case ID {request.Party.CaseID} not found");
 
             int currentUserId = GetCurrentUserId();
 

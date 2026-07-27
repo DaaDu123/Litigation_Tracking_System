@@ -12,7 +12,7 @@ public class BlockFirmCommandHandler(AppDbContext _context, ILogger<BlockFirmCom
     {
         var firm = await _context.Firms.FirstOrDefaultAsync(x => x.FirmID == request.FirmID, cancellationToken);
         if (firm == null || firm.IsDeleted)
-            throw new NotFoundException("Firm nahi mili.");
+            throw new NotFoundException("Firm not found.");
 
         firm.IsBlocked = true;
         firm.BlockedReason = request.Reason;

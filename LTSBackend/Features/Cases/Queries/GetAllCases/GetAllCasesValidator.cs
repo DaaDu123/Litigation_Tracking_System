@@ -8,14 +8,14 @@ public class GetAllCasesValidator : AbstractValidator<GetAllCasesQuery>
     {
         RuleFor(x => x.PageNumber)
             .GreaterThan(0)
-            .WithMessage("Page Number 0 se zyada hona chahiye");
+            .WithMessage("Page Number must be greater than 0");
 
         RuleFor(x => x.PageSize)
             .InclusiveBetween(1, 100)
-            .WithMessage("Page Size 1 aur 100 ke beech hona chahiye");
+            .WithMessage("Page Size must be between 1 and 100");
 
         RuleFor(x => x.Priority)
             .Must(x => x == null || x == "High" || x == "Medium" || x == "Low")
-            .WithMessage("Priority sirf High, Medium ya Low ho sakta hai");
+            .WithMessage("Priority can only be High, Medium, or Low");
     }
 }

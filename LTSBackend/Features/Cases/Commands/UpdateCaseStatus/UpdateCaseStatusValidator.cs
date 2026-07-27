@@ -8,14 +8,14 @@ public class UpdateCaseStatusValidator : AbstractValidator<UpdateCaseStatusComma
     {
         RuleFor(x => x.CaseID)
             .GreaterThan(0)
-            .WithMessage("Valid Case ID zaroori hai");
+            .WithMessage("Valid Case ID is required");
 
         RuleFor(x => x.NewStatusID)
             .GreaterThan(0)
-            .WithMessage("Valid Status zaroori hai");
+            .WithMessage("Valid Status is required");
 
         RuleFor(x => x.Remarks)
             .MaximumLength(1000)
-            .WithMessage("Remarks 1000 characters se zyada nahi ho sakta");
+            .WithMessage("Remarks cannot exceed 1000 characters");
     }
 }

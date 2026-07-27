@@ -26,7 +26,7 @@ namespace LTSBackend.Features.CaseAssignments.Commands.AssignCase
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Assignment.CaseID, cancellationToken);
             if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Case ID {request.Assignment.CaseID} nahi mila");
+                throw new NotFoundException($"Case ID {request.Assignment.CaseID} not found");
 
             // FIX: user being assigned must belong to the same firm as the case
             // (otherwise a lawyer from another firm could be "assigned" cross-tenant)
@@ -35,7 +35,7 @@ namespace LTSBackend.Features.CaseAssignments.Commands.AssignCase
                 u.IsActive &&
                 u.FirmID == caseEntity.FirmID, cancellationToken);
             if (!userExists)
-                throw new NotFoundException($"User ID {request.Assignment.UserID} nahi mila ya inactive hai ya is firm ka nahi hai");
+                throw new NotFoundException($"User ID {request.Assignment.UserID} not found, is inactive, or does not belong to this firm");
 
             // Prevent duplicate active assignment of the same user+type on the same case
             var duplicate = await _context.CaseAssignments.AnyAsync(a =>
@@ -45,7 +45,7 @@ namespace LTSBackend.Features.CaseAssignments.Commands.AssignCase
                 a.EndDate == null, cancellationToken);
 
             if (duplicate)
-                throw new ValidationException(new List<string> { "Yeh user pehle se hi is type ke sath is case par active assign hai" });
+                throw new ValidationException(new List<string> { "This user is already actively assigned to this case with this type" });
 
             int currentUserId = GetCurrentUserId();
 
@@ -76,8 +76,8 @@ namespace LTSBackend.Features.CaseAssignments.Commands.AssignCase
                 NotificationTypeID = 3, // CaseAssignment (seeded in AppDbContext)
                 UserID = request.Assignment.UserID,
                 CaseID = request.Assignment.CaseID,
-                Subject = "Naya case assign hua hai",
-                Message = $"Aapko case {caseEntity.CaseNumber} ({caseEntity.CaseTitle}) '{request.Assignment.AssignmentType}' ke tor par assign kiya gaya hai.",
+                Subject = "New case assigned",
+                Message = $"You have been assigned to case {caseEntity.CaseNumber} ({caseEntity.CaseTitle}) as '{request.Assignment.AssignmentType}'.",
                 Priority = "Medium",
                 CreatedDate = DateTime.UtcNow
             });

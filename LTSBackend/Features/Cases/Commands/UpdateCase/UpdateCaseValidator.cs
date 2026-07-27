@@ -8,51 +8,51 @@ public class UpdateCaseValidator : AbstractValidator<UpdateCaseCommand>
     {
         RuleFor(x => x.CaseID)
             .GreaterThan(0)
-            .WithMessage("Valid Case ID zaroori hai");
+            .WithMessage("Valid Case ID is required");
 
         RuleFor(x => x.CaseNumber)
             .MaximumLength(100)
-            .WithMessage("Case Number 100 characters se zyada nahi ho sakta")
+            .WithMessage("Case Number cannot exceed 100 characters")
             .When(x => !string.IsNullOrEmpty(x.CaseNumber));
 
         RuleFor(x => x.CaseTitle)
             .MaximumLength(255)
-            .WithMessage("Case Title 255 characters se zyada nahi ho sakta")
+            .WithMessage("Case Title cannot exceed 255 characters")
             .When(x => !string.IsNullOrEmpty(x.CaseTitle));
 
         RuleFor(x => x.SubjectMatter)
             .MaximumLength(255)
-            .WithMessage("Subject Matter 255 characters se zyada nahi ho sakta")
+            .WithMessage("Subject Matter cannot exceed 255 characters")
             .When(x => !string.IsNullOrEmpty(x.SubjectMatter));
 
         RuleFor(x => x.Priority)
             .Must(x => x == "High" || x == "Medium" || x == "Low")
-            .WithMessage("Priority sirf High, Medium ya Low ho sakta hai")
+            .WithMessage("Priority can only be High, Medium, or Low")
             .When(x => !string.IsNullOrEmpty(x.Priority));
 
         RuleFor(x => x.CourtID)
             .GreaterThan(0)
-            .WithMessage("Valid Court zaroori hai")
+            .WithMessage("Valid Court is required")
             .When(x => x.CourtID.HasValue);
 
         RuleFor(x => x.CategoryID)
             .GreaterThan(0)
-            .WithMessage("Valid Category zaroori hai")
+            .WithMessage("Valid Category is required")
             .When(x => x.CategoryID.HasValue);
 
         RuleFor(x => x.CurrentLegalOfficerID)
             .GreaterThan(0)
-            .WithMessage("Valid Legal Officer zaroori hai")
+            .WithMessage("Valid Legal Officer is required")
             .When(x => x.CurrentLegalOfficerID.HasValue);
 
         RuleFor(x => x.ClaimedAmount)
             .GreaterThanOrEqualTo(0)
-            .WithMessage("Claimed Amount 0 se zyada ya equal hona chahiye")
+            .WithMessage("Claimed Amount must be greater than or equal to 0")
             .When(x => x.ClaimedAmount.HasValue);
 
         RuleFor(x => x.PotentialLiability)
             .GreaterThanOrEqualTo(0)
-            .WithMessage("Potential Liability 0 se zyada ya equal hona chahiye")
+            .WithMessage("Potential Liability must be greater than or equal to 0")
             .When(x => x.PotentialLiability.HasValue);
     }
 }

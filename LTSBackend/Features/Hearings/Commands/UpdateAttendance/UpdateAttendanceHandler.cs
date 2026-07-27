@@ -18,7 +18,7 @@ namespace LTSBackend.Features.Hearings.Commands.UpdateAttendance
                 .FirstOrDefaultAsync(a => a.AttendanceID == request.AttendanceId, cancellationToken);
 
             if (attendance == null || (!_currentUser.IsSuperAdmin && attendance.Hearing.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Attendance ID {request.AttendanceId} nahi mila");
+                throw new NotFoundException($"Attendance ID {request.AttendanceId} not found");
 
             attendance.Present = request.IsPresent;
             attendance.AttendanceRole = request.AttendanceRole;

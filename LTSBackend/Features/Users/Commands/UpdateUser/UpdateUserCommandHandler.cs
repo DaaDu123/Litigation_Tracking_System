@@ -26,19 +26,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         }
 
         // ================================================
-        // 2. Check if new email is unique
-        // ================================================
-        bool emailExists = await _context.Users
-            .AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
-
-        if (emailExists)
-        {
-            _logger.LogWarning("Update failed: Email already in use: {Email}", request.Email);
-            throw new ValidationException(["Email is already in use by another user."]);
-        }
-
-        // ================================================
-        // 3. Validate RoleID
+        // 2. Validate RoleID
         // ================================================
         if (!request.RoleID.HasValue)
         {
@@ -62,12 +50,12 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         }
 
         // ================================================
-        // 3b. Enforce role hierarchy + self-protection
+        // 2b. Enforce role hierarchy + self-protection
         // ================================================
         if (user.UserID == request.ActingUserID && request.RoleID.Value != user.RoleID)
         {
             _logger.LogWarning("User {ActingUserId} attempted to change their own role", request.ActingUserID);
-            throw new ValidationException(["Aap apna khud ka role change nahi kar sakte."]);
+            throw new ValidationException(["You cannot change your own role."]);
         }
         var actingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserID == request.ActingUserID, cancellationToken);
         var actingRole = actingUser?.GetRole();
@@ -75,17 +63,39 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         {
             _logger.LogWarning("User {ActingUserId} with role {ActingRole} attempted to assign disallowed role {TargetRoleId}",
                 request.ActingUserID, actingRole, request.RoleID);
-            throw new ValidationException(["Aap ye role assign karne ke authorized nahi hain."]);
+            throw new ValidationException(["You are not authorized to assign this role."]);
         }
 
         // ================================================
-        // 3c. Multi-tenancy: can only edit users in your own firm
+        // 2c. Multi-tenancy: can only edit users in your own firm
         // (SuperAdmin, whose FirmID is null, bypasses this check)
+        //
+        // NOTE: moved above the email-uniqueness check (previously step 2)
+        // so an unauthorized cross-firm request fails fast on an
+        // authorization check rather than running an unrelated DB query
+        // first. Not a fix for an actual leak — the write was already
+        // correctly blocked either way, this is ordering hygiene only.
         // ================================================
         if (actingUser!.FirmID != null && user.FirmID != actingUser.FirmID)
         {
             _logger.LogWarning("User {ActingUserId} attempted to update a user from a different firm: {TargetUserId}", request.ActingUserID, request.UserID);
-            throw new ValidationException(["Aap sirf apni firm ke users edit kar sakte hain."]);
+            throw new ValidationException(["You can only edit users within your own firm."]);
+        }
+
+        // ================================================
+        // 3. Check if new email is unique
+        //    Email is globally unique across all firms by design (see the
+        //    unique index on Users.Email in AppDbContext) — login doesn't
+        //    ask which firm first, so this check is intentionally NOT
+        //    firm-scoped.
+        // ================================================
+        bool emailExists = await _context.Users
+            .AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
+
+        if (emailExists)
+        {
+            _logger.LogWarning("Update failed: Email already in use: {Email}", request.Email);
+            throw new ValidationException(["Email is already in use by another user."]);
         }
 
         // ================================================

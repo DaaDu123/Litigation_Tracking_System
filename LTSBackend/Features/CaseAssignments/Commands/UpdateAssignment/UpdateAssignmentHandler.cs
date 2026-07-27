@@ -21,10 +21,10 @@ namespace LTSBackend.Features.CaseAssignments.Commands.UpdateAssignment
                 .FirstOrDefaultAsync(a => a.AssignmentID == request.Assignment.AssignmentID, cancellationToken);
 
             if (assignment == null || (!_currentUser.IsSuperAdmin && assignment.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Assignment ID {request.Assignment.AssignmentID} nahi mila");
+                throw new NotFoundException($"Assignment ID {request.Assignment.AssignmentID} not found");
 
             if (assignment.EndDate != null)
-                throw new ValidationException(new List<string> { "Khatam ho chuki (ended) assignment ko update nahi kiya ja sakta" });
+                throw new ValidationException(new List<string> { "An ended assignment cannot be updated" });
 
             assignment.AssignmentType = request.Assignment.AssignmentType;
             assignment.LeadCounsel = request.Assignment.LeadCounsel;

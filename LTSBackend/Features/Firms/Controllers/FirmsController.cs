@@ -51,7 +51,7 @@ public class FirmsController(IMediator _mediator, ILogger<FirmsController> _logg
     {
         var firm = await _mediator.Send(new GetFirmByIdQuery(id));
         if (firm == null)
-            return NotFound(ApiResponse<FirmDTO>.FailureResponse("Firm nahi mili"));
+            return NotFound(ApiResponse<FirmDTO>.FailureResponse("Firm not found"));
 
         return Ok(ApiResponse<FirmDTO>.SuccessResponse(firm, "Firm successfully fetched"));
     }
@@ -60,7 +60,7 @@ public class FirmsController(IMediator _mediator, ILogger<FirmsController> _logg
     public async Task<IActionResult> Update(int id, [FromBody] UpdateFirmCommand command)
     {
         if (id != command.FirmID)
-            return BadRequest(ApiResponse<bool>.FailureResponse("URL aur body mein Firm ID match nahi hain"));
+            return BadRequest(ApiResponse<bool>.FailureResponse("URL and body Firm ID do not match"));
 
         var result = await _mediator.Send(command);
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Firm successfully updated"));
@@ -74,7 +74,7 @@ public class FirmsController(IMediator _mediator, ILogger<FirmsController> _logg
             return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid identity."));
 
         var result = await _mediator.Send(new BlockFirmCommand(id, body?.Reason) { ActingUserID = actingUserId.Value });
-        return Ok(ApiResponse<bool>.SuccessResponse(result, "Firm blocked - saare users login nahi kar sakenge."));
+        return Ok(ApiResponse<bool>.SuccessResponse(result, "Firm blocked - all users will be unable to log in."));
     }
 
     [HttpPut("{id}/unblock")]

@@ -9,48 +9,48 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
     {
         RuleFor(x => x.FullName)
             .NotEmpty()
-            .WithMessage("Full name zaroori hai")
+            .WithMessage("Full name is required")
             .MaximumLength(150)
-            .WithMessage("Full name 150 characters se zyada nahi ho sakta");
+            .WithMessage("Full name cannot exceed 150 characters");
 
         RuleFor(x => x.Email)
             .NotEmpty()
-            .WithMessage("Email zaroori hai")
+            .WithMessage("Email is required")
             .EmailAddress()
             .WithMessage("Invalid email format")
             .MaximumLength(150)
-            .WithMessage("Email 150 characters se zyada nahi ho sakta");
+            .WithMessage("Email cannot exceed 150 characters");
 
         RuleFor(x => x.Password)
             .NotEmpty()
-            .WithMessage("Password zaroori hai")
+            .WithMessage("Password is required")
             .MinimumLength(8)
-            .WithMessage("Password minimum 8 characters ka hona chahiye")
+            .WithMessage("Password must be at least 8 characters")
             .Matches("[A-Z]")
-            .WithMessage("Password mein kam az kam aik uppercase letter hona chahiye")
+            .WithMessage("Password must contain at least one uppercase letter")
             .Matches("[a-z]")
-            .WithMessage("Password mein kam az kam aik lowercase letter hona chahiye")
+            .WithMessage("Password must contain at least one lowercase letter")
             .Matches("[0-9]")
-            .WithMessage("Password mein kam az kam aik digit hona chahiye")
+            .WithMessage("Password must contain at least one digit")
             .Matches(@"[!@#$%^&*(),.?"":{}|<>_\-+=\[\]\\/;'~`]")
-            .WithMessage("Password mein kam az kam aik symbol (!@#$%^&* etc.) hona chahiye");
+            .WithMessage("Password must contain at least one symbol (!@#$%^&* etc.)");
 
         RuleFor(x => x.Phone)
             .MaximumLength(20)
-            .WithMessage("Phone 20 characters se zyada nahi ho sakta")
+            .WithMessage("Phone cannot exceed 20 characters")
             .Matches(@"^\+?[0-9\-\(\)\s]*$")
-            .WithMessage("Phone format invalid hai")
+            .WithMessage("Phone format is invalid")
             .When(x => !string.IsNullOrWhiteSpace(x.Phone));
 
         RuleFor(x => x.Department)
             .MaximumLength(100)
-            .WithMessage("Department 100 characters se zyada nahi ho sakta");
+            .WithMessage("Department cannot exceed 100 characters");
 
         RuleFor(x => x.RoleID)
             .NotNull()
-            .WithMessage("Role zaroori hai")
+            .WithMessage("Role is required")
             .GreaterThan(0)
-            .WithMessage("Valid role zaroori hai")
+            .WithMessage("Valid role is required")
             .Must(roleId => roleId.HasValue && Enum.IsDefined(typeof(UserRole), roleId.Value))
             .WithMessage("Invalid role");
 
@@ -62,7 +62,7 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 
                 return file.Length <= 5 * 1024 * 1024; // 5MB max
             })
-            .WithMessage("Profile image 5 MB se zyada nahi ho sakta")
+            .WithMessage("Profile image cannot exceed 5 MB")
             .Must(file =>
             {
                 if (file == null)
@@ -71,6 +71,6 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
                 var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
                 return allowed.Contains(Path.GetExtension(file.FileName).ToLowerInvariant());
             })
-            .WithMessage("Sirf JPG, JPEG, PNG, aur WebP formats allowed hain");
+            .WithMessage("Only JPG, JPEG, PNG, and WebP formats are allowed");
     }
 }

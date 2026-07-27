@@ -18,10 +18,10 @@ namespace LTSBackend.Features.Deadlines.Commands.UpdateDeadline
                 .FirstOrDefaultAsync(d => d.DeadlineID == request.Deadline.DeadlineID, cancellationToken);
 
             if (deadline == null || (!_currentUser.IsSuperAdmin && deadline.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Deadline ID {request.Deadline.DeadlineID} nahi mila");
+                throw new NotFoundException($"Deadline ID {request.Deadline.DeadlineID} not found");
 
             if (deadline.Completed)
-                throw new ValidationException(new List<string> { "Mukammal (completed) deadline ko update nahi kiya ja sakta" });
+                throw new ValidationException(new List<string> { "A completed deadline cannot be updated" });
 
             deadline.DeadlineType = request.Deadline.DeadlineType;
             deadline.DueDate = request.Deadline.DueDate;

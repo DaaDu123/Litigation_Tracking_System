@@ -21,14 +21,14 @@ namespace LTSBackend.Features.CaseNotes.Commands.DeleteNote
                 .FirstOrDefaultAsync(n => n.NoteID == request.NoteID, cancellationToken);
 
             if (note == null || (!_currentUser.IsSuperAdmin && note.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Note ID {request.NoteID} nahi mila");
+                throw new NotFoundException($"Note ID {request.NoteID} not found");
 
             int currentUserId = GetCurrentUserId();
             var currentUserRoleId = await _context.Users.Where(u => u.UserID == currentUserId).Select(u => u.RoleID).FirstOrDefaultAsync(cancellationToken);
             bool isElevated = currentUserRoleId is 1 or 2 or 3;
 
             if (note.UserID != currentUserId && !isElevated)
-                throw new UnauthorizedException("Sirf note ka author ya senior staff isay delete kar sakta hai");
+                throw new UnauthorizedException("Only the note's author or senior staff can delete it");
 
             _context.AuditLogs.Add(_auditService.Create(currentUserId, $"Case Note Deleted: NoteID {note.NoteID}"));
 

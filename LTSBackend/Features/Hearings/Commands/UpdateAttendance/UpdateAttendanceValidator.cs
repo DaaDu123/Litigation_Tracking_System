@@ -12,7 +12,7 @@ namespace LTSBackend.Features.Hearings.Commands.UpdateAttendance
             RuleFor(x => x.DepartureTime)
                 .GreaterThanOrEqualTo(x => x.ArrivalTime)
                 .When(x => x.ArrivalTime.HasValue && x.DepartureTime.HasValue)
-                .WithMessage("Departure time arrival time se pehle nahi ho sakti");
+                .WithMessage("Departure time cannot be before arrival time");
         }
     }
 }

@@ -4,37 +4,37 @@ namespace LTSBackend.Features.Cases.DTOs;
 
 public class CreateCaseDTO
 {
-    [Required(ErrorMessage = "Case Number zaroori hai")]
+    [Required(ErrorMessage = "Case Number is required")]
     [StringLength(100)]
     public string CaseNumber { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Case Title zaroori hai")]
+    [Required(ErrorMessage = "Case Title is required")]
     [StringLength(255)]
     public string CaseTitle { get; set; } = string.Empty;
 
     public string? CaseDescription { get; set; }
 
-    [Required(ErrorMessage = "Court zaroori hai")]
+    [Required(ErrorMessage = "Court is required")]
     public int CourtID { get; set; }
 
-    [Required(ErrorMessage = "Category zaroori hai")]
+    [Required(ErrorMessage = "Category is required")]
     public int CategoryID { get; set; }
 
-    [Required(ErrorMessage = "Priority zaroori hai")]
+    [Required(ErrorMessage = "Priority is required")]
     [RegularExpression("^(High|Medium|Low)$")]
     public string Priority { get; set; } = "Medium";
 
-    [Required(ErrorMessage = "Subject Matter zaroori hai")]
+    [Required(ErrorMessage = "Subject Matter is required")]
     [StringLength(255)]
     public string SubjectMatter { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Filing Date zaroori hai")]
+    [Required(ErrorMessage = "Filing Date is required")]
     public DateTime FilingDate { get; set; }
 
-    [Required(ErrorMessage = "Institution Date zaroori hai")]
+    [Required(ErrorMessage = "Institution Date is required")]
     public DateTime InstitutionDate { get; set; }
 
-    [Required(ErrorMessage = "Registration Date zaroori hai")]
+    [Required(ErrorMessage = "Registration Date is required")]
     public DateTime RegistrationDate { get; set; }
 
     public DateTime? ExpectedDisposalDate { get; set; }
@@ -45,9 +45,9 @@ public class CreateCaseDTO
 
     public string? FinancialImplication { get; set; }
 
-    [Required(ErrorMessage = "Department zaroori hai")]
+    [Required(ErrorMessage = "Department is required")]
     public int ResponsibleDepartmentID { get; set; }
 
-    [Required(ErrorMessage = "Legal Officer zaroori hai")]
+    [Required(ErrorMessage = "Legal Officer is required")]
     public int CurrentLegalOfficerID { get; set; }
 }

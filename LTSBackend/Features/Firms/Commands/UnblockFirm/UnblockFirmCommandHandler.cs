@@ -11,7 +11,7 @@ public class UnblockFirmCommandHandler(AppDbContext _context) : IRequestHandler<
     {
         var firm = await _context.Firms.FirstOrDefaultAsync(x => x.FirmID == request.FirmID, cancellationToken);
         if (firm == null || firm.IsDeleted)
-            throw new NotFoundException("Firm nahi mili.");
+            throw new NotFoundException("Firm not found.");
 
         firm.IsBlocked = false;
         firm.BlockedReason = null;

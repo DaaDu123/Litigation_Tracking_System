@@ -22,14 +22,14 @@ namespace LTSBackend.Features.CaseNotes.Commands.UpdateNote
                 .FirstOrDefaultAsync(n => n.NoteID == request.Note.NoteID, cancellationToken);
 
             if (note == null || (!_currentUser.IsSuperAdmin && note.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Note ID {request.Note.NoteID} nahi mila");
+                throw new NotFoundException($"Note ID {request.Note.NoteID} not found");
 
             int currentUserId = GetCurrentUserId();
             var currentUserRoleId = await GetCurrentUserRoleId(currentUserId, cancellationToken);
             bool isElevated = currentUserRoleId is 1 or 2 or 3; // SuperAdmin, FirmAdmin, Partner
 
             if (note.UserID != currentUserId && !isElevated)
-                throw new UnauthorizedException("Sirf note ka author ya senior staff isay edit kar sakta hai");
+                throw new UnauthorizedException("Only the note's author or senior staff can edit it");
 
             note.NoteType = request.Note.NoteType;
             note.Notes = request.Note.Notes;

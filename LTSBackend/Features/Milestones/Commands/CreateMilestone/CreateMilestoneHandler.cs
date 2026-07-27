@@ -16,7 +16,7 @@ namespace LTSBackend.Features.Milestones.Commands.CreateMilestone
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Milestone.CaseID, cancellationToken);
             if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Case ID {request.Milestone.CaseID} nahi mila");
+                throw new NotFoundException($"Case ID {request.Milestone.CaseID} not found");
 
             var milestone = new CaseMilestone
             {

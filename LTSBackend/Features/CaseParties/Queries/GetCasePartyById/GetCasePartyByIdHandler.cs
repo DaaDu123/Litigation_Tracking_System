@@ -16,7 +16,7 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCasePartyById
                 .FirstOrDefaultAsync(p => p.PartyID == request.PartyID, cancellationToken);
 
             if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Party ID {request.PartyID} nahi mila");
+                throw new NotFoundException($"Party ID {request.PartyID} not found");
 
             return new CasePartyDetailDTO
             {

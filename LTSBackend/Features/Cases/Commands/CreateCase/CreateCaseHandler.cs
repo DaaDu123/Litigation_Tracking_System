@@ -13,7 +13,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 {
     public async Task<long> Handle(CreateCaseCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Naya Case create kia ja raha hai: {CaseNumber}", request.CaseNumber);
+        _logger.LogInformation("Creating new case: {CaseNumber}", request.CaseNumber);
 
         // ================================================
         // Get logged-in user ID + firm (multi-tenancy)
@@ -23,7 +23,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         if (_currentUser.FirmID == null)
         {
             _logger.LogWarning("User {UserId} without a firm attempted to create a case", currentUserId);
-            throw new ValidationException(["Aap kisi firm se mansoob nahi hain, is liye case create nahi kar sakte."]);
+            throw new ValidationException(["You are not associated with any firm, so you cannot create a case."]);
         }
         int firmId = _currentUser.FirmID.Value;
 
@@ -36,10 +36,10 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         if (caseExists)
         {
-            _logger.LogWarning("Case Number pehle se exist karta hai: {CaseNumber}", request.CaseNumber);
+            _logger.LogWarning("Case Number already exists: {CaseNumber}", request.CaseNumber);
             throw new ValidationException(new List<string>
             {
-                $"Case Number '{request.CaseNumber}' pehle se exist karta hai"
+                $"Case Number '{request.CaseNumber}' already exists"
             });
         }
 
@@ -49,8 +49,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         if (court == null)
         {
-            _logger.LogWarning("Court nahi mila ya inactive hai: {CourtID}", request.CourtID);
-            throw new NotFoundException($"Court ID {request.CourtID} nahi mila ya inactive hai");
+            _logger.LogWarning("Court not found or is inactive: {CourtID}", request.CourtID);
+            throw new NotFoundException($"Court ID {request.CourtID} not found or is inactive");
         }
 
         // ================================================
@@ -62,8 +62,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         if (category == null)
         {
-            _logger.LogWarning("Category nahi mila: {CategoryID}", request.CategoryID);
-            throw new NotFoundException($"Category ID {request.CategoryID} nahi mila");
+            _logger.LogWarning("Category not found: {CategoryID}", request.CategoryID);
+            throw new NotFoundException($"Category ID {request.CategoryID} not found");
         }
 
         // ================================================
@@ -76,7 +76,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
             if (department == null)
             {
-                _logger.LogWarning("Department nahi mila ya inactive: {DepartmentID}", request.ResponsibleDepartmentID);
+                _logger.LogWarning("Department not found ya inactive: {DepartmentID}", request.ResponsibleDepartmentID);
                 throw new NotFoundException($"Department ID {request.ResponsibleDepartmentID} not found or is inactive");
             }
         }
@@ -97,8 +97,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
             if (legalOfficer == null)
             {
-                _logger.LogWarning("Legal Officer nahi mila: {LegalOfficerID}", request.CurrentLegalOfficerID);
-                throw new NotFoundException($"Legal Officer ID {request.CurrentLegalOfficerID} nahi mila");
+                _logger.LogWarning("Legal Officer not found: {LegalOfficerID}", request.CurrentLegalOfficerID);
+                throw new NotFoundException($"Legal Officer ID {request.CurrentLegalOfficerID} not found");
             }
         }
 
@@ -111,8 +111,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         if (defaultStatus == null)
         {
-            _logger.LogError("Default status 'New' nahi mila database mein");
-            throw new NotFoundException("Default status 'New' nahi mila");
+            _logger.LogError("Default status 'New' not found in the database");
+            throw new NotFoundException("Default status 'New' not found");
         }
 
         // ================================================
@@ -124,8 +124,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         if (defaultStage == null)
         {
-            _logger.LogError("Default stage 'Filing' nahi mila database mein");
-            throw new NotFoundException("Default stage 'Filing' nahi mila");
+            _logger.LogError("Default stage 'Filing' not found in the database");
+            throw new NotFoundException("Default stage 'Filing' not found");
         }
 
         // ================================================

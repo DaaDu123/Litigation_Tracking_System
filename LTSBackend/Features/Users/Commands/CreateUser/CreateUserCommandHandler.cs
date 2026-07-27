@@ -64,7 +64,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         if (actingRole == null || !RoleHierarchy.CanAssignRole(actingRole.Value, request.RoleID.Value))
         {
             _logger.LogWarning("User {ActingUserId} with role {ActingRole} attempted to assign disallowed role {TargetRoleId}", request.ActingUserID, actingRole, request.RoleID);
-            throw new ValidationException(["Aap ye role assign karne ke authorized nahi hain."]);
+            throw new ValidationException(["You are not authorized to assign this role."]);
         }
         // ================================================
         // 2c. Multi-tenancy: new user inherits the acting user's
@@ -76,7 +76,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         if (actingUser.FirmID == null)
         {
             _logger.LogWarning("SuperAdmin {ActingUserId} attempted to create a user via /api/users instead of /api/firms", request.ActingUserID);
-            throw new ValidationException(["SuperAdmin naya firm user is endpoint se nahi bana sakta - pehle POST /api/firms se firm banayein."]);
+            throw new ValidationException(["SuperAdmin cannot create a firm user via this endpoint - create the firm first via POST /api/firms."]);
         }
 
         // ================================================
@@ -99,7 +99,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
 
             if (!deptExists)
             {
-                _logger.LogInformation("Department nahi mila, user bena department ke banayega");
+                _logger.LogInformation("Department not found, user will be created without a department");
             }
         }
 

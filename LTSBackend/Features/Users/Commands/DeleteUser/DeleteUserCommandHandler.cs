@@ -51,7 +51,7 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         if (actingRole == null || targetRole == null || (int)targetRole < (int)actingRole)
         {
             _logger.LogWarning("User {ActingUserId} attempted to deactivate higher-privileged user {TargetUserId}", request.ActingUserID, request.UserID);
-            throw new ValidationException(["Aap is user ko deactivate karne ke authorized nahi hain."]);
+            throw new ValidationException(["You are not authorized to deactivate this user."]);
         }
 
         // ================================================
@@ -61,7 +61,7 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         if (actingUser!.FirmID != null && user.FirmID != actingUser.FirmID)
         {
             _logger.LogWarning("User {ActingUserId} attempted to deactivate a user from a different firm: {TargetUserId}", request.ActingUserID, request.UserID);
-            throw new ValidationException(["Aap sirf apni firm ke users deactivate kar sakte hain."]);
+            throw new ValidationException(["You can only deactivate users within your own firm."]);
         }
 
         // ================================================

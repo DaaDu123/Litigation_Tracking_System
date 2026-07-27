@@ -21,7 +21,7 @@ namespace LTSBackend.Features.CaseParties.Commands.UpdateCaseParty
                 .FirstOrDefaultAsync(p => p.PartyID == request.Party.PartyID, cancellationToken);
 
             if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Party ID {request.Party.PartyID} nahi mila");
+                throw new NotFoundException($"Party ID {request.Party.PartyID} not found");
 
             party.PartyType = request.Party.PartyType;
             party.PartyName = request.Party.PartyName;

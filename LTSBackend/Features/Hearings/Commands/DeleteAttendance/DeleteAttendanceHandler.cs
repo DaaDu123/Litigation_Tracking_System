@@ -18,7 +18,7 @@ namespace LTSBackend.Features.Hearings.Commands.DeleteAttendance
                 .FirstOrDefaultAsync(a => a.AttendanceID == request.AttendanceId, cancellationToken);
 
             if (attendance == null || (!_currentUser.IsSuperAdmin && attendance.Hearing.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Attendance ID {request.AttendanceId} nahi mila");
+                throw new NotFoundException($"Attendance ID {request.AttendanceId} not found");
 
             int currentUserId = GetCurrentUserId();
             _context.AuditLogs.Add(_auditService.Create(currentUserId, $"Hearing Attendance Deleted: AttendanceID {attendance.AttendanceID}"));

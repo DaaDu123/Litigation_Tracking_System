@@ -21,7 +21,7 @@ namespace LTSBackend.Features.Milestones.Commands.CompleteMilestone
                 .FirstOrDefaultAsync(m => m.MilestoneID == request.MilestoneID, cancellationToken);
 
             if (milestone == null || (!_currentUser.IsSuperAdmin && milestone.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Milestone ID {request.MilestoneID} nahi mila");
+                throw new NotFoundException($"Milestone ID {request.MilestoneID} not found");
 
             int currentUserId = GetCurrentUserId();
 

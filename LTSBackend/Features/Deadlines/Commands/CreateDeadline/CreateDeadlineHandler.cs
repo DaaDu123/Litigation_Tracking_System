@@ -16,7 +16,7 @@ namespace LTSBackend.Features.Deadlines.Commands.CreateDeadline
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Deadline.CaseID, cancellationToken);
             if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Case ID {request.Deadline.CaseID} nahi mila");
+                throw new NotFoundException($"Case ID {request.Deadline.CaseID} not found");
 
             var deadline = new Deadline
             {

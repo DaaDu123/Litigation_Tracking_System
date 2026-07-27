@@ -18,7 +18,7 @@ namespace LTSBackend.Features.CaseParties.Commands.DeleteCaseParty
                 .FirstOrDefaultAsync(p => p.PartyID == request.PartyID, cancellationToken);
 
             if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Party ID {request.PartyID} nahi mila");
+                throw new NotFoundException($"Party ID {request.PartyID} not found");
 
             int currentUserId = GetCurrentUserId();
             _context.AuditLogs.Add(_auditService.Create(currentUserId, $"Case Party Deleted: {party.PartyName} (PartyID {party.PartyID})"));

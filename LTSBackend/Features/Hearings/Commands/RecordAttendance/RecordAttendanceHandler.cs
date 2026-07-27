@@ -23,16 +23,16 @@ namespace LTSBackend.Features.Hearings.Commands.RecordAttendance
                 .FirstOrDefaultAsync(h => h.HearingID == request.Attendance.HearingId, cancellationToken);
 
             if (hearing == null || (!_currentUser.IsSuperAdmin && hearing.Case.FirmID != _currentUser.FirmID))
-                throw new NotFoundException($"Hearing ID {request.Attendance.HearingId} nahi mila");
+                throw new NotFoundException($"Hearing ID {request.Attendance.HearingId} not found");
 
             var userExists = await _context.Users.AnyAsync(u => u.UserID == request.Attendance.UserId, cancellationToken);
             if (!userExists)
-                throw new NotFoundException($"User ID {request.Attendance.UserId} nahi mila");
+                throw new NotFoundException($"User ID {request.Attendance.UserId} not found");
 
             var duplicate = await _context.HearingAttendances.AnyAsync(a =>
                 a.HearingID == request.Attendance.HearingId && a.UserID == request.Attendance.UserId, cancellationToken);
             if (duplicate)
-                throw new ValidationException(new List<string> { "Is user ki attendance is hearing ke liye pehle se record hai" });
+                throw new ValidationException(new List<string> { "This user's attendance for this hearing has already been recorded" });
 
             var attendance = new HearingAttendance
             {

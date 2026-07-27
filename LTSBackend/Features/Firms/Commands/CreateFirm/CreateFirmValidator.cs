@@ -10,7 +10,7 @@ public class CreateFirmValidator : AbstractValidator<CreateFirmCommand>
 
         RuleFor(x => x.FirmCode)
             .NotEmpty().MaximumLength(30)
-            .Matches("^[A-Za-z0-9-]+$").WithMessage("Firm code sirf letters, numbers aur hyphen par mushtamil ho sakta hai.");
+            .Matches("^[A-Za-z0-9-]+$").WithMessage("Firm code can only contain letters, numbers, and hyphens.");
 
         RuleFor(x => x.ContactEmail).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.ContactEmail));
 
@@ -19,6 +19,6 @@ public class CreateFirmValidator : AbstractValidator<CreateFirmCommand>
         RuleFor(x => x.AdminPassword)
             .NotEmpty().MinimumLength(8)
             .Matches(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$")
-            .WithMessage("Password mein uppercase, lowercase, digit aur symbol shamil hona chahiye.");
+            .WithMessage("Password must include uppercase, lowercase, a digit, and a symbol.");
     }
 }

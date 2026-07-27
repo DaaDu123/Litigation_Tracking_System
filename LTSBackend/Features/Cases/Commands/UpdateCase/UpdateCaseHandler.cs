@@ -15,7 +15,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         UpdateCaseCommand request,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Case update kia ja raha hai: {CaseID}", request.CaseID);
+        _logger.LogInformation("Updating case: {CaseID}", request.CaseID);
 
         int currentUserId = GetCurrentUserId();
 
@@ -31,7 +31,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         if (caseToUpdate == null)
         {
-            _logger.LogWarning("Case nahi mila: {CaseID}", request.CaseID);
+            _logger.LogWarning("Case not found: {CaseID}", request.CaseID);
             throw new NotFoundException($"Case ID {request.CaseID} not found");
         }
 
@@ -46,8 +46,8 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
             if (!courtExists)
             {
-                _logger.LogWarning("Court nahi mila: {CourtID}", request.CourtID);
-                throw new NotFoundException($"Court ID {request.CourtID} nahi mila");
+                _logger.LogWarning("Court not found: {CourtID}", request.CourtID);
+                throw new NotFoundException($"Court ID {request.CourtID} not found");
             }
 
             caseToUpdate.CourtID = request.CourtID.Value;
@@ -64,8 +64,8 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
             if (!categoryExists)
             {
-                _logger.LogWarning("Category nahi mila: {CategoryID}", request.CategoryID);
-                throw new NotFoundException($"Category ID {request.CategoryID} nahi mila");
+                _logger.LogWarning("Category not found: {CategoryID}", request.CategoryID);
+                throw new NotFoundException($"Category ID {request.CategoryID} not found");
             }
 
             caseToUpdate.CategoryID = request.CategoryID.Value;
@@ -82,8 +82,8 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
             if (!stageExists)
             {
-                _logger.LogWarning("Stage nahi mila: {StageID}", request.StageID);
-                throw new NotFoundException($"Stage ID {request.StageID} nahi mila");
+                _logger.LogWarning("Stage not found: {StageID}", request.StageID);
+                throw new NotFoundException($"Stage ID {request.StageID} not found");
             }
 
             caseToUpdate.StageID = request.StageID.Value;
@@ -102,10 +102,10 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
             if (!officerExists)
             {
-                _logger.LogWarning("Legal Officer nahi mila: {LegalOfficerID}",
+                _logger.LogWarning("Legal Officer not found: {LegalOfficerID}",
                     request.CurrentLegalOfficerID);
                 throw new NotFoundException(
-                    $"Legal Officer ID {request.CurrentLegalOfficerID} nahi mila");
+                    $"Legal Officer ID {request.CurrentLegalOfficerID} not found");
             }
 
             caseToUpdate.CurrentLegalOfficerID = request.CurrentLegalOfficerID.Value;
@@ -128,7 +128,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
             {
                 throw new ValidationException(new List<string>
                 {
-                    $"Case Number '{request.CaseNumber}' pehle se use ho raha hai"
+                    $"Case Number '{request.CaseNumber}' is already in use"
                 });
             }
 

@@ -66,7 +66,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
         var user = await _mediator.Send(new GetUserByIdQuery(id));
 
         if (user == null)
-            return NotFound(ApiResponse<UserDTO>.FailureResponse("User nahi mila"));
+            return NotFound(ApiResponse<UserDTO>.FailureResponse("User not found"));
 
         return Ok(ApiResponse<UserDTO>.SuccessResponse(user, "User successfully fetched"));
     }
@@ -81,7 +81,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
         _logger.LogInformation("Update user request: {UserID}", id);
 
         if (id != command.UserID)
-            return BadRequest(ApiResponse<bool>.FailureResponse("URL aur body mein user ID match nahi hain"));
+            return BadRequest(ApiResponse<bool>.FailureResponse("URL and body user ID do not match"));
 
         var actingUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(actingUserIdClaim, out var actingUserId))
@@ -126,7 +126,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
 
         if (user == null)
         {
-            return NotFound(ApiResponse<UserDTO>.FailureResponse("User nahi mila"));
+            return NotFound(ApiResponse<UserDTO>.FailureResponse("User not found"));
         }
 
         return Ok(ApiResponse<UserDTO>.SuccessResponse(user, "Profile successfully fetched"));
