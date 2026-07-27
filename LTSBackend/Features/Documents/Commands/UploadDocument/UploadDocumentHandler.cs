@@ -34,12 +34,19 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
 
         // ================================================
         // 2. Check upload permission
+        //    BUG FIX: previously called CanUserAccessDocumentAsync(userId, 0,
+        //    "Upload"), which resolves case-assignment BY JOINING THROUGH the
+        //    Documents table - but no Document row exists yet at upload time,
+        //    so that check always failed for AssociateLawyer, and
+        //    InternParalegal wasn't even in its allowed-action list. Use the
+        //    dedicated pre-upload check instead, which looks up assignment
+        //    directly by CaseID.
         // ================================================
-        bool canUpload = await _permissionService.CanUserAccessDocumentAsync(request.UserID, 0, "Upload", cancellationToken);
+        bool canUpload = await _permissionService.CanUserUploadToCaseAsync(request.UserID, request.CaseID, cancellationToken);
         if (!canUpload)
         {
-            _logger.LogWarning("Upload denied: User {UserId} cannot upload documents", request.UserID);
-            throw new UnauthorizedException("You don't have permission to upload documents");
+            _logger.LogWarning("Upload denied: User {UserId} cannot upload to case {CaseId}", request.UserID, request.CaseID);
+            throw new UnauthorizedException("You don't have permission to upload documents to this case");
         }
 
         // ================================================

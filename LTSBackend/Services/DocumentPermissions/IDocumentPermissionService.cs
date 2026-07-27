@@ -19,6 +19,17 @@ public interface IDocumentPermissionService
     Task<bool> CanUserAccessDocumentAsync(int userId, long documentId, string action, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Checks whether the user may upload a NEW document to the given case.
+    /// This is intentionally separate from CanUserAccessDocumentAsync: at
+    /// upload time no Document row exists yet, so any check that resolves
+    /// case assignment "via the document" (as CanUserAccessDocumentAsync's
+    /// internal case-assignment lookup does) can never succeed - there is
+    /// no document to join through. This method checks assignment directly
+    /// against the CaseID instead.
+    /// </summary>
+    Task<bool> CanUserUploadToCaseAsync(int userId, long caseId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Checks whether a Moharrir has been elevated (granted view/download)
     /// rather than being restricted to blind (write-only) upload.
     /// </summary>

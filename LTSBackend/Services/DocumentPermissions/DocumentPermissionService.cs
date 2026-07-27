@@ -141,6 +141,95 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
         }
     }
 
+    // ================================================================
+    // BUG FIX (broken core feature): the pre-upload check previously called
+    // CanUserAccessDocumentAsync(userId, documentId: 0, "Upload", ...). But
+    // at upload time no Document row exists yet, so that method's internal
+    // "is this user assigned to the document's case" lookup - which joins
+    // THROUGH the Documents table - could never find anything for
+    // documentId 0, no matter who was asking. Net effect: AssociateLawyer
+    // could never successfully upload a document (always denied), and
+    // InternParalegal was denied even earlier since "Upload" wasn't in that
+    // role's allowed-action list at all - despite the SRS explicitly
+    // requiring "Intern: Upload draft documents" and the controller-level
+    // [Authorize] already admitting both roles to this endpoint. This
+    // method checks case assignment directly by CaseID (no Document join
+    // needed) so the intended business rule actually takes effect.
+    // ================================================================
+    public async Task<bool> CanUserUploadToCaseAsync(int userId, long caseId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await _context.Users
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Include(x => x.Firm)
+                .FirstOrDefaultAsync(x => x.UserID == userId, cancellationToken);
+
+            if (user == null || user.IsDeleted || !user.IsActive)
+            {
+                _logger.LogWarning("Upload denied - account inactive/deleted/not found: {UserId}", userId);
+                return false;
+            }
+
+            if (user.Firm != null && (user.Firm.IsBlocked || user.Firm.IsDeleted))
+            {
+                _logger.LogWarning("Upload denied - firm blocked/deleted for user {UserId}", userId);
+                return false;
+            }
+
+            var role = user.GetRole();
+
+            if (role == UserRole.SuperAdmin)
+                return true;
+
+            // Multi-tenant isolation: the case must belong to the user's own firm.
+            var caseFirmId = await _context.Cases
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(c => c.CaseID == caseId)
+                .Select(c => (int?)c.FirmID)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (caseFirmId == null || caseFirmId != user.FirmID)
+            {
+                _logger.LogWarning("Upload denied - cross-firm or non-existent case {CaseId} for user {UserId}", caseId, userId);
+                return false;
+            }
+
+            // FirmAdmin/Partner: full upload access within their own firm.
+            if (role == UserRole.FirmAdmin || role == UserRole.Partner)
+                return true;
+
+            // Moharrir: "blind upload" is always allowed regardless of
+            // elevated/restricted mode - matches HandleMohallirAccessAsync's
+            // existing Upload rule.
+            if (role == UserRole.Moharrir)
+                return true;
+
+            // AssociateLawyer and InternParalegal: upload only to a case
+            // they are actually assigned to (per SRS role responsibilities).
+            if (role == UserRole.AssociateLawyer || role == UserRole.InternParalegal)
+            {
+                var now = DateTime.UtcNow;
+                bool isAssigned = await _context.CaseAssignments
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .AnyAsync(a => a.CaseID == caseId && a.UserID == userId && (a.EndDate == null || a.EndDate > now), cancellationToken);
+
+                _logger.LogDebug("Role {Role} {UserId} upload to case {CaseId} - assigned={Assigned}", role, userId, caseId, isAssigned);
+                return isAssigned;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while checking upload permission for user {UserId} case {CaseId}", userId, caseId);
+            return false;
+        }
+    }
+
     // Confirms an active (non-ended) CaseAssignment linking this user to the
     // case that owns the given document. CaseAssignments has no IsActive
     // column - an assignment is treated as active when EndDate is null or
