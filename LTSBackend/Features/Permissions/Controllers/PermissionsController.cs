@@ -9,6 +9,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LTSBackend.Features.Permissions.Controllers;
 
+// ================================================================
+// INTENTIONAL DESIGN - see the identical note on RolesController.
+// [HasPermission("ManageRoles")] is deliberately unreachable by any role
+// except SuperAdmin (who bypasses permission checks entirely) because
+// Permission/RolePermission are GLOBAL, non-tenant-scoped tables.
+// AssignPermissions here rewrites a Role's ENTIRE permission set
+// platform-wide; do not grant "ManageRoles" to FirmAdmin or any other
+// role without first adding tenant scoping to Role/RolePermission -
+// otherwise this becomes a cross-tenant privilege-escalation path.
+// ================================================================
 [Route("api/[controller]")]
 [ApiController]
 [HasPermission("ManageRoles")]

@@ -124,32 +124,21 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
     }
 
     /// <summary>
-    /// Get current logged-in user ID from HttpContext
+    /// Get current logged-in user ID from HttpContext.
+    /// SECURITY FIX: see UpdateCaseHandler.GetCurrentUserId for full
+    /// rationale - previously defaulted to UserID = 1 (SuperAdmin) instead
+    /// of failing when the identity claim was missing.
     /// </summary>
     private int GetCurrentUserId()
     {
-        int currentUserId = 1; // Default fallback
+        var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        try
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
         {
-            var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                var userIdClaim = httpContext.User
-                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (!string.IsNullOrEmpty(userIdClaim) &&
-                    int.TryParse(userIdClaim, out var userId))
-                {
-                    currentUserId = userId;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to get current user ID from context");
+            _logger.LogWarning("Case status update rejected: missing or invalid user identity claim");
+            throw new UnauthorizedException("Unable to determine the current user's identity.");
         }
 
-        return currentUserId;
+        return userId;
     }
 }

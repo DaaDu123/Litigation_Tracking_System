@@ -41,7 +41,7 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
             .NotNull()
             .WithMessage("Role is required.")
             .Must(roleId => roleId.HasValue && Enum.IsDefined(typeof(UserRole), roleId.Value))
-            .WithMessage("Invalid role. Must be: SuperAdmin(1), Admin(2), Lawyer(3), Clerk(4), or Operator(5).");
+            .WithMessage("Invalid role. Must be: SuperAdmin(1), FirmAdmin(2), Partner(3), AssociateLawyer(4), Moharrir(5), or InternParalegal(6).");
 
         RuleFor(x => x.ProfileImage)
             .Must(file =>
@@ -60,6 +60,17 @@ public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
                 var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
                 return allowed.Contains(Path.GetExtension(file.FileName).ToLowerInvariant());
             })
-            .WithMessage("Only JPG, JPEG, PNG, and WebP image formats are allowed.");
+            .WithMessage("Only JPG, JPEG, PNG, and WebP image formats are allowed.")
+            // SECURITY: same content-signature check as CreateUserCommandValidator.
+            .Must(file =>
+            {
+                if (file == null)
+                    return true;
+
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                using var stream = file.OpenReadStream();
+                return LTSBackend.Comman.Security.FileSignatureValidator.HasValidSignature(stream, extension);
+            })
+            .WithMessage("File content does not match its image extension.");
     }
 }

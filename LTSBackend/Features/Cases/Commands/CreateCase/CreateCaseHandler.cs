@@ -197,26 +197,20 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         return newCase.CaseID;
     }
 
+    // SECURITY FIX: see UpdateCaseHandler.GetCurrentUserId for full
+    // rationale - previously defaulted to UserID = 1 (SuperAdmin) instead
+    // of failing when the identity claim was missing.
     private int GetCurrentUserId()
     {
-        int currentUserId = 1;
-        try
+        var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
         {
-            var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var userId))
-                {
-                    currentUserId = userId;
-                }
-            }
+            _logger.LogWarning("Case create rejected: missing or invalid user identity claim");
+            throw new UnauthorizedException("Unable to determine the current user's identity.");
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to get current user ID from context");
-        }
-        return currentUserId;
+
+        return userId;
     }
 
     private async Task<string> GenerateUniqueInternalReferenceNoAsync(CancellationToken cancellationToken)

@@ -11,6 +11,31 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LTSBackend.Features.Roles.Controllers;
 
+// ================================================================
+// INTENTIONAL DESIGN (do not "fix" without reading this first):
+// [HasPermission("ManageRoles")] gates this controller, but "ManageRoles"
+// is deliberately NEVER seeded into the Permissions table or granted to
+// any role in AppDbContext.SeedRolePermissions - see PermissionService,
+// SuperAdmin implicitly holds every permission regardless of what's
+// seeded, so this controller is reachable by SuperAdmin only, and by
+// construction unreachable (403) for every other role.
+//
+// This is required, not accidental: Role and RolePermission are GLOBAL
+// tables with no FirmID column - they are shared across every tenant in
+// the system (see AppDbContext, neither entity has a HasQueryFilter). If
+// "ManageRoles" were ever added to SeedRolePermissions for FirmAdmin (or
+// any non-SuperAdmin role), that role would gain the ability to
+// create/update/delete ANY firm's roles and rewrite ANY role's
+// permission set platform-wide - a full cross-tenant privilege-escalation
+// vulnerability, not merely a data leak. Per-firm role/permission
+// customization, if ever needed, requires FirmID-scoped tables and a
+// dedicated feature slice - it must NOT be achieved by granting
+// "ManageRoles" more broadly here.
+//
+// Assigning EXISTING permissions to a user within one's own firm is a
+// separate, already-scoped concern - see Features/Permissions (per-user
+// grants) and CreateUser/UpdateUser's RoleHierarchy.CanAssignRole check.
+// ================================================================
 [Route("api/[controller]")]
 [ApiController]
 [HasPermission("ManageRoles")]

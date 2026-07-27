@@ -67,8 +67,31 @@ public class ExportFirmDataQueryHandler(AppDbContext _context, ILogger<ExportFir
         }
     }
 
-    private static string CsvEscape(string value) =>
-        value.Contains(',') || value.Contains('"') || value.Contains('\n')
+    // ================================================================
+    // SECURITY FIX (CSV / Excel Formula Injection): several of the
+    // exported columns (FullName, Department, Designation, PartyName,
+    // Organization) are user-controlled free text. If any such value
+    // starts with '=', '+', '-', '@', a tab, or a carriage return, Excel
+    // (and most other spreadsheet apps) will interpret the cell as a
+    // formula the moment the exported file is opened - a value like
+    // "=cmd|'/c calc'!A0" or a DDE/webhook-exfiltration formula would
+    // execute on whoever's machine opens this export (typically the
+    // SuperAdmin handling the export request). Prefixing such values with
+    // a leading apostrophe forces spreadsheet apps to treat the cell as
+    // plain text, neutralizing the formula while keeping the visible
+    // value unchanged for a human reading the CSV directly.
+    // ================================================================
+    private static readonly char[] FormulaTriggerChars = { '=', '+', '-', '@', '\t', '\r' };
+
+    private static string CsvEscape(string value)
+    {
+        if (value.Length > 0 && FormulaTriggerChars.Contains(value[0]))
+        {
+            value = "'" + value;
+        }
+
+        return value.Contains(',') || value.Contains('"') || value.Contains('\n')
             ? "\"" + value.Replace("\"", "\"\"") + "\""
             : value;
+    }
 }

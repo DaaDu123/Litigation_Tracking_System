@@ -196,29 +196,31 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         return true;
     }
+    // ================================================================
+    // SECURITY FIX: previously defaulted to UserID = 1 (which, per
+    // AppDbContext.SeedUsers, IS the SuperAdmin account) whenever the
+    // identity claim was missing or unparsable, instead of failing the
+    // request. [Authorize] on the controller should make that case
+    // unreachable in practice, but silently falling back to the
+    // highest-privileged account's ID is exactly the wrong failure mode
+    // for defense-in-depth: any future change that weakens the auth
+    // pipeline (a misconfigured policy, a bypassed filter, a bug) would
+    // silently attribute case updates/audit entries to SuperAdmin rather
+    // than being rejected outright. Throw instead, matching how every
+    // other authenticated handler in this codebase treats a missing
+    // identity claim.
+    // ================================================================
     private int GetCurrentUserId()
     {
-        int currentUserId = 1; // Default fallback
-        try
-        {
-            var httpContext = _httpContextAccessor.HttpContext;
-            if (httpContext != null)
-            {
-                var userIdClaim = httpContext.User
-                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userIdClaim = _httpContextAccessor.HttpContext?.User
+            .FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                if (!string.IsNullOrEmpty(userIdClaim) &&
-                    int.TryParse(userIdClaim, out var userId))
-                {
-                    currentUserId = userId;
-                }
-            }
-        }
-        catch (Exception ex)
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
         {
-            _logger.LogWarning(ex, "Failed to get current user ID from context");
+            _logger.LogWarning("Case update rejected: missing or invalid user identity claim");
+            throw new UnauthorizedException("Unable to determine the current user's identity.");
         }
 
-        return currentUserId;
+        return userId;
     }
 }

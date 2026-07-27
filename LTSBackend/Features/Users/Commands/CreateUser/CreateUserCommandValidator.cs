@@ -71,6 +71,19 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
                 var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
                 return allowed.Contains(Path.GetExtension(file.FileName).ToLowerInvariant());
             })
-            .WithMessage("Only JPG, JPEG, PNG, and WebP formats are allowed");
+            .WithMessage("Only JPG, JPEG, PNG, and WebP formats are allowed")
+            // SECURITY: same content-signature check as case document
+            // uploads (see UploadDocumentValidator) - rejects a file whose
+            // actual bytes don't match its claimed image extension.
+            .Must(file =>
+            {
+                if (file == null)
+                    return true;
+
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                using var stream = file.OpenReadStream();
+                return LTSBackend.Comman.Security.FileSignatureValidator.HasValidSignature(stream, extension);
+            })
+            .WithMessage("File content does not match its image extension.");
     }
 }

@@ -269,12 +269,16 @@ builder.Services.AddAuthorization(options =>
 // SRS "API Security" explicitly calls for rate limiting; there was none in
 // the pipeline previously, leaving login, OTP, and password-reset endpoints
 // open to unlimited brute-force attempts regardless of the FailedLoginAttempts
-// lockout counter on the User entity. Two policies are registered:
-//  - "global": a generous per-IP limit applied to every request.
-//  - "auth": a much stricter per-IP limit intended for Features/Auth
-//    endpoints (login, register, forgot/reset password, OTP verify) -
-//    apply via [EnableRateLimiting("auth")] when that feature slice is
-//    reviewed next.
+// lockout counter on the User entity. Three policies are registered:
+//  - Global limiter: a generous per-IP limit applied to every request.
+//  - "auth-critical": a strict per-IP limit for endpoints that gate a
+//    brute-forceable secret (login password, 6-digit OTP) - login,
+//    verify-otp, refresh-token, reset-password.
+//  - "auth-moderate": a slightly looser per-IP limit for endpoints that are
+//    still abuse-prone (email-bombing/enumeration) but not directly
+//    brute-forceable - register, resend-otp, forgot-password.
+// AuthController applies these via [EnableRateLimiting("auth-critical")] /
+// [EnableRateLimiting("auth-moderate")] on each endpoint.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -289,7 +293,30 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             }));
 
-    options.AddPolicy("auth", httpContext =>
+    // ================================================================
+    // BUG FIX (CRITICAL): AuthController applies [EnableRateLimiting(...)]
+    // with two policy names - "auth-critical" (login, verify-otp,
+    // refresh-token, reset-password - endpoints that gate a brute-forceable
+    // secret: password or a 6-digit OTP) and "auth-moderate" (register,
+    // resend-otp, forgot-password - lower brute-force risk but still an
+    // email-bombing/enumeration vector). Only a single policy named "auth"
+    // was ever registered here, so every one of those seven endpoints would
+    // throw "no IRateLimiterPolicy registered with the name ..." the moment
+    // it was hit, taking down login/registration/password-reset entirely.
+    // Both names the controller actually asks for are registered below;
+    // "auth-critical" is intentionally the stricter of the two.
+    // ================================================================
+    options.AddPolicy("auth-critical", httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("auth-moderate", httpContext =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions

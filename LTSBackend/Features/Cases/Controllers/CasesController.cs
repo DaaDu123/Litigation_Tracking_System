@@ -160,7 +160,20 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
     // DELETE CASE
     // =====================================================
     /// <summary>
-    /// Role-based: SuperAdmin, FirmAdmin only
+    /// Role-based: SuperAdmin, FirmAdmin only.
+    ///
+    /// NOTE (found during review, left as-is - deliberately the stricter
+    /// option): AppDbContext.SeedRolePermissions grants Partner the
+    /// DeleteCases permission, but that permission is never actually
+    /// checked anywhere in code (no [HasPermission("DeleteCases")] /
+    /// HasPermissionAsync call exists) - this hardcoded role list is the
+    /// only real gate, and it excludes Partner. So today Partner holds a
+    /// permission that is unreachable in practice. Resolve deliberately:
+    /// either add Partner to RoleNames.FirmAdminAndAbove usage here (if
+    /// Partners should be able to delete cases, matching the seed
+    /// intent), or remove DeleteCases from Partner's seeded permissions
+    /// (if FirmAdmin-only was the real intent) - don't leave the two out
+    /// of sync.
     /// </summary>
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
