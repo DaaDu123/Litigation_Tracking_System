@@ -2,6 +2,7 @@
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -12,6 +13,7 @@ namespace LTSBackend.Features.Deadlines.Commands.CompleteDeadline
         AppDbContext _context,
         IAuditService _auditService,
         ICurrentUserService _currentUser,
+        IPermissionService _permissionService,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CompleteDeadlineCommand, bool>
     {
         public async Task<bool> Handle(CompleteDeadlineCommand request, CancellationToken cancellationToken)
@@ -22,6 +24,18 @@ namespace LTSBackend.Features.Deadlines.Commands.CompleteDeadline
 
             if (deadline == null || (!_currentUser.IsSuperAdmin && deadline.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Deadline ID {request.DeadlineID} not found");
+
+            // SECURITY FIX (IDOR): see CreateDeadlineHandler for rationale.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, deadline.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        throw new NotFoundException($"Deadline ID {request.DeadlineID} not found");
+                }
+            }
 
             deadline.Completed = true;
             deadline.CompletedDate = DateTime.UtcNow;

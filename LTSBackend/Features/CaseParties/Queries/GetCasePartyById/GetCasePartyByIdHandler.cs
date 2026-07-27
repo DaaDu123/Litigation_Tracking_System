@@ -2,12 +2,13 @@
 using LTSBackend.Data;
 using LTSBackend.Features.CaseParties.DTOs;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.CaseParties.Queries.GetCasePartyById
 {
-    public class GetCasePartyByIdHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<GetCasePartyByIdQuery, CasePartyDetailDTO>
+    public class GetCasePartyByIdHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCasePartyByIdQuery, CasePartyDetailDTO>
     {
         public async Task<CasePartyDetailDTO> Handle(GetCasePartyByIdQuery request, CancellationToken cancellationToken)
         {
@@ -17,6 +18,21 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCasePartyById
 
             if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Party ID {request.PartyID} not found");
+
+            // SECURITY FIX (IDOR): see GetCasePartiesHandler for full rationale -
+            // firm scoping alone let any firm user read any case's parties
+            // regardless of assignment. 404 (not 403) to avoid disclosing the
+            // party's existence to a user who shouldn't see it.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, party.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        throw new NotFoundException($"Party ID {request.PartyID} not found");
+                }
+            }
 
             return new CasePartyDetailDTO
             {

@@ -2,6 +2,7 @@
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -12,6 +13,7 @@ namespace LTSBackend.Features.CaseParties.Commands.UpdateCaseParty
         AppDbContext _context,
         IAuditService _auditService,
         ICurrentUserService _currentUser,
+        IPermissionService _permissionService,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCasePartyCommand, bool>
     {
         public async Task<bool> Handle(UpdateCasePartyCommand request, CancellationToken cancellationToken)
@@ -22,6 +24,20 @@ namespace LTSBackend.Features.CaseParties.Commands.UpdateCaseParty
 
             if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Party ID {request.Party.PartyID} not found");
+
+            // SECURITY FIX (IDOR): see CreateCasePartyHandler for rationale -
+            // Update is open to AssociateLawyer/Moharrir who must be scoped to
+            // their assigned cases only.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, party.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        throw new NotFoundException($"Party ID {request.Party.PartyID} not found");
+                }
+            }
 
             party.PartyType = request.Party.PartyType;
             party.PartyName = request.Party.PartyName;

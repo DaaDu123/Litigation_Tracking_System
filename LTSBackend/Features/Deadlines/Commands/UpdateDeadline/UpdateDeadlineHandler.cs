@@ -2,6 +2,7 @@
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -9,6 +10,7 @@ using System.Security.Claims;
 namespace LTSBackend.Features.Deadlines.Commands.UpdateDeadline
 {
     public class UpdateDeadlineHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
+        IPermissionService _permissionService,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateDeadlineCommand, bool>
     {
         public async Task<bool> Handle(UpdateDeadlineCommand request, CancellationToken cancellationToken)
@@ -19,6 +21,18 @@ namespace LTSBackend.Features.Deadlines.Commands.UpdateDeadline
 
             if (deadline == null || (!_currentUser.IsSuperAdmin && deadline.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Deadline ID {request.Deadline.DeadlineID} not found");
+
+            // SECURITY FIX (IDOR): see CreateDeadlineHandler for rationale.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, deadline.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        throw new NotFoundException($"Deadline ID {request.Deadline.DeadlineID} not found");
+                }
+            }
 
             if (deadline.Completed)
                 throw new ValidationException(new List<string> { "A completed deadline cannot be updated" });

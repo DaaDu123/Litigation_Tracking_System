@@ -1,21 +1,36 @@
 ﻿using LTSBackend.Data;
 using LTSBackend.Features.Milestones.DTOs;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Milestones.Queries.GetCaseMilestones
 {
-    public class GetCaseMilestonesHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<GetCaseMilestonesQuery, List<MilestoneDetailDTO>>
+    public class GetCaseMilestonesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCaseMilestonesQuery, List<MilestoneDetailDTO>>
     {
         public async Task<List<MilestoneDetailDTO>> Handle(GetCaseMilestonesQuery request, CancellationToken cancellationToken)
         {
+            // SECURITY FIX (IDOR): firm scoping alone let any firm user - including
+            // AssociateLawyer/Moharrir/InternParalegal - read milestones for a case
+            // they aren't assigned to. Mirrors GetCaseAssignmentsHandler.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, request.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        return new List<MilestoneDetailDTO>();
+                }
+            }
+
             var query = _context.CaseMilestones
                 .AsNoTracking()
                 .Include(m => m.Case)
                 .Where(m => m.CaseID == request.CaseID);
 
-            // FIX: multi-tenant isolation
+            // Multi-tenant isolation
             if (!_currentUser.IsSuperAdmin)
                 query = query.Where(m => m.Case.FirmID == _currentUser.FirmID);
 

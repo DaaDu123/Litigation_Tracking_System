@@ -2,6 +2,7 @@
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -12,6 +13,7 @@ namespace LTSBackend.Features.Milestones.Commands.CompleteMilestone
         AppDbContext _context,
         IAuditService _auditService,
         ICurrentUserService _currentUser,
+        IPermissionService _permissionService,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CompleteMilestoneCommand, bool>
     {
         public async Task<bool> Handle(CompleteMilestoneCommand request, CancellationToken cancellationToken)
@@ -22,6 +24,18 @@ namespace LTSBackend.Features.Milestones.Commands.CompleteMilestone
 
             if (milestone == null || (!_currentUser.IsSuperAdmin && milestone.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Milestone ID {request.MilestoneID} not found");
+
+            // SECURITY FIX (IDOR): see CreateMilestoneHandler for rationale.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, milestone.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        throw new NotFoundException($"Milestone ID {request.MilestoneID} not found");
+                }
+            }
 
             int currentUserId = GetCurrentUserId();
 

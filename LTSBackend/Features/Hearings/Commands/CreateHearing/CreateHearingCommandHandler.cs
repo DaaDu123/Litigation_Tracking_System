@@ -9,6 +9,7 @@ using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 
 namespace LTSBackend.Features.Hearings.Commands.CreateHearing
 {
@@ -16,12 +17,14 @@ namespace LTSBackend.Features.Hearings.Commands.CreateHearing
     {
         private readonly AppDbContext _context;
         private readonly ICurrentUserService _currentUser;
+        private readonly IPermissionService _permissionService;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public CreateHearingCommandHandler(AppDbContext context, ICurrentUserService currentUser, IHttpContextAccessor httpContextAccessor)
+        public CreateHearingCommandHandler(AppDbContext context, ICurrentUserService currentUser, IPermissionService permissionService, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _currentUser = currentUser;
+            _permissionService = permissionService;
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -31,6 +34,20 @@ namespace LTSBackend.Features.Hearings.Commands.CreateHearing
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Hearing.CaseId, cancellationToken);
             if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException("Case not found");
+
+            // SECURITY FIX (IDOR): controller allows RoleNames.AllLawyers
+            // (includes AssociateLawyer/Moharrir), who must be scoped to
+            // their assigned cases only.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, request.Hearing.CaseId, cancellationToken);
+                    if (!isAssignedToCase)
+                        throw new NotFoundException("Case not found");
+                }
+            }
 
             // Validate court exists
             var courtExists = await _context.Courts.AnyAsync(c => c.CourtID == request.Hearing.CourtId, cancellationToken);

@@ -1,18 +1,33 @@
 ﻿using LTSBackend.Data;
 using LTSBackend.Features.Deadlines.DTOs;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Deadlines.Queries.GetCaseDeadlines
 {
-    public class GetCaseDeadlinesHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<GetCaseDeadlinesQuery, List<DeadlineDetailDTO>>
+    public class GetCaseDeadlinesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCaseDeadlinesQuery, List<DeadlineDetailDTO>>
     {
         public async Task<List<DeadlineDetailDTO>> Handle(GetCaseDeadlinesQuery request, CancellationToken cancellationToken)
         {
+            // SECURITY FIX (IDOR): firm scoping alone let any firm user - including
+            // AssociateLawyer/Moharrir/InternParalegal - read deadlines for a case
+            // they aren't assigned to. Mirrors GetCaseAssignmentsHandler.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, request.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        return new List<DeadlineDetailDTO>();
+                }
+            }
+
             var query = _context.Deadlines.AsNoTracking().Where(d => d.CaseID == request.CaseID);
 
-            // FIX: multi-tenant isolation
+            // Multi-tenant isolation
             if (!_currentUser.IsSuperAdmin)
                 query = query.Where(d => d.Case.FirmID == _currentUser.FirmID);
 

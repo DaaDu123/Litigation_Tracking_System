@@ -3,6 +3,7 @@ using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -10,13 +11,27 @@ using System.Security.Claims;
 namespace LTSBackend.Features.Milestones.Commands.CreateMilestone
 {
     public class CreateMilestoneHandler(AppDbContext _context, IAuditService _auditService,
-        ICurrentUserService _currentUser, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateMilestoneCommand, long>
+        ICurrentUserService _currentUser, IPermissionService _permissionService, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateMilestoneCommand, long>
     {
         public async Task<long> Handle(CreateMilestoneCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Milestone.CaseID, cancellationToken);
             if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Case ID {request.Milestone.CaseID} not found");
+
+            // SECURITY FIX (IDOR): controller allows RoleNames.AllLawyers
+            // (includes AssociateLawyer/Moharrir), who must be scoped to
+            // their assigned cases only.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, request.Milestone.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        throw new NotFoundException($"Case ID {request.Milestone.CaseID} not found");
+                }
+            }
 
             var milestone = new CaseMilestone
             {

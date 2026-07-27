@@ -1,6 +1,7 @@
 ﻿using LTSBackend.Data;
 using LTSBackend.Features.CaseNotes.DTOs;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,12 +11,32 @@ namespace LTSBackend.Features.CaseNotes.Queries.GetCaseNotes
     /// SRS: "Confidential" notes are excluded for users below Associate/Moharrir level
     /// unless they are the note's author, to protect internal legal opinions.
     /// </summary>
-    public class GetCaseNotesHandler(AppDbContext _context, ICurrentUserService _currentUser, IHttpContextAccessor _httpContextAccessor)
+    public class GetCaseNotesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService, IHttpContextAccessor _httpContextAccessor)
         : IRequestHandler<GetCaseNotesQuery, List<CaseNoteDetailDTO>>
     {
         public async Task<List<CaseNoteDetailDTO>> Handle(GetCaseNotesQuery request, CancellationToken cancellationToken)
         {
             int currentUserId = GetCurrentUserId();
+
+            // ================================================================
+            // SECURITY FIX (IDOR / broken access control): previously only firm
+            // (tenant) scoping was applied, so any firm user - including
+            // AssociateLawyer, Moharrir, InternParalegal - could read case
+            // notes (including confidential legal opinions, gated separately
+            // below) for a case they are not assigned to. Mirrors the check
+            // already used in GetCaseAssignmentsHandler.
+            // ================================================================
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, request.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        return new List<CaseNoteDetailDTO>();
+                }
+            }
+
             var currentUserRoleId = await _context.Users.Where(u => u.UserID == currentUserId).Select(u => u.RoleID).FirstOrDefaultAsync(cancellationToken);
             bool isElevated = currentUserRoleId is 1 or 2 or 3 or 4; // SuperAdmin..AssociateLawyer can see confidential notes
 
@@ -25,7 +46,7 @@ namespace LTSBackend.Features.CaseNotes.Queries.GetCaseNotes
                 .Include(n => n.Case)
                 .Where(n => n.CaseID == request.CaseID);
 
-            // FIX: multi-tenant isolation - don't leak another firm's case notes
+            // Multi-tenant isolation - don't leak another firm's case notes
             if (!_currentUser.IsSuperAdmin)
                 query = query.Where(n => n.Case.FirmID == _currentUser.FirmID);
 

@@ -37,7 +37,12 @@ public class CaseAssignmentsController(IMediator _mediator) : ControllerBase
     public async Task<IActionResult> GetMyAssignedCases()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        int.TryParse(userIdClaim, out var userId);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            // Fail closed rather than silently querying with UserID = 0.
+            // [Authorize] should make this unreachable in practice.
+            return Unauthorized(ApiResponse<object>.FailureResponse("Unable to determine current user."));
+        }
 
         var result = await _mediator.Send(new GetMyAssignedCasesQuery { UserID = userId });
         return Ok(ApiResponse<List<CaseAssignmentDetailDTO>>.SuccessResponse(result, "Assigned cases fetched"));

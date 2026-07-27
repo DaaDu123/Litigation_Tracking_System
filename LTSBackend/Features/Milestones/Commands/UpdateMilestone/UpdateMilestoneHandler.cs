@@ -2,6 +2,7 @@
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -9,7 +10,7 @@ using System.Security.Claims;
 namespace LTSBackend.Features.Milestones.Commands.UpdateMilestone
 {
     public class UpdateMilestoneHandler(AppDbContext _context, IAuditService _auditService,
-        ICurrentUserService _currentUser, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateMilestoneCommand, bool>
+        ICurrentUserService _currentUser, IPermissionService _permissionService, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateMilestoneCommand, bool>
     {
         public async Task<bool> Handle(UpdateMilestoneCommand request, CancellationToken cancellationToken)
         {
@@ -19,6 +20,18 @@ namespace LTSBackend.Features.Milestones.Commands.UpdateMilestone
 
             if (milestone == null || (!_currentUser.IsSuperAdmin && milestone.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Milestone ID {request.Milestone.MilestoneID} not found");
+
+            // SECURITY FIX (IDOR): see CreateMilestoneHandler for rationale.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, milestone.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                        throw new NotFoundException($"Milestone ID {request.Milestone.MilestoneID} not found");
+                }
+            }
 
             milestone.Milestone = request.Milestone.Milestone;
             milestone.MilestoneDate = request.Milestone.MilestoneDate;

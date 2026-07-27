@@ -1,15 +1,28 @@
 ﻿using LTSBackend.Data;
 using LTSBackend.Features.Hearings.DTOs;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Hearings.Queries.GetHearingAttendance
 {
-    public class GetHearingAttendanceHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<GetHearingAttendanceQuery, List<HearingAttendanceDTO>>
+    public class GetHearingAttendanceHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetHearingAttendanceQuery, List<HearingAttendanceDTO>>
     {
         public async Task<List<HearingAttendanceDTO>> Handle(GetHearingAttendanceQuery request, CancellationToken cancellationToken)
         {
+            // SECURITY FIX (IDOR): see RecordAttendanceHandler for rationale.
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+                if (!hasFullVisibility)
+                {
+                    var caseId = await _context.Hearings.Where(h => h.HearingID == request.HearingId).Select(h => (long?)h.CaseID).FirstOrDefaultAsync(cancellationToken);
+                    if (caseId == null || !await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, caseId.Value, cancellationToken))
+                        return new List<HearingAttendanceDTO>();
+                }
+            }
+
             var query = _context.HearingAttendances
                 .AsNoTracking()
                 .Include(a => a.User)
