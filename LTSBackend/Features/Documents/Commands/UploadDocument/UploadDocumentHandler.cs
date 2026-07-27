@@ -47,9 +47,7 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         //    FIX: previously any user could upload a "document" onto
         //    another firm's case just by knowing the CaseID.
         // ================================================
-        var caseRecord = await _context.Cases
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.CaseID == request.CaseID, cancellationToken);
+        var caseRecord = await _context.Cases.AsNoTracking().FirstOrDefaultAsync(x => x.CaseID == request.CaseID, cancellationToken);
 
         if (caseRecord == null || (!_currentUser.IsSuperAdmin && caseRecord.FirmID != _currentUser.FirmID))
         {
@@ -60,8 +58,7 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         // ================================================
         // 4. Verify document type exists
         // ================================================
-        var documentType = await _context.DocumentTypes.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.DocumentTypeID == request.DocumentTypeID, cancellationToken);
+        var documentType = await _context.DocumentTypes.AsNoTracking().FirstOrDefaultAsync(x => x.DocumentTypeID == request.DocumentTypeID, cancellationToken);
 
         if (documentType == null)
         {
@@ -71,13 +68,22 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
 
         // ================================================
         // 5. Save file to disk
+        //    SECURITY FIX: case documents are confidential, tenant-owned
+        //    content and must NEVER be reachable by a raw static URL - use
+        //    SaveSecureFileAsync (stores outside wwwroot, so
+        //    app.UseStaticFiles() can never serve it) instead of
+        //    SaveFileAsync (public wwwroot/uploads, previously let anyone
+        //    who learned the GUID filename download the document with zero
+        //    authentication, bypassing tenant/RBAC/blind-Moharrir checks
+        //    entirely). The only way to read these bytes back is now
+        //    IFileService.ReadSecureFileAsync, which every caller in this
+        //    codebase gates behind CanUserAccessDocumentAsync first.
         // ================================================
         string filePath;
         try
         {
-            filePath = await _fileService.SaveFileAsync(request.File, "case_documents");
-
-            _logger.LogInformation("File saved to disk: {FilePath}", filePath);
+            filePath = await _fileService.SaveSecureFileAsync(request.File, "case_documents");
+            _logger.LogInformation("File saved to secure disk storage: {FilePath}", filePath);
         }
         catch (Exception ex)
         {
@@ -151,9 +157,7 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         _context.AuditLogs.Add(auditLog);
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Document upload completed - ID: {DocumentId}, User: {UserId}, Case: {CaseId}",
-            document.DocumentID, request.UserID, request.CaseID);
-
+        _logger.LogInformation("Document upload completed - ID: {DocumentId}, User: {UserId}, Case: {CaseId}",document.DocumentID, request.UserID, request.CaseID);
         return new UploadDocumentResult(document.DocumentID, isMohallirRestricted);
     }
 }

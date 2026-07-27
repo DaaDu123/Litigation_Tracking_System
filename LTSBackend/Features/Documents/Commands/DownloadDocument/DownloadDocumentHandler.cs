@@ -1,18 +1,18 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.DocumentPermissions;
+using LTSBackend.Services.ProfileService;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Documents.Commands.DownloadDocument;
 
-public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionService _permissionService, ILogger<DownloadDocumentHandler> _logger) : IRequestHandler<DownloadDocumentCommand, DocumentDownloadDTO>
+public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionService _permissionService, IFileService _fileService,
+    ILogger<DownloadDocumentHandler> _logger) : IRequestHandler<DownloadDocumentCommand, DocumentDownloadDTO>
 {
     public async Task<DocumentDownloadDTO> Handle(DownloadDocumentCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Document download request - ID: {DocumentId}, User: {UserId}",
-            request.DocumentID,
-            request.UserID);
+        _logger.LogInformation("Document download request - ID: {DocumentId}, User: {UserId}",request.DocumentID,request.UserID);
 
         // ================================================
         // 1. Check download permission
@@ -39,29 +39,35 @@ public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionS
 
         // ================================================
         // 3. Check if file exists on disk
-        // ================================================
-        var filePath = Path.Combine(Environment.CurrentDirectory, "wwwroot", document.FilePath.TrimStart('/'));
-
-        if (!File.Exists(filePath))
-        {
-            _logger.LogError("File not found on disk: {FilePath}", filePath);
-            throw new InvalidOperationException("Document file not found on server");
-        }
-
-        // ================================================
-        // 4. Read file bytes
+        //    SECURITY FIX: documents are now stored via
+        //    IFileService.SaveSecureFileAsync, outside wwwroot (see
+        //    UploadDocumentHandler) - reading was still pointed at
+        //    wwwroot here, which (a) would have broken every download
+        //    once uploads moved to secure storage, and (b) was itself
+        //    the other half of the vulnerability: reading straight from
+        //    wwwroot only works at all because wwwroot is publicly
+        //    servable by app.UseStaticFiles() with no authentication, so
+        //    the exact same bytes returned by THIS permission-checked
+        //    endpoint were also downloadable directly, bypassing every
+        //    check above. IFileService.ReadSecureFileAsync resolves the
+        //    path safely and throws FileNotFoundException if missing.
         // ================================================
         byte[] fileBytes;
         try
         {
-            fileBytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
+            fileBytes = await _fileService.ReadSecureFileAsync(document.FilePath);
             _logger.LogInformation("Document file read successfully: {DocumentId}, Size: {Size} bytes",
                 request.DocumentID,
                 fileBytes.Length);
         }
+        catch (FileNotFoundException ex)
+        {
+            _logger.LogError(ex, "File not found on disk for document {DocumentId}: {FilePath}", request.DocumentID, document.FilePath);
+            throw new InvalidOperationException("Document file not found on server");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to read document file: {FilePath}", filePath);
+            _logger.LogError(ex, "Failed to read document file: {FilePath}", document.FilePath);
             throw new InvalidOperationException("Failed to read document file");
         }
 
@@ -78,7 +84,6 @@ public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionS
         };
 
         _logger.LogInformation("Document download prepared: {DocumentId}, FileName: {FileName}", request.DocumentID, document.FileName);
-
         return downloadDto;
     }
     private static string GetContentType(string fileName)

@@ -89,8 +89,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         //    ask which firm first, so this check is intentionally NOT
         //    firm-scoped.
         // ================================================
-        bool emailExists = await _context.Users
-            .AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
+        bool emailExists = await _context.Users.AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
 
         if (emailExists)
         {
@@ -118,6 +117,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         // ================================================
         // 5. Update user properties
         // ================================================
+        bool roleOrStatusChanged = user.RoleID != request.RoleID || user.IsActive != request.IsActive;
         user.FullName = request.FullName;
         user.Email = request.Email;
         user.Phone = request.Phone;
@@ -125,6 +125,12 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         user.RoleID = request.RoleID;
         user.IsActive = request.IsActive;
         user.UpdatedAt = DateTime.UtcNow;
+
+        if (roleOrStatusChanged)
+        {
+            user.SecurityStamp = Guid.NewGuid().ToString("N");
+            _logger.LogInformation("Rotated security stamp for user {UserId} - role or active status changed, invalidating any already-issued access token",user.UserID);
+        }
 
         // ================================================
         // 6. Save changes

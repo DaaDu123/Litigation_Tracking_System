@@ -64,6 +64,22 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool
         user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;  // FIX: Use UpdatedAt instead of non-existent PasswordChangedDate
 
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
+
+        var activeTokens = await _context.RefreshTokens
+            .Where(x => x.UserID == user.UserID && !x.IsRevoked)
+            .ToListAsync(cancellationToken);
+
+        foreach (var token in activeTokens)
+        {
+            token.IsRevoked = true;
+        }
+
+        _logger.LogInformation(
+            "Rotated security stamp and revoked {Count} active session(s) for user {UserId} after password change",
+            activeTokens.Count,
+            user.UserID);
+
         // ================================================
         // 4. Create audit log
         // ================================================

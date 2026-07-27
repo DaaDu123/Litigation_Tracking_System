@@ -1,22 +1,38 @@
-﻿using LTSBackend.Data;
+﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Data;
 using LTSBackend.Features.CaseAssignments.DTOs;
 using LTSBackend.Services.CurrentUser;
+using LTSBackend.Services.Permissions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.CaseAssignments.Queries.GetCaseAssignments
 {
-    public class GetCaseAssignmentsHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<GetCaseAssignmentsQuery, List<CaseAssignmentDetailDTO>>
+    public class GetCaseAssignmentsHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCaseAssignmentsQuery, List<CaseAssignmentDetailDTO>>
     {
         public async Task<List<CaseAssignmentDetailDTO>> Handle(GetCaseAssignmentsQuery request, CancellationToken cancellationToken)
         {
+            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            {
+                bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
+
+                if (!hasFullVisibility)
+                {
+                    bool isAssignedToCase = await _permissionService.IsUserAssignedToCaseAsync(_currentUser.UserID.Value, request.CaseID, cancellationToken);
+                    if (!isAssignedToCase)
+                    {
+                        throw new NotFoundException($"Case ID {request.CaseID} not found");
+                    }
+                }
+            }
+
             var query = _context.CaseAssignments
                 .AsNoTracking()
                 .Include(a => a.Case)
                 .Include(a => a.User)
                 .Where(a => a.CaseID == request.CaseID);
 
-            // FIX: multi-tenant isolation - don't leak another firm's assignments
+            // Multi-tenant isolation - don't leak another firm's assignments
             if (!_currentUser.IsSuperAdmin)
                 query = query.Where(a => a.Case.FirmID == _currentUser.FirmID);
 

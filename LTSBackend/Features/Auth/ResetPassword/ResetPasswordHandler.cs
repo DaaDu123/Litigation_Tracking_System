@@ -27,9 +27,7 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         _logger = logger;
     }
 
-    public async Task<ResetPasswordResponseDTO> Handle(
-        ResetPasswordCommand request,
-        CancellationToken cancellationToken)
+    public async Task<ResetPasswordResponseDTO> Handle(ResetPasswordCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Password reset attempt for email: {Email}", request.Email);
 
@@ -48,17 +46,13 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         if (otp == null)
         {
             _logger.LogWarning("Password reset failed: Invalid or expired OTP for email: {Email}", request.Email);
-            throw new ValidationException(
-                new List<string> { "Invalid or expired OTP code." });
+            throw new ValidationException(new List<string> { "Invalid or expired OTP code." });
         }
 
         // ================================================
         // 2. Find user
         // ================================================
-        var user = await _context.Users
-            .FirstOrDefaultAsync(
-                x => x.Email == request.Email,
-                cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email,cancellationToken);
 
         if (user == null)
         {
@@ -78,12 +72,11 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         otp.IsUsed = true;
 
         // ================================================
-        // 5. NEW: Saare active refresh tokens revoke kare
-        //    (old sessions end when the password is changed)
+        // 5. Revoke all active refresh tokens
         // ================================================
-        var activeTokens = await _context.RefreshTokens
-            .Where(x => x.UserID == user.UserID && !x.IsRevoked)
-            .ToListAsync(cancellationToken);
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
+
+        var activeTokens = await _context.RefreshTokens.Where(x => x.UserID == user.UserID && !x.IsRevoked).ToListAsync(cancellationToken);
 
         foreach (var token in activeTokens)
         {
@@ -91,15 +84,14 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         }
 
         _logger.LogInformation(
-            "Revoked {Count} active sessions for user {UserId} after password reset",
+            "Rotated security stamp and revoked {Count} active session(s) for user {UserId} after password reset",
             activeTokens.Count,
             user.UserID);
 
         // ================================================
         // 6. Create audit log
         // ================================================
-        _context.AuditLogs.Add(
-            _auditService.Create(user.UserID, "Password Reset via OTP"));
+        _context.AuditLogs.Add(_auditService.Create(user.UserID, "Password Reset via OTP"));
 
         // ================================================
         // 7. Save changes

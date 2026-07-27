@@ -95,6 +95,13 @@ public class JwtService(IConfiguration _configuration) : IJwtService
 
     public string HashRefreshToken(string rawToken)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(rawToken))
+        {
+            throw new ArgumentException("Refresh token cannot be null or empty.", nameof(rawToken));
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(rawToken);
+        var hashBytes = SHA256.HashData(bytes);
+        return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 }

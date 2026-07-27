@@ -55,8 +55,14 @@ public class DeleteDocumentHandler(AppDbContext _context, IFileService _fileServ
         // ================================================
         try
         {
-            _fileService.DeleteFile(document.FilePath);
-            _logger.LogInformation("File deleted from disk: {FilePath}", document.FilePath);
+            // SECURITY FIX: documents live in secure (non-public) storage now
+            // (see UploadDocumentHandler/IFileService.SaveSecureFileAsync) -
+            // use the matching delete method, not DeleteFile (which only
+            // ever looked in the public wwwroot/uploads store and would
+            // silently no-op here, leaking the file on disk forever after
+            // its DB row was removed).
+            _fileService.DeleteSecureFile(document.FilePath);
+            _logger.LogInformation("File deleted from secure disk storage: {FilePath}", document.FilePath);
         }
         catch (Exception ex)
         {
