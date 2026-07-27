@@ -107,11 +107,14 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
 
         // ================================================
         // 8. Save refresh token to database
+        //    SECURITY: only the SHA-256 hash is persisted — never the raw
+        //    token. The raw value is only ever sent to the client, in the
+        //    HttpOnly cookie set below.
         // ================================================
         _context.RefreshTokens.Add(new LTSBackend.Models.Security.RefreshToken
         {
             UserID = user.UserID,
-            Token = refreshToken,
+            Token = _jwtService.HashRefreshToken(refreshToken),
             ExpiryDate = refreshTokenExpiry,
             IsRevoked = false
         });

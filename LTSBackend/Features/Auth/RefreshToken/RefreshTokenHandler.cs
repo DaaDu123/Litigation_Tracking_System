@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Auth.RefreshToken;
@@ -30,12 +30,17 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
 
         // ================================================
         // 2. Find stored refresh token with user and role
+        //    SECURITY: refresh tokens are stored as a SHA-256 hash, never
+        //    the raw value (see IJwtService.HashRefreshToken) — hash the
+        //    incoming cookie value before looking it up.
         // ================================================
+        var tokenHash = _jwtService.HashRefreshToken(refreshToken);
+
         var storedToken = await _context.RefreshTokens
             .Include(x => x.User)
             .ThenInclude(x => x.Role)
             .FirstOrDefaultAsync(
-                x => x.Token == refreshToken,
+                x => x.Token == tokenHash,
                 cancellationToken);
 
         if (storedToken == null)
@@ -49,8 +54,46 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
         // ================================================
         if (storedToken.IsRevoked)
         {
-            _logger.LogWarning("Token refresh failed: Token is revoked for user: {UserId}", storedToken.UserID);
-            throw new UnauthorizedException("Refresh token has been revoked.");
+            // ================================================
+            // SECURITY FIX (token theft / reuse detection): every refresh
+            // token is single-use — Section 5 below revokes it the moment
+            // it's rotated. If a *revoked* token is presented again, that
+            // means either (a) the legitimate client retried a stale
+            // request, or (b) an attacker is replaying a token they stole
+            // (e.g. from a leaked DB backup or intercepted request) after
+            // the real user already rotated past it. We can't tell those
+            // apart, so we treat it as theft: revoke every other active
+            // refresh token for this user, forcing a full re-login on all
+            // devices, and record a security audit entry. Previously this
+            // just returned "revoked" with no further action, leaving a
+            // stolen-but-already-used token's replay silently ignored.
+            // ================================================
+            var otherActiveTokens = await _context.RefreshTokens
+                .Where(x => x.UserID == storedToken.UserID && !x.IsRevoked)
+                .ToListAsync(cancellationToken);
+
+            if (otherActiveTokens.Count > 0)
+            {
+                foreach (var t in otherActiveTokens)
+                {
+                    t.IsRevoked = true;
+                }
+
+                _context.AuditLogs.Add(_auditService.Create(
+                    storedToken.UserID,
+                    "SECURITY ALERT: Revoked refresh token reuse detected — all active sessions revoked"));
+
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            _logger.LogWarning(
+                "Token refresh failed: Reuse of a revoked token detected for user {UserId}. " +
+                "All {Count} active session(s) for this user have been revoked.",
+                storedToken.UserID,
+                otherActiveTokens.Count);
+
+            throw new UnauthorizedException(
+                "This session is no longer valid. For your security, all sessions have been logged out — please log in again.");
         }
 
         if (storedToken.ExpiryDate <= DateTime.UtcNow)
@@ -95,6 +138,8 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
 
         // ================================================
         // 7. Generate new refresh token
+        //    SECURITY: store only the hash, matching Login/VerifyOtp — the
+        //    raw value is set on the cookie in step 10 and never persisted.
         // ================================================
         var newRefreshToken = _jwtService.GenerateRefreshToken();
         var newRefreshTokenExpiry = _jwtService.GetRefreshTokenExpiry();
@@ -102,7 +147,7 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
         _context.RefreshTokens.Add(new LTSBackend.Models.Security.RefreshToken
         {
             UserID = user.UserID,
-            Token = newRefreshToken,
+            Token = _jwtService.HashRefreshToken(newRefreshToken),
             ExpiryDate = newRefreshTokenExpiry,
             IsRevoked = false
         });
@@ -119,7 +164,7 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
         await _context.SaveChangesAsync(cancellationToken);
 
         // ================================================
-        // 10. Update refresh token cookie
+        // 10. Update refresh token cookie (raw value — never the hash)
         // ================================================
         _cookieHelper.SetRefreshToken(
             _httpContextAccessor.HttpContext!.Response,

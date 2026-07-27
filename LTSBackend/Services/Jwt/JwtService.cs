@@ -63,6 +63,12 @@ public class JwtService(IConfiguration _configuration) : IJwtService
         return Convert.ToBase64String(randomBytes);
     }
 
+    public string HashRefreshToken(string rawToken)
+    {
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken));
+        return Convert.ToHexString(hashBytes); // uppercase hex, fixed 64 chars for SHA-256
+    }
+
     public DateTime GetAccessTokenExpiry()
     {
         int expiryMinutes = _configuration.GetValue<int>("JwtSettings:ExpiryMinutes", 60);

@@ -68,11 +68,13 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
         //    FIX: expiry was hardcoded to 7 days here, inconsistent
         //    with Login/RefreshToken handlers which use the configured
         //    JwtSettings.RefreshTokenDays via GetRefreshTokenExpiry().
+        //    SECURITY: only the SHA-256 hash is persisted, matching
+        //    LoginHandler/RefreshTokenHandler — never the raw token.
         // ================================================
         _context.RefreshTokens.Add(new RefreshTokenEntity
         {
             UserID = user.UserID,
-            Token = refreshToken,
+            Token = _jwtService.HashRefreshToken(refreshToken),
             ExpiryDate = _jwtService.GetRefreshTokenExpiry(),
             IsRevoked = false
         });

@@ -25,6 +25,8 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -158,6 +160,78 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 // Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+#endregion
+
+#region Rate Limiting Configuration
+// SECURITY: No rate limiting existed anywhere in the API. Combined with
+// per-account (not per-IP) login lockout and no cap on OTP verification
+// attempts, this left Login/VerifyOtp/ResendOtp/RefreshToken/ForgotPassword/
+// ResetPassword open to credential-stuffing, email enumeration, and
+// brute-forcing the 6-digit OTP within its validity window from a single
+// IP trying many different accounts. Partitioned by client IP; falls back
+// to a fixed "unknown" partition if the IP can't be determined (e.g. a
+// misconfigured proxy) rather than throwing.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    static string GetClientKey(HttpContext context) =>
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    // Login, OTP verification, token refresh: the endpoints most directly
+    // usable for credential guessing / OTP brute-forcing. Kept tight, and
+    // requests over the limit are rejected immediately (no queueing) since
+    // these are interactive, user-initiated calls, not background jobs.
+    options.AddPolicy("auth-critical", context =>
+        RateLimitPartition.GetFixedWindowLimiter(GetClientKey(context), _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = 5,
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+
+    // Register, ForgotPassword, ResendOtp: less directly guessable, but
+    // still need protection against spam / email-bombing / account
+    // enumeration via response-timing or repeated attempts.
+    options.AddPolicy("auth-moderate", context =>
+        RateLimitPartition.GetFixedWindowLimiter(GetClientKey(context), _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = 10,
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+
+    // Global fallback for every other endpoint (defense-in-depth per the
+    // spec's general API Security review item, not just Auth). Partitioned
+    // by authenticated user ID when available so one heavy user doesn't
+    // throttle others, otherwise by IP.
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var partitionKey = context.User?.Identity?.IsAuthenticated == true
+            ? $"user:{context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value}"
+            : $"ip:{GetClientKey(context)}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = 100,
+            QueueLimit = 0,
+            AutoReplenishment = true
+        });
+    });
+
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            success = false,
+            message = "Too many requests. Please wait a moment and try again."
+        }, cancellationToken);
+    };
+});
 #endregion
 
 #region Background Services
@@ -362,7 +436,11 @@ app.UseHttpsRedirection();
 
 // 5. Static files
 app.UseStaticFiles();
-app.UseRouting();   // ✅ ADD THIS — routing decision yahan explicitly ho jati hai
+app.UseRouting();   // explicit routing decision happens here
+
+// 5b. Rate limiting (must run after UseRouting so [EnableRateLimiting]
+// endpoint metadata is available, and before the endpoints execute)
+app.UseRateLimiter();
 
 // 6. CORS
 app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");

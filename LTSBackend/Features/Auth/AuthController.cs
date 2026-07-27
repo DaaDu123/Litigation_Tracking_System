@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Auth.ChangePassword;
 using LTSBackend.Features.Auth.ForgotPassword;
 using LTSBackend.Features.Auth.Login;
@@ -11,6 +11,7 @@ using LTSBackend.Features.Auth.VerifyOtp;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace LTSBackend.Features.Auth;
@@ -32,8 +33,12 @@ public class AuthController : ControllerBase
     // REGISTRATION & EMAIL VERIFICATION
     // =====================================================
 
+    // SECURITY: rate limited (see Program.cs "auth-moderate" policy) —
+    // otherwise open self-registration + resend-otp are spam/enumeration
+    // vectors.
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-moderate")]
     public async Task<IActionResult> Register([FromBody] RegisterCommand command)
     {
         _logger.LogInformation("Registration request for email: {Email}", command.Email);
@@ -41,8 +46,12 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<RegisterResponseDTO>.SuccessResponse(result, result.Message));
     }
 
+    // SECURITY: rate limited (see Program.cs "auth-critical" policy) — this
+    // is the endpoint that brute-forces a 6-digit OTP; without a limit an
+    // attacker gets unlimited guesses inside the 5-minute expiry window.
     [HttpPost("verify-otp")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-critical")]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpCommand command)
     {
         _logger.LogInformation("OTP verification attempt for email: {Email}", command.Email);
@@ -50,8 +59,11 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<VerifyOtpResponseDTO>.SuccessResponse(result, result.Message));
     }
 
+    // SECURITY: rate limited (see Program.cs "auth-moderate" policy) —
+    // prevents using resend as an email-bombing vector.
     [HttpPost("resend-otp")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-moderate")]
     public async Task<IActionResult> ResendOtp([FromBody] ResendOtpCommand command)
     {
         _logger.LogInformation("Resend OTP request for email: {Email}", command.Email);
@@ -63,8 +75,12 @@ public class AuthController : ControllerBase
     // LOGIN & LOGOUT
     // =====================================================
 
+    // SECURITY: rate limited (see Program.cs "auth-critical" policy) — the
+    // per-account lockout in LoginHandler doesn't stop an attacker trying
+    // many different email addresses from one IP; this closes that gap.
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-critical")]
     public async Task<IActionResult> Login([FromBody] LoginCommand command)
     {
         _logger.LogInformation("Login attempt for email: {Email}", command.Email);
@@ -85,8 +101,11 @@ public class AuthController : ControllerBase
     // TOKEN REFRESH
     // =====================================================
 
+    // SECURITY: rate limited (see Program.cs "auth-critical" policy) —
+    // caps how fast a stolen/guessed refresh token cookie can be replayed.
     [HttpPost("refresh-token")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-critical")]
     public async Task<IActionResult> RefreshToken()
     {
         _logger.LogInformation("Token refresh request");
@@ -117,8 +136,14 @@ public class AuthController : ControllerBase
         var result = await _mediator.Send(commandWithUserId);
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Password changed successfully!"));
     }
+
+    // SECURITY: rate limited (see Program.cs "auth-moderate" policy) —
+    // ForgotPassword returns a generic response regardless of whether the
+    // email exists (see ForgotPasswordHandler), but without a rate limit
+    // an attacker could still email-bomb a target or brute-force timing.
     [HttpPost("forgot-password")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-moderate")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordCommand command)
     {
         _logger.LogInformation("Forgot password request for email: {Email}", command.Email);
@@ -126,8 +151,12 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<ForgotPasswordResponseDTO>.SuccessResponse(result, result.Message));
     }
 
+    // SECURITY: rate limited (see Program.cs "auth-critical" policy) — the
+    // reset OTP is the same 6-digit format as registration, same
+    // brute-force concern applies.
     [HttpPost("reset-password")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth-critical")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command)
     {
         _logger.LogInformation("Password reset request for email: {Email}", command.Email);

@@ -3,13 +3,14 @@ using LTSBackend.Data;
 using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Auth.Logout;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.Jwt;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Auth.Logout;
 
-public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, IAuditService _auditService, ILogger<LogoutHandler> _logger) : IRequestHandler<LogoutCommand, bool>
+public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, IAuditService _auditService, IJwtService _jwtService, ILogger<LogoutHandler> _logger) : IRequestHandler<LogoutCommand, bool>
 {
     public async Task<bool> Handle(
         LogoutCommand request,
@@ -31,11 +32,16 @@ public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpCont
 
         // ================================================
         // 2. Find and load refresh token with user
+        //    SECURITY: refresh tokens are stored as a SHA-256 hash (see
+        //    IJwtService.HashRefreshToken) — hash the incoming cookie
+        //    value before looking it up, matching RefreshTokenHandler.
         // ================================================
+        var tokenHash = _jwtService.HashRefreshToken(refreshToken);
+
         var token = await _context.RefreshTokens
             .Include(x => x.User)
             .FirstOrDefaultAsync(
-                x => x.Token == refreshToken,
+                x => x.Token == tokenHash,
                 cancellationToken);
 
         if (token == null)
