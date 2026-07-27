@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using LTSBackend.Features.LoginHistory.GetAllLoginHistory;
 
 namespace LTSBackend.Features.LoginHistory.Queries.GetAllLoginHistory;
 

@@ -1,13 +1,20 @@
 ﻿using LTSBackend.Data;
 using LTSBackend.Features.LoginHistory.DTOs;
-using LTSBackend.Features.LoginHistory.Queries.GetMyLoginHistory;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace LTSBackend.Features.LoginHistory.Queries.GetMyLoginHistory;
+namespace LTSBackend.Features.LoginHistory.GetMyLoginHistory;
 
+/// <summary>
+/// Returns the acting user's own login history only. UserID here is always
+/// the caller's own ID (read from their JWT NameIdentifier claim in
+/// LoginHistoryController.MyHistory(), never taken from client-supplied
+/// input), so there is no IDOR risk on this endpoint even though the query
+/// below filters by a raw UserID parameter.
+/// </summary>
 public class GetMyLoginHistoryHandler(AppDbContext context) : IRequestHandler<GetMyLoginHistoryQuery, List<MyLoginHistoryDTO>>
 {
+    // Fetches every login record for the given (always self) user, newest first.
     public async Task<List<MyLoginHistoryDTO>> Handle(GetMyLoginHistoryQuery request, CancellationToken cancellationToken)
     {
         return await context.LoginHistories

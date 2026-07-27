@@ -1,7 +1,9 @@
-﻿using LTSBackend.Models.Audit;
+﻿using System.Security.Claims;
+using LTSBackend.Models.Audit;
 using LTSBackend.Models.Cases;
 using LTSBackend.Models.Masters;
 using LTSBackend.Models.Security;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using UserRole = LTSBackend.Comman.Enum.UserRole;
 using LTSBackend.Comman.Enum;
@@ -9,16 +11,60 @@ using LTSBackend.Comman.Enum;
 namespace LTSBackend.Data;
 
 /// <summary>
-/// ✅ AppDbContext: Main Database Context with Complete Seed Data
-/// 
-/// Contains all DbSets, relationships, constraints and complete seed data
-/// for production-ready initialization
+/// AppDbContext: Main Database Context with Complete Seed Data.
+///
+/// Contains all DbSets, relationships, constraints, global multi-tenant
+/// query filters, and complete seed data for production-ready
+/// initialization.
+///
+/// TENANT ISOLATION (SRS "Multi-Tenant Security" / "Row-Level Security"):
+/// every tenant-owned table is given a global query filter below so that
+/// EVERY query issued through this context - in every handler, in every
+/// feature slice, present or future - is automatically scoped to the
+/// calling user's own firm. This is enforced here, once, instead of
+/// relying on every single handler remembering to add its own
+/// ".Where(x => x.FirmID == ...)" - a single missed filter in any one
+/// handler would otherwise be a full cross-tenant data leak (IDOR).
+/// Handlers that legitimately need to bypass this (e.g. this class's own
+/// authorization services) call ".IgnoreQueryFilters()" explicitly.
 /// </summary>
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, IHttpContextAccessor? httpContextAccessor = null) : base(options)
     {
+        _httpContextAccessor = httpContextAccessor;
     }
+
+    // The identity of the caller making the current request, if any. Null
+    // outside of an HTTP request (migrations, seeding, background services).
+    private ClaimsPrincipal? RequestUser => _httpContextAccessor?.HttpContext?.User;
+
+    private bool IsAuthenticatedRequest => RequestUser?.Identity?.IsAuthenticated == true;
+
+    private bool IsSuperAdminRequest => RequestUser?.FindFirstValue(ClaimTypes.Role) == RoleNames.SuperAdmin;
+
+    // The acting user's FirmID claim, parsed from the current JWT. Null for
+    // SuperAdmin (who has no firm) and for requests with no FirmID claim.
+    private int? RequestFirmId
+    {
+        get
+        {
+            var value = RequestUser?.FindFirstValue("FirmID");
+            return int.TryParse(value, out var id) ? id : null;
+        }
+    }
+
+    /// <summary>
+    /// True when tenant scoping must be skipped entirely: there is no HTTP
+    /// request in flight (migrations/seeding/background jobs), the caller
+    /// is not authenticated yet (e.g. login/forgot-password looking a user
+    /// up by email before any FirmID is known), or the caller is the
+    /// platform-wide Super Admin, who is explicitly allowed to see every
+    /// tenant (SRS "Super Admin can access every tenant. No other role can.").
+    /// </summary>
+    private bool BypassTenantFilter => !IsAuthenticatedRequest || IsSuperAdminRequest;
 
     // ================================================================
     // ✅ SECURITY MODELS (User, Role, Permission)
@@ -95,6 +141,11 @@ public class AppDbContext : DbContext
             entity.HasMany(e => e.RefreshTokens).WithOne(r => r.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.UserOtps).WithOne(o => o.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.LoginHistories).WithOne(l => l.User).OnDelete(DeleteBehavior.Cascade);
+
+            // Global filter: hide soft-deleted users, and restrict every
+            // query to the caller's own firm unless bypassed (SuperAdmin /
+            // background job / not-yet-authenticated login lookup).
+            entity.HasQueryFilter(e => !e.IsDeleted && (BypassTenantFilter || e.FirmID == RequestFirmId));
         });
 
         // ================================================================
@@ -151,6 +202,12 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Token).IsRequired();
             entity.Property(e => e.ExpiryDate).IsRequired();
             entity.HasOne(e => e.User).WithMany(u => u.RefreshTokens).HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade);
+
+            // Cascading tenant filter via the owning User's FirmID. Harmless
+            // during refresh-token exchange itself (that request isn't
+            // authenticated via the access token, so BypassTenantFilter is
+            // true), but protects any future admin-facing "list tokens" view.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.User.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -162,7 +219,14 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Email).IsRequired().HasMaxLength(150);
             entity.Property(e => e.OtpCode).IsRequired().HasMaxLength(6);
             entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.HasOne(e => e.User).WithMany(u => u.UserOtps).HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade).IsRequired(false);
             entity.HasIndex(e => new { e.Email, e.OtpCode });
+
+            // Cascading tenant filter via the (optional) owning User's FirmID.
+            // OTP flows run before authentication (registration/forgot
+            // password), so BypassTenantFilter is true there and this filter
+            // only matters for any future authenticated OTP management view.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.User == null || e.User.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -175,6 +239,13 @@ public class AppDbContext : DbContext
             entity.Property(e => e.LoginTime).IsRequired();
             entity.HasOne(e => e.User).WithMany(u => u.LoginHistories).HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => new { e.UserID, e.LoginTime }).IsDescending(false, true);
+
+            // Cascading tenant filter via the owning User's FirmID. This is
+            // the fix for a confirmed cross-tenant leak: GetAllLoginHistory
+            // previously returned every firm's login IPs/emails to any Firm
+            // Admin with the ViewLoginHistory permission. With this filter,
+            // that same handler is now automatically scoped to one firm.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.User.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -216,6 +287,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.CategoryID);
             entity.HasIndex(e => e.CaseNumber);
             entity.HasIndex(e => e.FirmID);
+
+            // Global tenant filter: a Case belongs to exactly one firm.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -228,6 +302,9 @@ public class AppDbContext : DbContext
             entity.Property(e => e.PartyName).IsRequired().HasMaxLength(255);
             entity.HasOne(e => e.Case).WithMany(c => c.CaseParties).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.CaseID);
+
+            // Cascading tenant filter via the owning Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -242,6 +319,9 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(e => e.UserID);
             entity.HasIndex(e => new { e.CaseID, e.EndDate });
+
+            // Cascading tenant filter via the owning Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -251,6 +331,9 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.HistoryID);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
+
+            // Cascading tenant filter via the owning Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -261,6 +344,9 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.MilestoneID);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.CaseID);
+
+            // Cascading tenant filter via the owning Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -274,6 +360,9 @@ public class AppDbContext : DbContext
             entity.HasMany(e => e.HearingAttendances).WithOne(ha => ha.Hearing).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.HearingDate);
             entity.HasIndex(e => e.CaseID);
+
+            // Cascading tenant filter via the owning Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -285,6 +374,9 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Hearing).WithMany(h => h.HearingAttendances).HasForeignKey(e => e.HearingID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(e => new { e.HearingID, e.UserID }).IsUnique();
+
+            // Cascading tenant filter via Hearing -> Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Hearing.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -296,6 +388,9 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Case).WithMany(c => c.Deadlines).HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.DueDate);
             entity.HasIndex(e => new { e.CaseID, e.Completed });
+
+            // Cascading tenant filter via the owning Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -307,6 +402,12 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.DocumentType).WithMany().HasForeignKey(e => e.DocumentTypeID).OnDelete(DeleteBehavior.NoAction);
             entity.HasMany(e => e.DocumentPermissions).WithOne(dp => dp.Document).OnDelete(DeleteBehavior.Cascade);
+
+            // Cascading tenant filter via the owning Case's FirmID. This is
+            // the single most important filter in the file: it is what
+            // stops a Moharrir/Lawyer/FirmAdmin from ever retrieving another
+            // firm's document just by guessing/incrementing a DocumentID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -320,6 +421,9 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(e => new { e.DocumentID, e.RoleID });
             entity.HasIndex(e => new { e.DocumentID, e.UserID });
+
+            // Cascading tenant filter via Document -> Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Document.Case.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -331,10 +435,10 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(e => e.CaseID);
-        });
 
-        // ================================================================
-        // ✅ NOTIFICATION TYPE ENTITY CONFIGURATION
+            // Cascading tenant filter via the owning Case's FirmID.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
+        });
         // ================================================================
         modelBuilder.Entity<NotificationType>(entity =>
         {
@@ -353,6 +457,11 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Case).WithMany().HasForeignKey(e => e.CaseID).OnDelete(DeleteBehavior.NoAction);
             entity.Property(e => e.Priority).HasMaxLength(20);
+
+            // Cascading tenant filter via the notified User's FirmID (every
+            // Notification always has a UserID; CaseID is optional so the
+            // Case navigation alone isn't reliable for this filter).
+            entity.HasQueryFilter(e => BypassTenantFilter || (e.User != null && e.User.FirmID == RequestFirmId));
         });
 
         // ================================================================================
@@ -411,6 +520,19 @@ public class AppDbContext : DbContext
     // ⚠️ NOTE: In production, use actual BCrypt.Net-Next hashed passwords
     // These are placeholder hashes - REPLACE with real bcrypt hashes before deployment
     // ====================================================================================
+    // ====================================================================================
+    // BUG FIX (CRITICAL): none of the six seeded demo users had RoleID set.
+    // GetRole() therefore returned null for all of them, PermissionService
+    // treated every one of them as roleless, and JwtService could not add a
+    // Role claim to their tokens - meaning every seeded account, INCLUDING
+    // the SuperAdmin, was locked out of every permission check out of the
+    // box. RoleID is now set explicitly for each seeded user below.
+    //
+    // SecurityStamp values are fixed, deterministic strings (not
+    // Guid.NewGuid()) for the same reason SeedTimestamp is a constant: HasData
+    // requires stable seed values, or EF Core thinks the model has pending
+    // changes on every build even with no real schema change.
+    // ====================================================================================
     private static void SeedUsers(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasData(
@@ -422,9 +544,11 @@ public class AppDbContext : DbContext
                 FullName = "Super Administrator",
                 PasswordHash = "$2a$11$placeholder_superadmin_hash_replace_in_production",
                 FirmID = null,
+                RoleID = (int)UserRole.SuperAdmin,
                 Designation = "System Administrator",
                 IsExternal = false,
                 IsActive = true,
+                SecurityStamp = "SEED-STAMP-USER-0001",
                 CreatedAt = SeedTimestamp
             },
             // FirmAdmin - Demo Firm Manager
@@ -435,9 +559,11 @@ public class AppDbContext : DbContext
                 FullName = "Firm Administrator",
                 PasswordHash = "$2a$11$placeholder_firmadmin_hash_replace_in_production",
                 FirmID = 1,
+                RoleID = (int)UserRole.FirmAdmin,
                 Designation = "Firm Administrator",
                 IsExternal = false,
                 IsActive = true,
+                SecurityStamp = "SEED-STAMP-USER-0002",
                 CreatedAt = SeedTimestamp
             },
             // Partner - Senior Lawyer
@@ -448,9 +574,11 @@ public class AppDbContext : DbContext
                 FullName = "Muhammad Ashraf (Partner)",
                 PasswordHash = "$2a$11$placeholder_partner_hash_replace_in_production",
                 FirmID = 1,
+                RoleID = (int)UserRole.Partner,
                 Designation = "Senior Partner",
                 IsExternal = false,
                 IsActive = true,
+                SecurityStamp = "SEED-STAMP-USER-0003",
                 CreatedAt = SeedTimestamp
             },
             // Associate Lawyer
@@ -461,9 +589,11 @@ public class AppDbContext : DbContext
                 FullName = "Ayesha Khan (Associate)",
                 PasswordHash = "$2a$11$placeholder_associate_hash_replace_in_production",
                 FirmID = 1,
+                RoleID = (int)UserRole.AssociateLawyer,
                 Designation = "Associate Lawyer",
                 IsExternal = false,
                 IsActive = true,
+                SecurityStamp = "SEED-STAMP-USER-0004",
                 CreatedAt = SeedTimestamp
             },
             // Moharrir - Legal Clerk
@@ -474,9 +604,11 @@ public class AppDbContext : DbContext
                 FullName = "Hassan Ali (Moharrir)",
                 PasswordHash = "$2a$11$placeholder_moharrir_hash_replace_in_production",
                 FirmID = 1,
+                RoleID = (int)UserRole.Moharrir,
                 Designation = "Legal Clerk",
                 IsExternal = false,
                 IsActive = true,
+                SecurityStamp = "SEED-STAMP-USER-0005",
                 CreatedAt = SeedTimestamp
             },
             // Intern / Paralegal
@@ -487,9 +619,11 @@ public class AppDbContext : DbContext
                 FullName = "Amna Saeed (Intern)",
                 PasswordHash = "$2a$11$placeholder_intern_hash_replace_in_production",
                 FirmID = 1,
+                RoleID = (int)UserRole.InternParalegal,
                 Designation = "Paralegal Intern",
                 IsExternal = false,
                 IsActive = true,
+                SecurityStamp = "SEED-STAMP-USER-0006",
                 CreatedAt = SeedTimestamp
             }
         );
@@ -624,6 +758,8 @@ public class AppDbContext : DbContext
             new Permission { PermissionID = (int)PermissionEnum.AssignLawyersToCases, PermissionName = nameof(PermissionEnum.AssignLawyersToCases), Description = "Assign lawyers to cases" },
             new Permission { PermissionID = (int)PermissionEnum.ManageFirmSettings, PermissionName = nameof(PermissionEnum.ManageFirmSettings), Description = "Manage firm settings and billing" },
             new Permission { PermissionID = (int)PermissionEnum.DeleteCases, PermissionName = nameof(PermissionEnum.DeleteCases), Description = "Delete cases" },
+            new Permission { PermissionID = (int)PermissionEnum.ViewLoginHistory, PermissionName = nameof(PermissionEnum.ViewLoginHistory), Description = "View this firm's own login history" },
+            new Permission { PermissionID = (int)PermissionEnum.DeleteLoginHistory, PermissionName = nameof(PermissionEnum.DeleteLoginHistory), Description = "Delete/cleanup this firm's own login history records" },
             new Permission { PermissionID = (int)PermissionEnum.UploadDocuments, PermissionName = nameof(PermissionEnum.UploadDocuments), Description = "Upload documents" },
 
             // Partner/Senior Lawyer Permissions
@@ -696,7 +832,12 @@ public class AppDbContext : DbContext
             PermissionEnum.ViewAllDocuments,
             PermissionEnum.DownloadDocuments,
             PermissionEnum.UploadDocuments,
-            PermissionEnum.ViewFirmAnalytics);
+            PermissionEnum.ViewFirmAnalytics,
+            // BUG FIX: LoginHistoryController required this permission but it
+            // never existed anywhere in the seed data - see PermissionEnum.cs.
+            // DeleteLoginHistory is intentionally NOT granted here (SuperAdmin
+            // only) to keep this security-relevant audit trail tamper-resistant.
+            PermissionEnum.ViewLoginHistory);
 
         Map(UserRole.Partner,
             PermissionEnum.ViewFirmCaseDirectory,

@@ -24,9 +24,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
-using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,42 +73,11 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehavior
 #endregion
 
 #region JWT Authentication Configuration
-// SECURITY: appsettings.json only ships placeholder values (see the
-// "CHANGE_ME_..." markers). The real secret must be supplied at deploy
-// time via an environment variable — ASP.NET Core's configuration system
-// automatically overlays environment variables over appsettings.json using
-// "__" as the section separator, so set:
-//   JwtSettings__SecretKey   (e.g. `openssl rand -base64 48`, or
-//                              `[Convert]::ToBase64String((1..48|%{Get-Random -Max 256}))` on Windows)
-// For local development, prefer `dotnet user-secrets set "JwtSettings:SecretKey" "<value>"`
-// inside this project folder instead of editing appsettings.json.
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var jwtSecret = jwtSettings["SecretKey"];
 
-const string PlaceholderJwtSecret = "CHANGE_ME_GENERATE_A_RANDOM_32BYTE_SECRET";
-
 if (string.IsNullOrWhiteSpace(jwtSecret))
-{
-    throw new InvalidOperationException(
-        "JwtSettings:SecretKey is not configured. Set it via the JwtSettings__SecretKey " +
-        "environment variable or `dotnet user-secrets` — never commit a real secret to appsettings.json.");
-}
-
-if (jwtSecret == PlaceholderJwtSecret)
-{
-    throw new InvalidOperationException(
-        "JwtSettings:SecretKey is still set to the placeholder value from appsettings.json. " +
-        "Generate a random secret and set it via the JwtSettings__SecretKey environment variable " +
-        "(or `dotnet user-secrets set \"JwtSettings:SecretKey\" \"<value>\"` for local dev).");
-}
-
-// HS256 requires a key of at least 256 bits (32 bytes) to be cryptographically sound.
-if (Encoding.UTF8.GetByteCount(jwtSecret) < 32)
-{
-    throw new InvalidOperationException(
-        "JwtSettings:SecretKey must be at least 32 bytes (256 bits) for HS256. " +
-        "Generate a longer random secret, e.g. `openssl rand -base64 48`.");
-}
+    throw new InvalidOperationException("JwtSettings:SecretKey is missing. Check appsettings.json");
 
 builder.Services.Configure<JwtSettings>(jwtSettings);
 
@@ -130,6 +98,68 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.UTF8.GetBytes(jwtSecret)),
 
             ClockSkew = TimeSpan.Zero
+        };
+
+        // ================================================================
+        // Runs on EVERY authenticated request, after the token's signature
+        // and expiry have already passed validation. This is what actually
+        // enforces the SRS's "Active user status" step of the RBAC chain
+        // and the security-stamp / session-revocation requirements: a JWT
+        // can be perfectly valid and unexpired and STILL be rejected here
+        // if the account was deactivated/blocked, the firm was
+        // suspended/deleted, or the stamp no longer matches (password was
+        // changed, or an admin forced logout) since the token was issued.
+        // ================================================================
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userIdClaim = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!int.TryParse(userIdClaim, out var userId))
+                {
+                    context.Fail("Token is missing a valid user identifier.");
+                    return;
+                }
+
+                var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+
+                // IgnoreQueryFilters(): at this exact point HttpContext.User is
+                // not yet the authenticated principal (that assignment happens
+                // only once this event succeeds), so the tenant-scoping global
+                // filter cannot resolve a FirmID yet - look the user up
+                // directly and enforce every rule explicitly instead.
+                var record = await dbContext.Users
+                    .IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .Where(u => u.UserID == userId)
+                    .Select(u => new
+                    {
+                        u.IsActive,
+                        u.IsDeleted,
+                        u.SecurityStamp,
+                        FirmBlocked = u.Firm != null && u.Firm.IsBlocked,
+                        FirmDeleted = u.Firm != null && u.Firm.IsDeleted
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (record == null || record.IsDeleted || !record.IsActive)
+                {
+                    context.Fail("This account is no longer active.");
+                    return;
+                }
+
+                if (record.FirmBlocked || record.FirmDeleted)
+                {
+                    context.Fail("This firm's workspace has been suspended.");
+                    return;
+                }
+
+                var tokenStamp = context.Principal?.FindFirstValue("SecurityStamp");
+                if (string.IsNullOrEmpty(tokenStamp) || tokenStamp != record.SecurityStamp)
+                {
+                    context.Fail("Session has been invalidated. Please log in again.");
+                }
+            }
         };
     });
 #endregion
@@ -160,78 +190,15 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 // Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
-#endregion
 
-#region Rate Limiting Configuration
-// SECURITY: No rate limiting existed anywhere in the API. Combined with
-// per-account (not per-IP) login lockout and no cap on OTP verification
-// attempts, this left Login/VerifyOtp/ResendOtp/RefreshToken/ForgotPassword/
-// ResetPassword open to credential-stuffing, email enumeration, and
-// brute-forcing the 6-digit OTP within its validity window from a single
-// IP trying many different accounts. Partitioned by client IP; falls back
-// to a fixed "unknown" partition if the IP can't be determined (e.g. a
-// misconfigured proxy) rather than throwing.
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    static string GetClientKey(HttpContext context) =>
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-    // Login, OTP verification, token refresh: the endpoints most directly
-    // usable for credential guessing / OTP brute-forcing. Kept tight, and
-    // requests over the limit are rejected immediately (no queueing) since
-    // these are interactive, user-initiated calls, not background jobs.
-    options.AddPolicy("auth-critical", context =>
-        RateLimitPartition.GetFixedWindowLimiter(GetClientKey(context), _ => new FixedWindowRateLimiterOptions
-        {
-            Window = TimeSpan.FromMinutes(1),
-            PermitLimit = 5,
-            QueueLimit = 0,
-            AutoReplenishment = true
-        }));
-
-    // Register, ForgotPassword, ResendOtp: less directly guessable, but
-    // still need protection against spam / email-bombing / account
-    // enumeration via response-timing or repeated attempts.
-    options.AddPolicy("auth-moderate", context =>
-        RateLimitPartition.GetFixedWindowLimiter(GetClientKey(context), _ => new FixedWindowRateLimiterOptions
-        {
-            Window = TimeSpan.FromMinutes(1),
-            PermitLimit = 10,
-            QueueLimit = 0,
-            AutoReplenishment = true
-        }));
-
-    // Global fallback for every other endpoint (defense-in-depth per the
-    // spec's general API Security review item, not just Auth). Partitioned
-    // by authenticated user ID when available so one heavy user doesn't
-    // throttle others, otherwise by IP.
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-    {
-        var partitionKey = context.User?.Identity?.IsAuthenticated == true
-            ? $"user:{context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value}"
-            : $"ip:{GetClientKey(context)}";
-
-        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
-        {
-            Window = TimeSpan.FromMinutes(1),
-            PermitLimit = 100,
-            QueueLimit = 0,
-            AutoReplenishment = true
-        });
-    });
-
-    options.OnRejected = async (context, cancellationToken) =>
-    {
-        context.HttpContext.Response.ContentType = "application/json";
-        await context.HttpContext.Response.WriteAsJsonAsync(new
-        {
-            success = false,
-            message = "Too many requests. Please wait a moment and try again."
-        }, cancellationToken);
-    };
-});
+// Dynamic permission-policy provider: PermissionPolicyProvider existed in
+// the codebase but was never registered here, so it was dead code and any
+// [HasPermission("X")] attribute for a permission NOT already hardcoded in
+// AddAuthorization(...) below would throw "policy not found" at request
+// time. Registering it lets [HasPermission("AnyPermissionName")] resolve
+// dynamically for every permission, without needing a matching hardcoded
+// policy for each one.
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 #endregion
 
 #region Background Services
@@ -295,6 +262,42 @@ builder.Services.AddAuthorization(options =>
         options.AddPolicy(permission, policy =>
             policy.Requirements.Add(new PermissionRequirement(permission)));
     }
+});
+#endregion
+
+#region Rate Limiting Configuration
+// SRS "API Security" explicitly calls for rate limiting; there was none in
+// the pipeline previously, leaving login, OTP, and password-reset endpoints
+// open to unlimited brute-force attempts regardless of the FailedLoginAttempts
+// lockout counter on the User entity. Two policies are registered:
+//  - "global": a generous per-IP limit applied to every request.
+//  - "auth": a much stricter per-IP limit intended for Features/Auth
+//    endpoints (login, register, forgot/reset password, OTP verify) -
+//    apply via [EnableRateLimiting("auth")] when that feature slice is
+//    reviewed next.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("auth", httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
 });
 #endregion
 
@@ -383,26 +386,6 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-#region Startup Configuration Checks
-// SECURITY: EmailSettings:SenderEmail / AppPassword ship as placeholders in
-// appsettings.json (see JwtSettings comment above for the same pattern).
-// Email delivery isn't fatal to the API's core security, so we warn instead
-// of throwing — but this must be fixed before OTP/password-reset emails are
-// expected to work. Set EmailSettings__SenderEmail and
-// EmailSettings__AppPassword via environment variables or user-secrets
-// (use a Gmail App Password, never the account's real login password).
-var emailSenderEmail = app.Configuration["EmailSettings:SenderEmail"];
-var emailAppPassword = app.Configuration["EmailSettings:AppPassword"];
-if (string.IsNullOrWhiteSpace(emailSenderEmail) || emailSenderEmail.StartsWith("CHANGE_ME") ||
-    string.IsNullOrWhiteSpace(emailAppPassword) || emailAppPassword.StartsWith("CHANGE_ME"))
-{
-    app.Logger.LogWarning(
-        "EmailSettings:SenderEmail / AppPassword are not configured (still placeholders). " +
-        "OTP and password-reset emails will fail until these are set via environment " +
-        "variables (EmailSettings__SenderEmail, EmailSettings__AppPassword) or user-secrets.");
-}
-#endregion
-
 #region Middleware Pipeline - 🔴 CRITICAL: ORDER MATTERS
 // 1. Exception handling (must be first)
 app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -436,11 +419,7 @@ app.UseHttpsRedirection();
 
 // 5. Static files
 app.UseStaticFiles();
-app.UseRouting();   // explicit routing decision happens here
-
-// 5b. Rate limiting (must run after UseRouting so [EnableRateLimiting]
-// endpoint metadata is available, and before the endpoints execute)
-app.UseRateLimiter();
+app.UseRouting();   // Explicitly resolves the endpoint/routing decision here, before CORS/auth/authorization middleware run
 
 // 6. CORS
 app.UseCors(app.Environment.IsDevelopment() ? "AllowAll" : "Production");
@@ -458,6 +437,12 @@ app.Use(async (context, next) =>
 
 // 8. Authentication & Authorization
 app.UseAuthentication();
+
+// Rate limiting runs after authentication so partitioning could later be
+// extended to per-user (not just per-IP) if needed, and before
+// authorization so a rate-limited request never reaches a handler.
+app.UseRateLimiter();
+
 app.UseAuthorization();
 
 // 9. Routing

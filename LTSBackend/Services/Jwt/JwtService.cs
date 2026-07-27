@@ -9,12 +9,26 @@ namespace LTSBackend.Services.Jwt;
 
 public class JwtService(IConfiguration _configuration) : IJwtService
 {
+    // Issues a short-lived signed access token carrying identity, tenant (FirmID),
+    // role and security-stamp claims used by every downstream authorization check.
     public string GenerateToken(User user)
     {
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-            new(ClaimTypes.Email, user.Email)
+            new(ClaimTypes.Email, user.Email),
+
+            // Unique token identifier (JWT ID). Not currently checked against a
+            // blacklist, but present so a revocation/blacklist store can be added
+            // later without re-issuing the token contract.
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+
+            // Security stamp - compared against the current DB value on every
+            // request (Program.cs OnTokenValidated). If the user's password is
+            // reset, the account is blocked, or an admin forces logout, the stamp
+            // is regenerated and this token is rejected immediately even though
+            // it has not expired.
+            new("SecurityStamp", user.SecurityStamp)
         };
 
         // FirmID claim - drives multi-tenant row-level scoping on every
@@ -57,26 +71,30 @@ public class JwtService(IConfiguration _configuration) : IJwtService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    // Generates a cryptographically random opaque refresh token (not a JWT) that
+    // is stored server-side (RefreshTokens table) and rotated on every use.
     public string GenerateRefreshToken()
     {
         var randomBytes = RandomNumberGenerator.GetBytes(64);
         return Convert.ToBase64String(randomBytes);
     }
 
-    public string HashRefreshToken(string rawToken)
-    {
-        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken));
-        return Convert.ToHexString(hashBytes); // uppercase hex, fixed 64 chars for SHA-256
-    }
-
+    // Computes the absolute UTC expiry timestamp for a newly issued access token.
     public DateTime GetAccessTokenExpiry()
     {
         int expiryMinutes = _configuration.GetValue<int>("JwtSettings:ExpiryMinutes", 60);
         return DateTime.UtcNow.AddMinutes(expiryMinutes);
     }
+
+    // Computes the absolute UTC expiry timestamp for a newly issued refresh token.
     public DateTime GetRefreshTokenExpiry()
     {
         int refreshTokenDays = _configuration.GetValue<int>("JwtSettings:RefreshTokenDays", 7);
         return DateTime.UtcNow.AddDays(refreshTokenDays);
+    }
+
+    public string HashRefreshToken(string rawToken)
+    {
+        throw new NotImplementedException();
     }
 }

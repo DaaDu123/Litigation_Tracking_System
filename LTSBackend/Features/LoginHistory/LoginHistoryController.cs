@@ -1,13 +1,15 @@
-﻿using System.Security.Claims;
-using LTSBackend.Comman.Responses;
+﻿using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Authorization;
-using LTSBackend.Features.LoginHistory.Commands.DeleteLoginHistory;
 using LTSBackend.Features.LoginHistory.Commands.DeleteOldHistory;
+using LTSBackend.Features.LoginHistory.DeleteAllOldHistory;
+using LTSBackend.Features.LoginHistory.DeleteLoginHistory;
 using LTSBackend.Features.LoginHistory.DTOs;
+using LTSBackend.Features.LoginHistory.GetAllLoginHistory;
+using LTSBackend.Features.LoginHistory.GetMyLoginHistory;
 using LTSBackend.Features.LoginHistory.Queries.GetAllLoginHistory;
-using LTSBackend.Features.LoginHistory.Queries.GetMyLoginHistory;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LTSBackend.Features.LoginHistory.Controllers;
 
@@ -16,6 +18,9 @@ namespace LTSBackend.Features.LoginHistory.Controllers;
 [HasPermission("ViewLoginHistory")]
 public class LoginHistoryController(IMediator mediator) : ControllerBase
 {
+    // Returns a paged, filterable list of login history for the caller's own
+    // firm (SuperAdmin sees every firm) - see GetAllLoginHistoryHandler for
+    // the tenant-isolation note.
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? search,
@@ -29,6 +34,8 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<PagedResult<LoginHistoryDTO>>.SuccessResponse(result, "Login history fetched successfully."));
     }
 
+    // Returns only the caller's own login history - UserID is taken from
+    // their own JWT claim, never from client input, so there is no IDOR risk here.
     [HttpGet("my")]
     public async Task<IActionResult> MyHistory()
     {
@@ -47,6 +54,9 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<MyLoginHistoryDTO>>.SuccessResponse(result, "My login history fetched successfully."));
     }
 
+    // Deletes a single login history record. Requires DeleteLoginHistory,
+    // which is intentionally not granted to Firm Admin by default - see
+    // PermissionEnum.cs for why.
     [HttpDelete("{id:int}")]
     [HasPermission("DeleteLoginHistory")]
     public async Task<IActionResult> Delete(int id)
@@ -56,6 +66,7 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Login history deleted successfully."));
     }
 
+    // Bulk-deletes logged-out records older than the given retention window.
     [HttpDelete("cleanup")]
     [HasPermission("DeleteLoginHistory")]
     public async Task<IActionResult> Cleanup([FromQuery] int days = 90)

@@ -49,6 +49,27 @@ public enum PermissionEnum
     /// </summary>
     DeleteCases = 205,
 
+    /// <summary>
+    /// View this firm's own login history (BUG FIX: [HasPermission("ViewLoginHistory")]
+    /// was already used on LoginHistoryController, but this permission never
+    /// existed - meaning only SuperAdmin, who bypasses permission checks
+    /// entirely, could ever view login history. Firm Admin is now granted
+    /// this explicitly in SeedRolePermissions, scoped to their own firm only
+    /// via the AppDbContext global query filter on LoginHistory.
+    /// </summary>
+    ViewLoginHistory = 206,
+
+    /// <summary>
+    /// Delete/cleanup this firm's own login history records. Deliberately
+    /// NOT granted to Firm Admin in SeedRolePermissions (remains Super-Admin
+    /// only) - login history is a security-relevant audit trail, and the
+    /// SRS requires audit logs to be "immutable and tamper-resistant", so
+    /// per-firm self-service deletion is intentionally not enabled by
+    /// default. Grant this to FirmAdmin only if retention/GDPR requirements
+    /// explicitly call for it.
+    /// </summary>
+    DeleteLoginHistory = 207,
+
     // ===== PARTNER / SENIOR LAWYER =====
     /// <summary>
     /// View firm-wide case portfolio

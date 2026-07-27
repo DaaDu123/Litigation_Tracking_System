@@ -3,45 +3,51 @@
 namespace LTSBackend.Services.DocumentPermissions;
 
 /// <summary>
-/// Manages document access permissions, including Moharrir blind upload feature
+/// Manages document access permissions, including the Moharrir blind-upload
+/// (write-only) mode required by the SRS.
 /// </summary>
 public interface IDocumentPermissionService
 {
     /// <summary>
-    /// Checks whether the user has document access (View/Download/Upload)
+    /// Checks whether the user may perform the given action ("View",
+    /// "Download", "Upload") on the given document, honouring tenant
+    /// isolation, case assignment, and Moharrir restricted/elevated mode.
     /// </summary>
-    /// <param name="userId">User ID</param>
-    /// <param name="documentId">Document ID</param>
+    /// <param name="userId">Acting user ID</param>
+    /// <param name="documentId">Target document ID</param>
     /// <param name="action">Action: "View", "Download", "Upload"</param>
     Task<bool> CanUserAccessDocumentAsync(int userId, long documentId, string action, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks whether the Moharrir has elevated access (view/download allowed)
+    /// Checks whether a Moharrir has been elevated (granted view/download)
+    /// rather than being restricted to blind (write-only) upload.
     /// </summary>
     Task<bool> HasMohallirElevatedAccessAsync(int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks whether the Moharrir is in restricted mode (blind upload only)
+    /// Checks whether a Moharrir is in restricted (blind upload only) mode.
     /// </summary>
     Task<bool> IsMohallirRestrictedAsync(int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get user ke document access level
+    /// Returns the user's overall document access level (None / WriteOnly /
+    /// ReadWrite / FullAccess).
     /// </summary>
     Task<DocumentAccessLevel> GetUserDocumentAccessLevelAsync(int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Grant document permission to role
+    /// Grants (or updates) a document permission for an entire role.
     /// </summary>
     Task GrantDocumentPermissionAsync(long documentId, int roleId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Grant document permission to a specific user (overrides role-level grant)
+    /// Grants (or updates) a document permission for one specific user,
+    /// which takes priority over any role-level grant for that same document.
     /// </summary>
-    Task GrantUserDocumentPermissionAsync(long documentId, int userId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default);   // ✅ new
+    Task GrantUserDocumentPermissionAsync(long documentId, int userId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Revoke document permission
+    /// Revokes a role-level document permission.
     /// </summary>
     Task RevokeDocumentPermissionAsync(long documentId, int roleId, CancellationToken cancellationToken = default);
 }

@@ -5,36 +5,45 @@ namespace LTSBackend.Services.Permissions;
 public interface IPermissionService
 {
     /// <summary>
-    /// Checks whether the user has a specific permission
+    /// Checks whether the given user currently holds the named permission.
+    /// Returns false (never throws) for unknown, inactive, or deleted users.
     /// </summary>
     Task<bool> HasPermissionAsync(int userId, string permission, CancellationToken cancellationToken = default);
+
     /// <summary>
-    /// Gets all permissions for the user
+    /// Returns every permission name granted to the user's role (or every
+    /// permission that exists, for SuperAdmin).
     /// </summary>
     Task<List<string>> GetPermissionsAsync(int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks whether the user is in a specific role
+    /// Checks whether the given user is currently assigned the given role.
     /// </summary>
     Task<bool> HasRoleAsync(int userId, UserRole role, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the user's role
+    /// Returns the user's current role, or null if the user has no role,
+    /// does not exist, or the stored RoleID is not a recognised UserRole.
     /// </summary>
     Task<UserRole?> GetUserRoleAsync(int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks whether the user has full, unfiltered visibility over every case in
-    /// their firm (SuperAdmin / FirmAdmin / Partner per the Roles &amp; Permissions
-    /// Matrix "View Firm Case Directory" row). Returns false for AssociateLawyer,
-    /// Moharrir, and InternParalegal, who must only see cases they are assigned to.
+    /// SRS "View Firm Case Directory": true only for SuperAdmin, Firm Admin,
+    /// and Senior Partner (i.e. holders of the ViewFirmCaseDirectory
+    /// permission) - everyone else (Associate Lawyer, Moharrir, Intern) may
+    /// only ever see cases they are individually assigned to, never the
+    /// firm's full case list.
     /// </summary>
     Task<bool> HasFullCaseDirectoryVisibilityAsync(int userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks whether the user has an active assignment (EndDate is null or in the
-    /// future) on the given case. Used to enforce case-level Broken Object Level
-    /// Authorization (BOLA) protection for roles without full directory visibility.
+    /// SRS RBAC step "Case assignment (where applicable)": true only if the
+    /// user has an active (non-ended) CaseAssignment row for this case, AND
+    /// the case belongs to the user's own firm. SuperAdmin and users with
+    /// full case-directory visibility (see above) are NOT automatically
+    /// "assigned" by this check - callers that mean to allow those roles
+    /// through regardless of assignment should check
+    /// HasFullCaseDirectoryVisibilityAsync first and short-circuit.
     /// </summary>
     Task<bool> IsUserAssignedToCaseAsync(int userId, long caseId, CancellationToken cancellationToken = default);
 }

@@ -4,10 +4,24 @@ using LTSBackend.Features.LoginHistory.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace LTSBackend.Features.LoginHistory.Queries.GetAllLoginHistory;
+namespace LTSBackend.Features.LoginHistory.GetAllLoginHistory;
 
+/// <summary>
+/// Returns a paged, filterable list of login history records.
+///
+/// TENANT ISOLATION (fixed - see AppDbContext.cs): this query intentionally
+/// does NOT add its own ".Where(x => x.User.FirmID == ...)" filter. Doing so
+/// used to be necessary and was missing here, which meant a Firm Admin with
+/// the ViewLoginHistory permission could see every firm's login IPs, emails
+/// and timestamps - a full cross-tenant data leak. Isolation is now enforced
+/// centrally by the global query filter on LoginHistory in AppDbContext, so
+/// every query through this DbSet is automatically scoped to the caller's
+/// own firm (or unrestricted for SuperAdmin). Do NOT call
+/// ".IgnoreQueryFilters()" here - that would silently reopen the leak.
+/// </summary>
 public class GetAllLoginHistoryHandler(AppDbContext context) : IRequestHandler<GetAllLoginHistoryQuery, PagedResult<LoginHistoryDTO>>
 {
+    // Builds and executes the filtered, paged login-history query.
     public async Task<PagedResult<LoginHistoryDTO>> Handle(GetAllLoginHistoryQuery request, CancellationToken cancellationToken)
     {
         var query = context.LoginHistories.AsNoTracking().Include(x => x.User).AsQueryable();
@@ -53,7 +67,7 @@ public class GetAllLoginHistoryHandler(AppDbContext context) : IRequestHandler<G
 
         //----------------------------------------
         // Data
-        //    FIX: LoginHistory model has no CreatedDate column — the
+        //    FIX: LoginHistory model has no CreatedDate column - the
         //    record is created at login time, so LoginTime is the
         //    closest equivalent. Mapped here instead of a non-existent
         //    x.CreatedDate (which was a compile error: 'LoginHistory'
