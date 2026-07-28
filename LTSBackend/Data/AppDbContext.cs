@@ -306,6 +306,34 @@ public class AppDbContext : DbContext
         });
 
         // ================================================================
+        // ✅ CASECATEGORY / CASESTATUS / CASESTAGE / DOCUMENTTYPE ENTITY
+        // CONFIGURATION (per-tenant scoping - same pattern as Court/Department)
+        // ================================================================
+        modelBuilder.Entity<CaseCategory>(entity =>
+        {
+            entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
+        });
+
+        modelBuilder.Entity<CaseStatus>(entity =>
+        {
+            entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
+        });
+
+        modelBuilder.Entity<CaseStage>(entity =>
+        {
+            entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
+        });
+
+        modelBuilder.Entity<DocumentType>(entity =>
+        {
+            entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
+        });
+
+        // ================================================================
         // ✅ CASE ENTITY CONFIGURATION
         // ================================================================
         modelBuilder.Entity<Case>(entity =>

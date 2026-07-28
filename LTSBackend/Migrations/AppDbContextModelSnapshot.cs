@@ -956,9 +956,6 @@ namespace LTSBackend.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("FirmID")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -967,8 +964,6 @@ namespace LTSBackend.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("CourtID");
-
-                    b.HasIndex("FirmID");
 
                     b.ToTable("Courts");
 
@@ -1076,15 +1071,10 @@ namespace LTSBackend.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<int?>("FirmID")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.HasKey("DepartmentID");
-
-                    b.HasIndex("FirmID");
 
                     b.ToTable("Departments");
 
@@ -1528,18 +1518,6 @@ namespace LTSBackend.Migrations
                         },
                         new
                         {
-                            PermissionID = 206,
-                            Description = "View this firm's own login history",
-                            PermissionName = "ViewLoginHistory"
-                        },
-                        new
-                        {
-                            PermissionID = 207,
-                            Description = "Delete/cleanup this firm's own login history records",
-                            PermissionName = "DeleteLoginHistory"
-                        },
-                        new
-                        {
                             PermissionID = 402,
                             Description = "Upload documents",
                             PermissionName = "UploadDocuments"
@@ -1907,150 +1885,144 @@ namespace LTSBackend.Migrations
                         new
                         {
                             RolePermissionID = 17,
-                            PermissionID = 206,
-                            RoleID = 2
-                        },
-                        new
-                        {
-                            RolePermissionID = 18,
                             PermissionID = 202,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 19,
+                            RolePermissionID = 18,
                             PermissionID = 203,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 20,
+                            RolePermissionID = 19,
                             PermissionID = 304,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 21,
+                            RolePermissionID = 20,
                             PermissionID = 205,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 22,
+                            RolePermissionID = 21,
                             PermissionID = 301,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 23,
+                            RolePermissionID = 22,
                             PermissionID = 302,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 24,
+                            RolePermissionID = 23,
                             PermissionID = 303,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 25,
+                            RolePermissionID = 24,
                             PermissionID = 305,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 26,
+                            RolePermissionID = 25,
                             PermissionID = 306,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 27,
+                            RolePermissionID = 26,
                             PermissionID = 402,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 28,
+                            RolePermissionID = 27,
                             PermissionID = 307,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 29,
+                            RolePermissionID = 28,
                             PermissionID = 308,
                             RoleID = 3
                         },
                         new
                         {
-                            RolePermissionID = 30,
+                            RolePermissionID = 29,
                             PermissionID = 401,
                             RoleID = 4
                         },
                         new
                         {
-                            RolePermissionID = 31,
+                            RolePermissionID = 30,
                             PermissionID = 402,
                             RoleID = 4
                         },
                         new
                         {
-                            RolePermissionID = 32,
+                            RolePermissionID = 31,
                             PermissionID = 403,
                             RoleID = 4
                         },
                         new
                         {
-                            RolePermissionID = 33,
+                            RolePermissionID = 32,
                             PermissionID = 404,
                             RoleID = 4
                         },
                         new
                         {
-                            RolePermissionID = 34,
+                            RolePermissionID = 33,
                             PermissionID = 405,
                             RoleID = 4
                         },
                         new
                         {
-                            RolePermissionID = 35,
+                            RolePermissionID = 34,
                             PermissionID = 406,
                             RoleID = 4
                         },
                         new
                         {
-                            RolePermissionID = 36,
+                            RolePermissionID = 35,
                             PermissionID = 501,
                             RoleID = 5
                         },
                         new
                         {
-                            RolePermissionID = 37,
+                            RolePermissionID = 36,
                             PermissionID = 502,
                             RoleID = 5
                         },
                         new
                         {
-                            RolePermissionID = 38,
+                            RolePermissionID = 37,
                             PermissionID = 505,
                             RoleID = 5
                         },
                         new
                         {
-                            RolePermissionID = 39,
+                            RolePermissionID = 38,
                             PermissionID = 601,
                             RoleID = 6
                         },
                         new
                         {
-                            RolePermissionID = 40,
+                            RolePermissionID = 39,
                             PermissionID = 602,
                             RoleID = 6
                         },
                         new
                         {
-                            RolePermissionID = 41,
+                            RolePermissionID = 40,
                             PermissionID = 603,
                             RoleID = 6
                         });
@@ -2127,11 +2099,6 @@ namespace LTSBackend.Migrations
                     b.Property<int?>("RoleID")
                         .HasColumnType("int");
 
-                    b.Property<string>("SecurityStamp")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -2159,9 +2126,7 @@ namespace LTSBackend.Migrations
                             IsActive = true,
                             IsDeleted = false,
                             IsExternal = false,
-                            PasswordHash = "$2a$11$placeholder_superadmin_hash_replace_in_production",
-                            RoleID = 1,
-                            SecurityStamp = "SEED-STAMP-USER-0001"
+                            PasswordHash = "$2a$11$placeholder_superadmin_hash_replace_in_production"
                         },
                         new
                         {
@@ -2176,9 +2141,7 @@ namespace LTSBackend.Migrations
                             IsActive = true,
                             IsDeleted = false,
                             IsExternal = false,
-                            PasswordHash = "$2a$11$placeholder_firmadmin_hash_replace_in_production",
-                            RoleID = 2,
-                            SecurityStamp = "SEED-STAMP-USER-0002"
+                            PasswordHash = "$2a$11$placeholder_firmadmin_hash_replace_in_production"
                         },
                         new
                         {
@@ -2193,9 +2156,7 @@ namespace LTSBackend.Migrations
                             IsActive = true,
                             IsDeleted = false,
                             IsExternal = false,
-                            PasswordHash = "$2a$11$placeholder_partner_hash_replace_in_production",
-                            RoleID = 3,
-                            SecurityStamp = "SEED-STAMP-USER-0003"
+                            PasswordHash = "$2a$11$placeholder_partner_hash_replace_in_production"
                         },
                         new
                         {
@@ -2210,9 +2171,7 @@ namespace LTSBackend.Migrations
                             IsActive = true,
                             IsDeleted = false,
                             IsExternal = false,
-                            PasswordHash = "$2a$11$placeholder_associate_hash_replace_in_production",
-                            RoleID = 4,
-                            SecurityStamp = "SEED-STAMP-USER-0004"
+                            PasswordHash = "$2a$11$placeholder_associate_hash_replace_in_production"
                         },
                         new
                         {
@@ -2227,9 +2186,7 @@ namespace LTSBackend.Migrations
                             IsActive = true,
                             IsDeleted = false,
                             IsExternal = false,
-                            PasswordHash = "$2a$11$placeholder_moharrir_hash_replace_in_production",
-                            RoleID = 5,
-                            SecurityStamp = "SEED-STAMP-USER-0005"
+                            PasswordHash = "$2a$11$placeholder_moharrir_hash_replace_in_production"
                         },
                         new
                         {
@@ -2244,9 +2201,7 @@ namespace LTSBackend.Migrations
                             IsActive = true,
                             IsDeleted = false,
                             IsExternal = false,
-                            PasswordHash = "$2a$11$placeholder_intern_hash_replace_in_production",
-                            RoleID = 6,
-                            SecurityStamp = "SEED-STAMP-USER-0006"
+                            PasswordHash = "$2a$11$placeholder_intern_hash_replace_in_production"
                         });
                 });
 
@@ -2546,26 +2501,6 @@ namespace LTSBackend.Migrations
                     b.Navigation("NotificationType");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("LTSBackend.Models.Masters.Court", b =>
-                {
-                    b.HasOne("LTSBackend.Models.Security.Firm", "Firm")
-                        .WithMany()
-                        .HasForeignKey("FirmID")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Firm");
-                });
-
-            modelBuilder.Entity("LTSBackend.Models.Masters.Department", b =>
-                {
-                    b.HasOne("LTSBackend.Models.Security.Firm", "Firm")
-                        .WithMany()
-                        .HasForeignKey("FirmID")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Firm");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.LoginHistory", b =>

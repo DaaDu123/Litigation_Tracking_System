@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using LTSBackend.Models.Security;
 
 namespace LTSBackend.Models.Masters;
 
@@ -8,6 +9,15 @@ public class CaseStatus
 {
     [Key]
     public int StatusID { get; set; }
+
+    /// <summary>
+    /// Same FirmID scoping pattern as Court/Department/CaseCategory - NULL
+    /// = system-wide global status, non-null = a firm's own custom status.
+    /// </summary>
+    public int? FirmID { get; set; }
+
+    [ForeignKey(nameof(FirmID))]
+    public Firm? Firm { get; set; }
 
     [Required]
     [MaxLength(100)]
