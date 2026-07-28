@@ -1,11 +1,12 @@
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Courts.Commands.UpdateCourt;
 
-public sealed class UpdateCourtHandler(AppDbContext _context, ILogger<UpdateCourtHandler> _logger) : IRequestHandler<UpdateCourtCommand, bool>
+public sealed class UpdateCourtHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<UpdateCourtHandler> _logger) : IRequestHandler<UpdateCourtCommand, bool>
 {
     public async Task<bool> Handle(UpdateCourtCommand request, CancellationToken cancellationToken)
     {
@@ -20,13 +21,25 @@ public sealed class UpdateCourtHandler(AppDbContext _context, ILogger<UpdateCour
         };
 
         // ================================================
-        // 1. Find court
+        // 1. Find court (the query filter already hides other firms'
+        //    custom courts from a non-SuperAdmin caller)
         // ================================================
         var court = await _context.Courts.FirstOrDefaultAsync(x => x.CourtID == request.CourtID, cancellationToken);
 
         if (court == null)
         {
             _logger.LogWarning("Update failed: Court not found: {CourtID}", request.CourtID);
+            throw new NotFoundException("Court not found.");
+        }
+
+        // ================================================
+        // 1b. Ownership check: a FirmAdmin may edit only their OWN firm's
+        //     custom court - never a system-wide global court (FirmID
+        //     null), which would affect every other firm using it.
+        // ================================================
+        if (!_currentUser.IsSuperAdmin && court.FirmID != _currentUser.FirmID)
+        {
+            _logger.LogWarning("Update denied: user {UserId} attempted to edit a global/other-firm court {CourtID}", _currentUser.UserID, request.CourtID);
             throw new NotFoundException("Court not found.");
         }
 

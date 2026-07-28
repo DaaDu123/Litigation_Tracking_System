@@ -21,6 +21,9 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
     // GET ALL DEPARTMENTS
     // Any authenticated user can read master data - required
     // for populating dropdowns on Case / User forms etc.
+    // Query results are automatically scoped by the caller's visibility
+    // (system-wide global departments + their own firm's custom ones) via
+    // the HasQueryFilter on Department in AppDbContext.
     // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] bool activeOnly = false)
@@ -42,18 +45,16 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
     // =====================================================
     // CREATE DEPARTMENT
     // ================================================================
-    // SECURITY NOTE: identical situation to CourtsController.Create -
-    // Department has NO FirmID column (see Models/Masters/Department.cs),
-    // so it is global/shared across every tenant, yet was open to
-    // FirmAdminAndAbove. Any firm's FirmAdmin could previously rename or
-    // delete a department that other firms' users/cases reference. The
-    // SRS lists "Manage Departments" under Firm Admin, so this SuperAdmin
-    // -only restriction is a temporary mitigation, not the final design -
-    // the correct fix is adding a FirmID column (+ migration + backfill)
-    // so departments are genuinely per-tenant, then relaxing this back.
+    // ARCHITECTURE FIX APPLIED: same per-tenant model as Court - FirmID is
+    // nullable (NULL = system-wide global department; a real value = a
+    // firm's own custom department). CreateDepartmentHandler assigns
+    // ownership on create, Update/DeleteDepartmentHandler enforce that a
+    // FirmAdmin may only touch their OWN firm's custom departments. This
+    // replaced an earlier temporary SuperAdmin-only lockdown. Requires the
+    // pending EF migration that adds Department.FirmID before deployment.
     // ================================================================
     [HttpPost]
-    [Authorize(Roles = RoleNames.SuperAdminOnly)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Create(CreateDepartmentCommand command)
     {
         var id = await mediator.Send(command);
@@ -62,10 +63,11 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // UPDATE DEPARTMENT
-    // See Create() above for why this is SuperAdmin-only, not FirmAdminAndAbove.
+    // Firm Admin may only update their OWN firm's custom department
+    // (enforced in UpdateDepartmentHandler).
     // =====================================================
     [HttpPut("{id}")]
-    [Authorize(Roles = RoleNames.SuperAdminOnly)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, UpdateDepartmentCommand command)
     {
         if (id != command.DepartmentID)
@@ -77,10 +79,11 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // DELETE DEPARTMENT
-    // See Create() above for why this is SuperAdmin-only, not FirmAdminAndAbove.
+    // Firm Admin may only delete their OWN firm's custom department
+    // (enforced in DeleteDepartmentHandler).
     // =====================================================
     [HttpDelete("{id}")]
-    [Authorize(Roles = RoleNames.SuperAdminOnly)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await mediator.Send(new DeleteDepartmentCommand(id));

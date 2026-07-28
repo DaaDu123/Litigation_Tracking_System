@@ -1,11 +1,12 @@
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Courts.Commands.DeleteCourt;
 
-public sealed class DeleteCourtHandler(AppDbContext _context, ILogger<DeleteCourtHandler> _logger): IRequestHandler<DeleteCourtCommand, bool>
+public sealed class DeleteCourtHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<DeleteCourtHandler> _logger): IRequestHandler<DeleteCourtCommand, bool>
 {
     public async Task<bool> Handle(DeleteCourtCommand request, CancellationToken cancellationToken)
     {
@@ -19,6 +20,17 @@ public sealed class DeleteCourtHandler(AppDbContext _context, ILogger<DeleteCour
         if (court == null)
         {
             _logger.LogWarning("Delete failed: Court not found: {CourtID}", request.CourtID);
+            throw new NotFoundException("Court not found.");
+        }
+
+        // ================================================
+        // 1b. Ownership check: a FirmAdmin may delete only their OWN firm's
+        //     custom court - never a system-wide global court, which other
+        //     firms may depend on.
+        // ================================================
+        if (!_currentUser.IsSuperAdmin && court.FirmID != _currentUser.FirmID)
+        {
+            _logger.LogWarning("Delete denied: user {UserId} attempted to delete a global/other-firm court {CourtID}", _currentUser.UserID, request.CourtID);
             throw new NotFoundException("Court not found.");
         }
 

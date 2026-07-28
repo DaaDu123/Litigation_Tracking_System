@@ -22,6 +22,9 @@ public class CourtsController(IMediator mediator) : ControllerBase
     // Any authenticated user can read master data.
     // Default: activeOnly=true (dropdown use case)
     // Admin panel: pass activeOnly=false to see all records
+    // Query results are automatically scoped by the caller's visibility
+    // (system-wide global courts + their own firm's custom courts) via
+    // the HasQueryFilter on Court in AppDbContext.
     // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText,[FromQuery] bool activeOnly = true)
@@ -43,28 +46,20 @@ public class CourtsController(IMediator mediator) : ControllerBase
     // =====================================================
     // CREATE COURT
     // ================================================================
-    // SECURITY NOTE (found during review - restricted, not silently left
-    // as FirmAdminAndAbove): Court has NO FirmID column - see Models/
-    // Masters/Court.cs and AppDbContext (no HasQueryFilter registered for
-    // it either). It is genuinely GLOBAL, shared-across-every-tenant
-    // reference data (the same real-world court is used by every firm's
-    // cases). Previously any FirmAdmin - from ANY firm - could rename,
-    // retype, or (if currently unreferenced) delete a court record that
-    // OTHER firms' cases and hearings depend on, with no way for the
-    // system to know or prevent it, since there is no tenant boundary on
-    // this table to check against. That is a real cross-tenant data-
-    // integrity risk today, not a hypothetical one.
-    //
-    // Restricted to SuperAdmin as an immediate, migration-free mitigation.
-    // The SRS lists "Manage Courts" under Firm Admin's responsibilities,
-    // so this is NOT the final fix - it trades away that feature to close
-    // the live risk. The correct long-term fix is to make Court genuinely
-    // per-tenant (add a FirmID column + EF migration + data backfill for
-    // existing rows) so each firm can manage its own court list without
-    // affecting others, then relax this back to FirmAdminAndAbove.
+    // ARCHITECTURE FIX APPLIED: Court is now genuinely per-tenant-aware.
+    // FirmID is nullable on the Court entity - NULL means a system-wide
+    // global court (managed by SuperAdmin, visible to every firm), a
+    // real value means a firm's own custom court entry. CreateCourtHandler
+    // sets FirmID = null for SuperAdmin or the caller's own FirmID for
+    // FirmAdmin, and UpdateCourtHandler/DeleteCourtHandler enforce that a
+    // FirmAdmin may only touch their OWN firm's custom courts - never a
+    // global entry or another firm's. This replaced an earlier temporary
+    // SuperAdmin-only lockdown that existed before Court had any tenant
+    // boundary at all. Requires the pending EF migration that adds the
+    // Court.FirmID column to be applied before deployment.
     // ================================================================
     [HttpPost]
-    [Authorize(Roles = RoleNames.SuperAdminOnly)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Create(CreateCourtCommand command)
     {
         var id = await mediator.Send(command);
@@ -73,10 +68,11 @@ public class CourtsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // UPDATE COURT
-    // See Create() above for why this is SuperAdmin-only, not FirmAdminAndAbove.
+    // Firm Admin may only update their OWN firm's custom court (enforced
+    // in UpdateCourtHandler) - never a global or another firm's court.
     // =====================================================
     [HttpPut("{id}")]
-    [Authorize(Roles = RoleNames.SuperAdminOnly)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, UpdateCourtCommand command)
     {
         if (id != command.CourtID)
@@ -88,10 +84,11 @@ public class CourtsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // DELETE COURT
-    // See Create() above for why this is SuperAdmin-only, not FirmAdminAndAbove.
+    // Firm Admin may only delete their OWN firm's custom court (enforced
+    // in DeleteCourtHandler) - never a global or another firm's court.
     // =====================================================
     [HttpDelete("{id}")]
-    [Authorize(Roles = RoleNames.SuperAdminOnly)]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await mediator.Send(new DeleteCourtCommand(id));

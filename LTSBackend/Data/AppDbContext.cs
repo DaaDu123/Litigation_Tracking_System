@@ -281,6 +281,31 @@ public class AppDbContext : DbContext
         });
 
         // ================================================================
+        // ✅ COURT ENTITY CONFIGURATION (per-tenant scoping added - see
+        // Models/Masters/Court.cs for the full rationale)
+        // ================================================================
+        modelBuilder.Entity<Court>(entity =>
+        {
+            entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
+
+            // A caller sees system-wide global courts (FirmID null) plus
+            // their own firm's custom courts. SuperAdmin bypasses and sees
+            // every court, including every other firm's custom entries.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
+        });
+
+        // ================================================================
+        // ✅ DEPARTMENT ENTITY CONFIGURATION (per-tenant scoping added - see
+        // Models/Masters/Department.cs for the full rationale)
+        // ================================================================
+        modelBuilder.Entity<Department>(entity =>
+        {
+            entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
+        });
+
+        // ================================================================
         // ✅ CASE ENTITY CONFIGURATION
         // ================================================================
         modelBuilder.Entity<Case>(entity =>

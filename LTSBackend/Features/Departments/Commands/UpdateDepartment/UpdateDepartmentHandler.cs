@@ -1,11 +1,12 @@
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Departments.Commands.UpdateDepartment;
 
-public sealed class UpdateDepartmentHandler(AppDbContext _context, ILogger<UpdateDepartmentHandler> _logger) : IRequestHandler<UpdateDepartmentCommand, bool>
+public sealed class UpdateDepartmentHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<UpdateDepartmentHandler> _logger) : IRequestHandler<UpdateDepartmentCommand, bool>
 {
     public async Task<bool> Handle(UpdateDepartmentCommand request, CancellationToken cancellationToken)
     {
@@ -26,6 +27,16 @@ public sealed class UpdateDepartmentHandler(AppDbContext _context, ILogger<Updat
         if (department == null)
         {
             _logger.LogWarning("Update failed: Department not found: {DepartmentID}", request.DepartmentID);
+            throw new NotFoundException("Department not found.");
+        }
+
+        // ================================================
+        // 1b. Ownership check: a FirmAdmin may edit only their OWN firm's
+        //     custom department - never a system-wide global department.
+        // ================================================
+        if (!_currentUser.IsSuperAdmin && department.FirmID != _currentUser.FirmID)
+        {
+            _logger.LogWarning("Update denied: user {UserId} attempted to edit a global/other-firm department {DepartmentID}", _currentUser.UserID, request.DepartmentID);
             throw new NotFoundException("Department not found.");
         }
 

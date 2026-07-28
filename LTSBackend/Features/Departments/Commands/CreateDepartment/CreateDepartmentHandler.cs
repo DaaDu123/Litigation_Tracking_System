@@ -1,12 +1,13 @@
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Masters;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Departments.Commands.CreateDepartment;
 
-public sealed class CreateDepartmentHandler(AppDbContext _context, ILogger<CreateDepartmentHandler> _logger) : IRequestHandler<CreateDepartmentCommand, int>
+public sealed class CreateDepartmentHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<CreateDepartmentHandler> _logger) : IRequestHandler<CreateDepartmentCommand, int>
 {
     public async Task<int> Handle(CreateDepartmentCommand request, CancellationToken cancellationToken)
     {
@@ -21,6 +22,8 @@ public sealed class CreateDepartmentHandler(AppDbContext _context, ILogger<Creat
 
         // ================================================
         // 1. Ensure department name is unique
+        //    NOTE: automatically scoped to global + own firm's departments
+        //    via the HasQueryFilter on Department in AppDbContext.
         // ================================================
         bool nameExists = await _context.Departments.AnyAsync(x => x.DepartmentName.ToLower() == request.DepartmentName.ToLower(), cancellationToken);
 
@@ -53,9 +56,12 @@ public sealed class CreateDepartmentHandler(AppDbContext _context, ILogger<Creat
 
         // ================================================
         // 3. Create department
+        //    SuperAdmin creates a system-wide global department (FirmID
+        //    null). FirmAdmin creates one scoped to their own firm only.
         // ================================================
         var department = new Department
         {
+            FirmID = _currentUser.IsSuperAdmin ? null : _currentUser.FirmID,
             DepartmentName = request.DepartmentName,
             DepartmentCode = request.DepartmentCode,
             Description = request.Description,
