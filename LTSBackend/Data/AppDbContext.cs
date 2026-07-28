@@ -258,6 +258,26 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Timestamp).IsRequired();
             entity.HasIndex(e => e.Timestamp).IsDescending();
             entity.HasIndex(e => e.UserID);
+
+            // ================================================================
+            // CRITICAL FIX: AuditLog has no FirmID column, and until now had
+            // NO tenant scoping whatsoever - GetAuditLogsHandler queried
+            // _context.AuditLogs with zero FirmID filter. This was masked
+            // only by "ViewAuditLogs" never being seeded to any role except
+            // via SuperAdmin's permission-check bypass (see PermissionService)
+            // - the instant that permission is granted to FirmAdmin (a very
+            // natural-looking fix, and exactly what already happened for the
+            // analogous "ViewLoginHistory" permission elsewhere in this
+            // codebase), every firm's ENTIRE audit trail - case deletions,
+            // user creation, permission/role changes, document activity -
+            // becomes visible to every other firm's admin. Scope by the
+            // acting user's firm at the model level so this can never regress
+            // silently regardless of what the handler above does. Rows with
+            // no UserID (system/platform-level events with no single firm
+            // owner) are hidden from every non-SuperAdmin caller rather than
+            // shown to all of them.
+            // ================================================================
+            entity.HasQueryFilter(e => BypassTenantFilter || (e.User != null && e.User.FirmID == RequestFirmId));
         });
 
         // ================================================================

@@ -42,10 +42,29 @@ public class CourtsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // CREATE COURT
-    // Restricted: Firm Admin and Super Admin only
-    // =====================================================
+    // ================================================================
+    // SECURITY NOTE (found during review - restricted, not silently left
+    // as FirmAdminAndAbove): Court has NO FirmID column - see Models/
+    // Masters/Court.cs and AppDbContext (no HasQueryFilter registered for
+    // it either). It is genuinely GLOBAL, shared-across-every-tenant
+    // reference data (the same real-world court is used by every firm's
+    // cases). Previously any FirmAdmin - from ANY firm - could rename,
+    // retype, or (if currently unreferenced) delete a court record that
+    // OTHER firms' cases and hearings depend on, with no way for the
+    // system to know or prevent it, since there is no tenant boundary on
+    // this table to check against. That is a real cross-tenant data-
+    // integrity risk today, not a hypothetical one.
+    //
+    // Restricted to SuperAdmin as an immediate, migration-free mitigation.
+    // The SRS lists "Manage Courts" under Firm Admin's responsibilities,
+    // so this is NOT the final fix - it trades away that feature to close
+    // the live risk. The correct long-term fix is to make Court genuinely
+    // per-tenant (add a FirmID column + EF migration + data backfill for
+    // existing rows) so each firm can manage its own court list without
+    // affecting others, then relax this back to FirmAdminAndAbove.
+    // ================================================================
     [HttpPost]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.SuperAdminOnly)]
     public async Task<IActionResult> Create(CreateCourtCommand command)
     {
         var id = await mediator.Send(command);
@@ -54,10 +73,10 @@ public class CourtsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // UPDATE COURT
-    // Restricted: Firm Admin and Super Admin only
+    // See Create() above for why this is SuperAdmin-only, not FirmAdminAndAbove.
     // =====================================================
     [HttpPut("{id}")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.SuperAdminOnly)]
     public async Task<IActionResult> Update(int id, UpdateCourtCommand command)
     {
         if (id != command.CourtID)
@@ -69,10 +88,10 @@ public class CourtsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // DELETE COURT
-    // Restricted: Firm Admin and Super Admin only
+    // See Create() above for why this is SuperAdmin-only, not FirmAdminAndAbove.
     // =====================================================
     [HttpDelete("{id}")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.SuperAdminOnly)]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await mediator.Send(new DeleteCourtCommand(id));

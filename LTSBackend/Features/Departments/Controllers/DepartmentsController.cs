@@ -41,10 +41,19 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // CREATE DEPARTMENT
-    // Restricted: Firm Admin and Super Admin only
-    // =====================================================
+    // ================================================================
+    // SECURITY NOTE: identical situation to CourtsController.Create -
+    // Department has NO FirmID column (see Models/Masters/Department.cs),
+    // so it is global/shared across every tenant, yet was open to
+    // FirmAdminAndAbove. Any firm's FirmAdmin could previously rename or
+    // delete a department that other firms' users/cases reference. The
+    // SRS lists "Manage Departments" under Firm Admin, so this SuperAdmin
+    // -only restriction is a temporary mitigation, not the final design -
+    // the correct fix is adding a FirmID column (+ migration + backfill)
+    // so departments are genuinely per-tenant, then relaxing this back.
+    // ================================================================
     [HttpPost]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.SuperAdminOnly)]
     public async Task<IActionResult> Create(CreateDepartmentCommand command)
     {
         var id = await mediator.Send(command);
@@ -53,10 +62,10 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // UPDATE DEPARTMENT
-    // Restricted: Firm Admin and Super Admin only
+    // See Create() above for why this is SuperAdmin-only, not FirmAdminAndAbove.
     // =====================================================
     [HttpPut("{id}")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.SuperAdminOnly)]
     public async Task<IActionResult> Update(int id, UpdateDepartmentCommand command)
     {
         if (id != command.DepartmentID)
@@ -68,10 +77,10 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
 
     // =====================================================
     // DELETE DEPARTMENT
-    // Restricted: Firm Admin and Super Admin only
+    // See Create() above for why this is SuperAdmin-only, not FirmAdminAndAbove.
     // =====================================================
     [HttpDelete("{id}")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.SuperAdminOnly)]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await mediator.Send(new DeleteDepartmentCommand(id));

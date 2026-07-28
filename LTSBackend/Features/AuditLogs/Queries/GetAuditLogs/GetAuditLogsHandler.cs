@@ -1,6 +1,7 @@
 ﻿using LTSBackend.Comman.Responses;
 using LTSBackend.Data;
 using LTSBackend.Features.AuditLogs.DTOs;
+using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,11 +10,13 @@ namespace LTSBackend.Features.AuditLogs.Queries.GetAuditLogs;
 public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResult<AuditLogDTO>>
 {
     private readonly AppDbContext _context;
+    private readonly ICurrentUserService _currentUser;
     private readonly ILogger<GetAuditLogsHandler> _logger;
 
-    public GetAuditLogsHandler(AppDbContext context, ILogger<GetAuditLogsHandler> logger)
+    public GetAuditLogsHandler(AppDbContext context, ICurrentUserService currentUser, ILogger<GetAuditLogsHandler> logger)
     {
         _context = context;
+        _currentUser = currentUser;
         _logger = logger;
     }
 
@@ -30,6 +33,18 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
             .AsNoTracking()
             .Include(x => x.User)
             .AsQueryable();
+
+        // ================================================
+        // CRITICAL FIX (cross-tenant data leak): AuditLog has no FirmID
+        // column, and this query previously applied no tenant scoping at
+        // all - relying entirely on AppDbContext's global query filter,
+        // which itself did not exist for this entity until this same
+        // review pass. Explicit scoping here as well (defense in depth,
+        // matching this codebase's convention elsewhere) so this can never
+        // regress even if a future change reads via IgnoreQueryFilters().
+        // ================================================
+        if (!_currentUser.IsSuperAdmin)
+            query = query.Where(x => x.User != null && x.User.FirmID == _currentUser.FirmID);
 
         // ================================================
         // 1. Search by user name or email
