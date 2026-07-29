@@ -180,7 +180,7 @@
                     <div class="lts-form-hint" style="margin-top:0;">Archived cases are hidden from the default case list.</div>
                 </div>
                 <label class="lts-switch">
-                    <InputCheckbox @bind-Value="_form.IsArchived" disabled="@_isSaving" />
+                    <InputCheckbox @bind-Value="_isArchived" disabled="@_isSaving" />
                     <span class="lts-switch-slider"></span>
                 </label>
             </div>
@@ -211,6 +211,7 @@
 
     private CaseDTO? _original;
     private UpdateCaseDTO _form = new();
+    private bool _isArchived;
 
     private List<CourtDTO> _courts = new();
     private List<CaseCategoryDTO> _categories = new();
@@ -241,6 +242,7 @@
             else
             {
                 _form = UpdateCaseDTO.FromCaseDetails(CaseId, _original);
+                _isArchived = _original.IsArchived;
                 // Make sure the current values are selectable even if the active-only
                 // lookups above happened to exclude them (e.g. a now-inactive court).
                 EnsureOptionPresent(_courts, _original.CourtID, _original.CourtName);
@@ -284,6 +286,7 @@
     {
         _isSaving = true;
         _apiError = null;
+        _form.IsArchived = _isArchived;
         try
         {
             await CaseService.UpdateAsync(_form);
