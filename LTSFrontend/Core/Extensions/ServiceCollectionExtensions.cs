@@ -2,6 +2,7 @@
 using LTSFrontend.Core.Auth;
 using LTSFrontend.Core.Http;
 using LTSFrontend.Features.Auth.Services;
+using LTSFrontend.Features.Cases.Services;
 using LTSFrontend.Features.Masters.Services;
 using LTSFrontend.Features.Users.Services;
 using LTSFrontend.State;
@@ -62,6 +63,8 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<ICourtService, CourtService>();
+            services.AddScoped<IMasterDataService, MasterDataService>();
+            services.AddScoped<ICaseService, CaseService>();
 
             // App-wide UI services
             services.AddScoped<ToastService>();

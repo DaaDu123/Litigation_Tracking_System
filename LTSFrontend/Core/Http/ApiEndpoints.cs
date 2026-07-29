@@ -45,6 +45,42 @@
                 public const string Base_ = Root;
                 public static string ById(int id) => $"{Root}/{id}";
             }
+
+            public static class CaseCategories
+            {
+                private const string Root = Base + "/casecategories";
+                public const string Base_ = Root;
+                public static string ById(int id) => $"{Root}/{id}";
+            }
+
+            public static class CaseStages
+            {
+                private const string Root = Base + "/casestages";
+                public const string Base_ = Root;
+                public static string ById(int id) => $"{Root}/{id}";
+            }
+
+            public static class CaseStatuses
+            {
+                private const string Root = Base + "/casestatuses";
+                public const string Base_ = Root;
+                public static string ById(int id) => $"{Root}/{id}";
+            }
+
+            public static class Departments
+            {
+                private const string Root = Base + "/departments";
+                public const string Base_ = Root;
+                public static string ById(int id) => $"{Root}/{id}";
+            }
+        }
+
+        public static class Cases
+        {
+            private const string Root = Base + "/cases";
+            public const string Base_ = Root;
+            public static string ById(long id) => $"{Root}/{id}";
+            public static string Status(long id) => $"{Root}/{id}/status";
         }
     }
 }
