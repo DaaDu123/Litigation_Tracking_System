@@ -2,6 +2,7 @@
 using LTSFrontend.Core.Auth;
 using LTSFrontend.Core.Http;
 using LTSFrontend.Features.Auth.Services;
+using LTSFrontend.Features.Masters.Services;
 using LTSFrontend.Features.Users.Services;
 using LTSFrontend.State;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -60,6 +61,10 @@ namespace LTSFrontend.Core.Extensions
             // Feature services
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<ICourtService, CourtService>();
+
+            // App-wide UI services
+            services.AddScoped<ToastService>();
 
             return services;
         }

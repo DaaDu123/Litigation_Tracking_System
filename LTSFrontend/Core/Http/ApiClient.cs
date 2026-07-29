@@ -27,6 +27,14 @@ namespace LTSFrontend.Core.Http
             return SendAsync<T>(request, ct);
         }
 
+        public Task<T?> PutAsync<T>(string url, object? body = null, CancellationToken ct = default)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Put, url);
+            if (body != null)
+                request.Content = JsonContent.Create(body, options: JsonOptions);
+            return SendAsync<T>(request, ct);
+        }
+
         public Task<T?> PostFormAsync<T>(string url, MultipartFormDataContent form, CancellationToken ct = default)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = form };

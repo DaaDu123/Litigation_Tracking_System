@@ -36,5 +36,15 @@
             public const string Base_ = Root;
             public static string ById(int id) => $"{Root}/{id}";
         }
+
+        public static class Masters
+        {
+            public static class Courts
+            {
+                private const string Root = Base + "/courts";
+                public const string Base_ = Root;
+                public static string ById(int id) => $"{Root}/{id}";
+            }
+        }
     }
 }
