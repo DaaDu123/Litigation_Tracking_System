@@ -41,12 +41,25 @@ namespace LTSFrontend.Core.Extensions
                 sp => sp.GetRequiredService<CustomAuthStateProvider>());
 
             // HttpClient -> LTSBackend
+            // Registered through IHttpClientFactory so the underlying
+            // SocketsHttpHandler (and its TCP/TLS connections) is pooled
+            // and reused across requests/circuits instead of a brand new
+            // handler + connection being created every time (this was the
+            // main cause of slow page loads).
             services.AddScoped<AuthTokenHandler>();
-            services.AddScoped(sp =>
+
+            services.AddHttpClient<ApiClient>((sp, client) =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
-                var env = sp.GetRequiredService<IHostEnvironment>();
                 var baseUrl = config["ApiSettings:BaseUrl"] ?? "https://localhost:7167";
+
+                client.BaseAddress = new Uri(baseUrl);
+                client.Timeout = TimeSpan.FromSeconds(100);
+            })
+            .AddHttpMessageHandler<AuthTokenHandler>()
+            .ConfigurePrimaryHttpMessageHandler(sp =>
+            {
+                var env = sp.GetRequiredService<IHostEnvironment>();
 
                 var socketHandler = new HttpClientHandler
                 {
@@ -61,17 +74,8 @@ namespace LTSFrontend.Core.Extensions
                         HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 }
 
-                var authHandler = sp.GetRequiredService<AuthTokenHandler>();
-                authHandler.InnerHandler = socketHandler;
-
-                return new HttpClient(authHandler)
-                {
-                    BaseAddress = new Uri(baseUrl),
-                    Timeout = TimeSpan.FromSeconds(100)
-                };
+                return socketHandler;
             });
-
-            services.AddScoped<ApiClient>();
 
             // Feature services
             services.AddScoped<IAuthService, AuthService>();

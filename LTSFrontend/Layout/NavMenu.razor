@@ -2,35 +2,35 @@
 @inject UserSessionState Session
 
 <nav>
-    <div class="nav-item px-3">
+    <div class="nav-item">
         <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
             <i class="bi bi-speedometer2"></i> <span class="nav-label">Dashboard</span>
         </NavLink>
     </div>
 
-    <div class="nav-item px-3">
+    <div class="nav-item">
         <NavLink class="nav-link" href="cases">
             <i class="bi bi-briefcase"></i> <span class="nav-label">Cases</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3 nav-item-sub">
+    <div class="nav-item nav-item-sub">
         <NavLink class="nav-link" href="cases/my-assigned">
             <i class="bi bi-person-check"></i> <span class="nav-label">My Assigned Cases</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3">
+    <div class="nav-item">
         <NavLink class="nav-link" href="hearings">
             <i class="bi bi-calendar-event"></i> <span class="nav-label">Hearings</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3">
+    <div class="nav-item">
         <NavLink class="nav-link" href="deadlines">
             <i class="bi bi-hourglass-split"></i> <span class="nav-label">Deadlines</span>
         </NavLink>
     </div>
 
     @* TEMP-DISABLED-FOR-TESTING <AuthorizeView Roles="Partner,FirmAdmin,SuperAdmin"> *@
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="users">
                 <i class="bi bi-people"></i> <span class="nav-label">Users</span>
             </NavLink>
@@ -38,82 +38,82 @@
     @* TEMP-DISABLED-FOR-TESTING </AuthorizeView> *@
 
     @* TEMP-DISABLED-FOR-TESTING <AuthorizeView Roles="SuperAdmin"> *@
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="firms">
                 <i class="bi bi-building"></i> <span class="nav-label">Firm Workspaces</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="roles">
                 <i class="bi bi-shield-lock"></i> <span class="nav-label">Roles &amp; Permissions</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3 nav-item-sub">
+        <div class="nav-item nav-item-sub">
             <NavLink class="nav-link" href="permissions/assign">
                 <i class="bi bi-pencil-square"></i> <span class="nav-label">Assign Permissions</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3 nav-item-sub">
+        <div class="nav-item nav-item-sub">
             <NavLink class="nav-link" href="permissions/matrix">
                 <i class="bi bi-grid-3x3"></i> <span class="nav-label">Permission Matrix</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3 nav-item-sub">
+        <div class="nav-item nav-item-sub">
             <NavLink class="nav-link" href="audit-logs">
                 <i class="bi bi-journal-check"></i> <span class="nav-label">Audit Logs</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3 nav-item-sub">
+        <div class="nav-item nav-item-sub">
             <NavLink class="nav-link" href="login-history">
                 <i class="bi bi-clock-history"></i> <span class="nav-label">Login History</span>
             </NavLink>
         </div>
     @* TEMP-DISABLED-FOR-TESTING </AuthorizeView> *@
 
-    <div class="nav-section-title px-3">Configuration</div>
+    <div class="nav-section-title">Configuration</div>
 
-    <div class="nav-item px-3">
+    <div class="nav-item">
         <NavLink class="nav-link" href="masters" Match="NavLinkMatch.All">
             <i class="bi bi-diagram-3"></i> <span class="nav-label">Master Data</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3 nav-item-sub">
+    <div class="nav-item nav-item-sub">
         <NavLink class="nav-link" href="masters/courts">
             <i class="bi bi-bank"></i> <span class="nav-label">Courts</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3 nav-item-sub">
+    <div class="nav-item nav-item-sub">
         <NavLink class="nav-link" href="masters/case-categories">
             <i class="bi bi-diagram-2"></i> <span class="nav-label">Case Categories</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3 nav-item-sub">
+    <div class="nav-item nav-item-sub">
         <NavLink class="nav-link" href="masters/case-stages">
             <i class="bi bi-signpost-split"></i> <span class="nav-label">Case Stages</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3 nav-item-sub">
+    <div class="nav-item nav-item-sub">
         <NavLink class="nav-link" href="masters/case-statuses">
             <i class="bi bi-flag"></i> <span class="nav-label">Case Statuses</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3 nav-item-sub">
+    <div class="nav-item nav-item-sub">
         <NavLink class="nav-link" href="masters/departments">
             <i class="bi bi-diagram-3"></i> <span class="nav-label">Departments</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3 nav-item-sub">
+    <div class="nav-item nav-item-sub">
         <NavLink class="nav-link" href="masters/document-types">
             <i class="bi bi-file-earmark-text"></i> <span class="nav-label">Document Types</span>
         </NavLink>
     </div>
 
-    <div class="nav-item px-3">
+    <div class="nav-item">
         <NavLink class="nav-link" href="profile">
             <i class="bi bi-person-circle"></i> <span class="nav-label">My Profile</span>
         </NavLink>
     </div>
-    <div class="nav-item px-3">
+    <div class="nav-item">
         <NavLink class="nav-link" href="login-history/my">
             <i class="bi bi-clock-history"></i> <span class="nav-label">My Login History</span>
         </NavLink>
