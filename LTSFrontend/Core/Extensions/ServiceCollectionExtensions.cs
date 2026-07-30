@@ -3,6 +3,7 @@ using LTSFrontend.Core.Auth;
 using LTSFrontend.Core.Http;
 using LTSFrontend.Features.Auth.Services;
 using LTSFrontend.Features.Cases.Services;
+using LTSFrontend.Features.Dashboard.Services;
 using LTSFrontend.Features.Masters.Services;
 using LTSFrontend.Features.Permissions.Services;
 using LTSFrontend.Features.Profile.Services;
@@ -76,6 +77,7 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IProfileService, ProfileService>();
+            services.AddScoped<IDashboardService, DashboardService>();
 
             // App-wide UI services
             services.AddScoped<ToastService>();

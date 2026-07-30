@@ -727,7 +727,187 @@ h1:focus {
     font-weight: 500;
 }
 
-/* ---------- Toolbar ---------- */
+.lts-stat-sublabel {
+    font-size: 0.72rem;
+    color: var(--lts-text-muted);
+    opacity: 0.8;
+    margin-top: 0.1rem;
+}
+
+.lts-stat-card-link {
+    position: absolute;
+    inset: 0;
+}
+
+/* ---------- Dashboard: page layout ---------- */
+.lts-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .lts-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.lts-dashboard-grid-thirds {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .lts-dashboard-grid-thirds {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- Dashboard: chart widget (pure CSS bar chart, no JS dependency) ---------- */
+.lts-chart-widget-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--lts-text);
+    margin-bottom: 0.9rem;
+}
+
+.lts-chart-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.65rem;
+}
+
+    .lts-chart-bar-row:last-child {
+        margin-bottom: 0;
+    }
+
+.lts-chart-bar-label {
+    flex: 0 0 110px;
+    font-size: 0.78rem;
+    color: var(--lts-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lts-chart-bar-track {
+    flex: 1;
+    height: 0.6rem;
+    background: var(--lts-surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.lts-chart-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--lts-blue);
+    transition: width 0.4s ease;
+}
+
+.lts-chart-bar-value {
+    flex: 0 0 2.2rem;
+    text-align: right;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--lts-text);
+}
+
+/* ---------- Dashboard: recent activity panel ---------- */
+.lts-activity-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.lts-activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--lts-border-color);
+    text-decoration: none;
+    color: inherit;
+}
+
+    .lts-activity-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    a.lts-activity-item:hover {
+        color: var(--lts-blue);
+    }
+
+.lts-activity-icon {
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    background: color-mix(in srgb, var(--lts-blue) 14%, transparent);
+    color: var(--lts-blue);
+    flex: 0 0 auto;
+}
+
+.lts-activity-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--lts-text);
+}
+
+.lts-activity-subtitle {
+    font-size: 0.78rem;
+    color: var(--lts-text-muted);
+}
+
+.lts-activity-time {
+    font-size: 0.7rem;
+    color: var(--lts-text-muted);
+    white-space: nowrap;
+    margin-left: auto;
+    flex: 0 0 auto;
+    padding-left: 0.5rem;
+}
+
+/* ---------- Dashboard: quick links ---------- */
+.lts-quicklink-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+}
+
+.lts-quicklink {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
+    background: var(--lts-surface);
+    border: 1px solid var(--lts-border-color);
+    border-radius: var(--lts-radius);
+    text-decoration: none;
+    color: var(--lts-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+    .lts-quicklink:hover {
+        border-color: var(--lts-blue);
+        transform: translateY(-1px);
+        color: var(--lts-blue);
+    }
+
+    .lts-quicklink i {
+        font-size: 1.05rem;
+    }
+
+
 .lts-toolbar {
     display: flex;
     align-items: center;
@@ -1818,6 +1998,30 @@ textarea.lts-form-control {
         color: var(--lts-text);
         word-break: break-word;
     }
+
+/* ---------- Permission Matrix ---------- */
+.lts-matrix-table {
+    min-width: 640px;
+}
+
+    .lts-matrix-table th.text-center,
+    .lts-matrix-table td.text-center {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+.lts-matrix-sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--lts-surface);
+    box-shadow: 1px 0 0 var(--lts-border-color);
+}
+
+thead .lts-matrix-sticky-col {
+    z-index: 2;
+    background: var(--lts-surface-2);
+}
 
 /* ---------- Utility ---------- */
 .spin {

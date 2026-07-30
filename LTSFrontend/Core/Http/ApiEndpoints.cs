@@ -103,5 +103,10 @@
             private const string Root = Base + "/profile";
             public const string Me = Root + "/me";
         }
+
+        public static class Dashboard
+        {
+            public const string Stats = Base + "/dashboard";
+        }
     }
 }
