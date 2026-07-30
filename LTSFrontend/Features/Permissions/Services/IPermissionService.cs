@@ -1,6 +1,11 @@
-﻿namespace LTSFrontend.Features.Permissions.Services
+using LTSFrontend.Features.Permissions.Models;
+
+namespace LTSFrontend.Features.Permissions.Services
 {
-    public class IPermissionService
+    public interface IPermissionService
     {
+        Task<List<PermissionDTO>> GetAllAsync();
+        Task<List<PermissionDTO>> GetRolePermissionsAsync(int roleId);
+        Task<bool> AssignAsync(int roleId, IEnumerable<int> permissionIds);
     }
 }

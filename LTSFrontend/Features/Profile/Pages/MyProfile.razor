@@ -1,5 +1,204 @@
-﻿<h3>MyProfile</h3>
+@page "/profile"
+@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
+@using LTSFrontend.Core.Exceptions
+@using LTSFrontend.Core.Http
+@using LTSFrontend.Features.Profile.Models
+@using LTSFrontend.Features.Profile.Services
+@using LTSFrontend.Shared.Components
+@using LTSFrontend.State
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@inject IProfileService ProfileService
+@inject ApiClient Api
+@inject UserSessionState Session
+@inject ToastService Toast
+
+<PageTitle>My Profile - LTS</PageTitle>
+
+<div class="lts-page-header">
+    <div>
+        <h1 class="lts-page-title">My Profile</h1>
+        <p class="lts-page-subtitle">View and update your personal account details.</p>
+    </div>
+</div>
+
+<div class="lts-card" style="max-width: 640px;">
+    @if (_isLoading)
+    {
+        <div class="lts-state">
+            <span class="lts-spinner lts-spinner-md"></span>
+            <div class="lts-state-title" style="margin-top:0.75rem;">Loading your profile...</div>
+        </div>
+    }
+    else if (_hasError)
+    {
+        <div class="lts-state is-error">
+            <div class="lts-state-icon"><i class="bi bi-exclamation-triangle"></i></div>
+            <div class="lts-state-title">Couldn't load your profile</div>
+            <div class="lts-state-desc">@_errorMessage</div>
+            <button class="lts-btn lts-btn-primary lts-btn-sm" @onclick="LoadAsync">
+                <i class="bi bi-arrow-clockwise"></i> Try Again
+            </button>
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(_apiError))
+        {
+            <div class="lts-form-error mb-3" style="background: var(--lts-danger-bg); padding: 0.6rem 0.85rem; border-radius: var(--lts-radius-sm);">
+                <i class="bi bi-exclamation-circle-fill"></i>
+                <span style="white-space: pre-line;">@_apiError</span>
+            </div>
+        }
+
+        <EditForm Model="_form" OnValidSubmit="HandleSubmitAsync">
+            <DataAnnotationsValidator />
+
+            <div class="lts-form-group">
+                <label class="lts-form-label">Profile Photo</label>
+                <FileUploadInput CurrentImageUrl="@_currentImageUrl" Disabled="@_isSaving" FileSelected="OnFileSelected" />
+            </div>
+
+            <div class="lts-form-group">
+                <label class="lts-form-label">Full Name <span class="required">*</span></label>
+                <InputText @bind-Value="_form.FullName" class="lts-form-control" maxlength="150" disabled="@_isSaving" />
+                <ValidationMessage For="() => _form.FullName" class="lts-form-error" />
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="lts-form-group">
+                        <label class="lts-form-label">Email</label>
+                        <input type="email" class="lts-form-control" value="@_profile?.Email" disabled />
+                        <div class="lts-form-hint">Email cannot be changed here.</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="lts-form-group">
+                        <label class="lts-form-label">Role</label>
+                        <input type="text" class="lts-form-control" value="@(_profile?.RoleName ?? "-")" disabled />
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="lts-form-group">
+                        <label class="lts-form-label">Phone</label>
+                        <InputText @bind-Value="_form.Phone" class="lts-form-control" maxlength="20"
+                                   placeholder="e.g. +92 300 1234567" disabled="@_isSaving" />
+                        <ValidationMessage For="() => _form.Phone" class="lts-form-error" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="lts-form-group">
+                        <label class="lts-form-label">Department</label>
+                        <InputText @bind-Value="_form.Department" class="lts-form-control" maxlength="100" disabled="@_isSaving" />
+                        <ValidationMessage For="() => _form.Department" class="lts-form-error" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="lts-modal-footer" style="padding: 1.25rem 0 0; margin-top: 0.5rem; justify-content: flex-start; gap: 0.6rem;">
+                <button type="submit" class="lts-btn lts-btn-primary" disabled="@_isSaving">
+                    @if (_isSaving)
+                    {
+                        <span class="lts-spinner lts-spinner-sm"></span>
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check-lg"></i>
+                        <span>Save Changes</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+<div class="lts-card mt-3" style="max-width: 640px;">
+    <h6 class="fw-semibold mb-2">Password</h6>
+    <p class="lts-page-subtitle" style="margin-bottom: 0.75rem;">Change your account password from the security settings.</p>
+    <a href="/forgot-password" class="lts-btn lts-btn-outline lts-btn-sm">
+        <i class="bi bi-shield-lock"></i> Change Password
+    </a>
+</div>
 
 @code {
+    private ProfileDTO? _profile;
+    private UpdateProfileDTO _form = new();
+    private IBrowserFile? _selectedImage;
 
+    private bool _isLoading = true;
+    private bool _hasError;
+    private bool _isSaving;
+    private string? _errorMessage;
+    private string? _apiError;
+
+    private string? _currentImageUrl =>
+        string.IsNullOrWhiteSpace(_profile?.ProfileImage)
+            ? null
+            : new Uri(Api.Http.BaseAddress!, _profile.ProfileImage).ToString();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _hasError = false;
+        _errorMessage = null;
+        try
+        {
+            _profile = await ProfileService.GetMyProfileAsync();
+            if (_profile != null)
+                _form = UpdateProfileDTO.FromDto(_profile);
+        }
+        catch (ApiException ex)
+        {
+            _hasError = true;
+            _errorMessage = ex.GetFullMessage();
+        }
+        catch (Exception)
+        {
+            _hasError = true;
+            _errorMessage = "Your profile could not be loaded. Please check your connection and try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void OnFileSelected(IBrowserFile? file) => _selectedImage = file;
+
+    private async Task HandleSubmitAsync()
+    {
+        _isSaving = true;
+        _apiError = null;
+        try
+        {
+            await ProfileService.UpdateAsync(_form, _selectedImage);
+            Session.UpdateFullName(_form.FullName);
+            Toast.Success("Profile updated", "Your changes have been saved.");
+            await LoadAsync();
+            _selectedImage = null;
+        }
+        catch (ApiException ex)
+        {
+            _apiError = ex.GetFullMessage();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _apiError = ex.Message;
+        }
+        catch (Exception)
+        {
+            _apiError = "Something went wrong while saving your profile. Please try again.";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
 }

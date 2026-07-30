@@ -1,6 +1,13 @@
-﻿namespace LTSFrontend.Features.Roles.Services
+using LTSFrontend.Features.Roles.Models;
+
+namespace LTSFrontend.Features.Roles.Services
 {
-    public class IRoleService
+    public interface IRoleService
     {
+        Task<List<RoleDTO>> GetAllAsync();
+        Task<RoleDTO?> GetByIdAsync(int id);
+        Task<int> CreateAsync(RoleFormDTO form);
+        Task<bool> UpdateAsync(RoleFormDTO form);
+        Task<bool> DeleteAsync(int id);
     }
 }

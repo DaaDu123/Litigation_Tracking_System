@@ -4,6 +4,9 @@ using LTSFrontend.Core.Http;
 using LTSFrontend.Features.Auth.Services;
 using LTSFrontend.Features.Cases.Services;
 using LTSFrontend.Features.Masters.Services;
+using LTSFrontend.Features.Permissions.Services;
+using LTSFrontend.Features.Profile.Services;
+using LTSFrontend.Features.Roles.Services;
 using LTSFrontend.Features.Users.Services;
 using LTSFrontend.State;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -63,8 +66,16 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<ICourtService, CourtService>();
+            services.AddScoped<ICaseCategoryService, CaseCategoryService>();
+            services.AddScoped<ICaseStageService, CaseStageService>();
+            services.AddScoped<ICaseStatusService, CaseStatusService>();
+            services.AddScoped<IDepartmentService, DepartmentService>();
+            services.AddScoped<IDocumentTypeService, DocumentTypeService>();
             services.AddScoped<IMasterDataService, MasterDataService>();
             services.AddScoped<ICaseService, CaseService>();
+            services.AddScoped<IRoleService, RoleService>();
+            services.AddScoped<IPermissionService, PermissionService>();
+            services.AddScoped<IProfileService, ProfileService>();
 
             // App-wide UI services
             services.AddScoped<ToastService>();

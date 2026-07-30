@@ -36,7 +36,7 @@ app.UseRouting();
 
 // Authentication & Authorization Middlewares
 app.UseAuthentication();
-app.UseAuthorization();
+// TEMP-DISABLED-FOR-TESTING: app.UseAuthorization();  -- re-enable before going live
 
 app.UseAntiforgery();
 

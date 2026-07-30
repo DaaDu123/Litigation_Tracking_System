@@ -39,6 +39,13 @@
             NotifyStateChanged();
         }
 
+        /// <summary>Refreshes just the display name (e.g. after "My Profile" is saved) without touching the token.</summary>
+        public void UpdateFullName(string fullName)
+        {
+            FullName = fullName;
+            NotifyStateChanged();
+        }
+
         public void Clear()
         {
             UserID = 0;

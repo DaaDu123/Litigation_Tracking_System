@@ -73,6 +73,13 @@
                 public const string Base_ = Root;
                 public static string ById(int id) => $"{Root}/{id}";
             }
+
+            public static class DocumentTypes
+            {
+                private const string Root = Base + "/documenttypes";
+                public const string Base_ = Root;
+                public static string ById(int id) => $"{Root}/{id}";
+            }
         }
 
         public static class Cases
@@ -81,6 +88,20 @@
             public const string Base_ = Root;
             public static string ById(long id) => $"{Root}/{id}";
             public static string Status(long id) => $"{Root}/{id}/status";
+        }
+
+        public static class Permissions
+        {
+            private const string Root = Base + "/permissions";
+            public const string Base_ = Root;
+            public const string Assign = Root + "/assign";
+            public static string ByRoleId(int roleId) => $"{Root}/role/{roleId}";
+        }
+
+        public static class Profile
+        {
+            private const string Root = Base + "/profile";
+            public const string Me = Root + "/me";
         }
     }
 }
