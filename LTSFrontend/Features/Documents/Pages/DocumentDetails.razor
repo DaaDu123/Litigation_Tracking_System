@@ -1,5 +1,150 @@
-﻿<h3>DocumentDetails</h3>
+@page "/documents/{DocumentId:long}"
+@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
+@using LTSFrontend.Core.Exceptions
+@using LTSFrontend.Features.Documents.Models
+@using LTSFrontend.Features.Documents.Services
+@using LTSFrontend.Shared.Components
+@using LTSFrontend.State
+@using Microsoft.AspNetCore.Authorization
+@inject IDocumentService DocumentService
+@inject ToastService Toast
+@inject NavigationManager Nav
+
+<PageTitle>@(_document?.DocumentName ?? "Document") - LTS</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="lts-card">
+        <div class="lts-state">
+            <span class="lts-spinner lts-spinner-md"></span>
+        </div>
+    </div>
+}
+else if (_document == null)
+{
+    <div class="lts-card">
+        <div class="lts-state is-error">
+            <div class="lts-state-icon"><i class="bi bi-exclamation-triangle"></i></div>
+            <div class="lts-state-title">Document not found</div>
+            <div class="lts-state-desc">It may have been removed, or you may not have access to view it.</div>
+            <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="GoBackToCases">
+                <i class="bi bi-arrow-left"></i> Back to Cases
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="lts-breadcrumb">
+        <a href="/cases">Cases</a>
+        <i class="bi bi-chevron-right" style="font-size:0.65rem;"></i>
+        <a href="@($"/cases/{_document.CaseID}")">@_document.CaseNumber</a>
+        <i class="bi bi-chevron-right" style="font-size:0.65rem;"></i>
+        <span class="current">@_document.DocumentName</span>
+    </div>
+
+    <div class="lts-page-header">
+        <div>
+            <h1 class="lts-page-title">@_document.DocumentName</h1>
+            <p class="lts-page-subtitle">@_document.DocumentType &middot; Version @_document.VersionNo</p>
+        </div>
+        <div class="lts-page-header-actions">
+            <button class="lts-btn lts-btn-primary" @onclick="HandleDownloadAsync">
+                <i class="bi bi-download"></i> Download
+            </button>
+            <PermissionGate Roles="Partner,FirmAdmin,SuperAdmin">
+                <button class="lts-btn lts-btn-danger" @onclick="HandleDeleteAsync">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </PermissionGate>
+        </div>
+    </div>
+
+    <div class="lts-card">
+        <dl class="mb-0">
+            <div class="lts-detail-row"><dt>File Name</dt><dd>@_document.FileName</dd></div>
+            <div class="lts-detail-row"><dt>File Size</dt><dd>@_document.FormattedFileSize</dd></div>
+            <div class="lts-detail-row"><dt>Case</dt><dd>@_document.CaseNumber</dd></div>
+            <div class="lts-detail-row"><dt>Uploaded By</dt><dd>@_document.UploadedBy</dd></div>
+            <div class="lts-detail-row"><dt>Uploaded On</dt><dd>@_document.UploadedDate.ToString("dd MMM yyyy HH:mm")</dd></div>
+            <div class="lts-detail-row">
+                <dt>Remarks</dt>
+                <dd>@(string.IsNullOrWhiteSpace(_document.Remarks) ? "-" : _document.Remarks)</dd>
+            </div>
+        </dl>
+    </div>
+}
+
+<ConfirmDialog @ref="_confirmDialog" />
 
 @code {
+    [Parameter] public long DocumentId { get; set; }
 
+    private DocumentDTO? _document;
+    private bool _isLoading = true;
+    private ConfirmDialog _confirmDialog = default!;
+
+    private void GoBackToCases() => Nav.NavigateTo("/cases");
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _document = await DocumentService.GetByIdAsync(DocumentId);
+        }
+        catch (ApiException)
+        {
+            _document = null;
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't load document", "Please refresh and try again.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleDownloadAsync()
+    {
+        try
+        {
+            await DocumentService.DownloadAsync(DocumentId);
+        }
+        catch (ApiException ex)
+        {
+            Toast.Error("Couldn't download document", ex.GetFullMessage());
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't download document", "Please try again.");
+        }
+    }
+
+    private async Task HandleDeleteAsync()
+    {
+        if (_document == null) return;
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            $"Delete document \"{_document.DocumentName}\"?", "This cannot be undone.", "Delete", "danger");
+
+        if (!confirmed) return;
+
+        try
+        {
+            await DocumentService.DeleteAsync(DocumentId);
+            Toast.Success("Document deleted", $"\"{_document.DocumentName}\" has been removed.");
+            Nav.NavigateTo($"/cases/{_document.CaseID}");
+        }
+        catch (ApiException ex)
+        {
+            Toast.Error("Couldn't delete document", ex.GetFullMessage());
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't delete document", "Please try again.");
+        }
+    }
 }

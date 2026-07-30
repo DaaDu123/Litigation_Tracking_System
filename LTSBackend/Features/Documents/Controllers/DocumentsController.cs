@@ -5,6 +5,7 @@ using LTSBackend.Features.Documents.Commands.DeleteDocument;
 using LTSBackend.Features.Documents.Commands.DownloadDocument;
 using LTSBackend.Features.Documents.Commands.UploadDocument;
 using LTSBackend.Features.Documents.DTOs;
+using LTSBackend.Features.Documents.Queries.GetCaseDocuments;
 using LTSBackend.Features.Documents.Queries.GetDocument;
 using LTSBackend.Models.Security;
 using MediatR;
@@ -115,6 +116,28 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             _logger.LogError(ex, "Document upload failed");
             return BadRequest(ApiResponse<bool>.FailureResponse($"Upload failed: {ex.Message}"));
         }
+    }
+
+    // =====================================================
+    // GET CASE DOCUMENTS (LIST)
+    // =====================================================
+    /// <summary>
+    /// List all latest-version documents attached to a case, filtered to
+    /// only what the requesting user is permitted to view (a restricted-mode
+    /// Moharrir's own blind uploads are correctly excluded here too).
+    /// SRS Reference: Case_SRS Section 4 "Document Management" - "Centralized document repository"
+    /// </summary>
+    [HttpGet("case/{caseId}")]
+    public async Task<IActionResult> GetCaseDocuments(long caseId)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
+        }
+
+        var result = await _mediator.Send(new GetCaseDocumentsQuery(caseId) { UserID = userId });
+        return Ok(ApiResponse<List<DocumentDetailDTO>>.SuccessResponse(result, "Case documents fetched"));
     }
 
     // =====================================================

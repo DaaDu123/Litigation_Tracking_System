@@ -1,8 +1,15 @@
 @page "/cases/{CaseId:long}"
 @*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
 @using LTSFrontend.Core.Exceptions
+@using LTSFrontend.Features.CaseAssignments.Components
+@using LTSFrontend.Features.CaseNotes.Components
+@using LTSFrontend.Features.CaseParties.Components
 @using LTSFrontend.Features.Cases.Models
 @using LTSFrontend.Features.Cases.Services
+@using LTSFrontend.Features.Deadlines.Components
+@using LTSFrontend.Features.Documents.Components
+@using LTSFrontend.Features.Hearings.Components
+@using LTSFrontend.Features.Milestones.Components
 @using LTSFrontend.Shared.Components
 @using LTSFrontend.State
 @using Microsoft.AspNetCore.Authorization
@@ -101,59 +108,119 @@ else
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-lg-7">
-            <div class="lts-card">
-                <h6 class="fw-semibold mb-3">Case Information</h6>
-                <dl class="mb-0">
-                    <div class="lts-detail-row"><dt>Court</dt><dd>@_case.CourtName</dd></div>
-                    <div class="lts-detail-row"><dt>Category</dt><dd>@_case.CategoryName</dd></div>
-                    <div class="lts-detail-row"><dt>Department</dt><dd>@_case.DepartmentName</dd></div>
-                    <div class="lts-detail-row"><dt>Subject Matter</dt><dd>@_case.SubjectMatter</dd></div>
-                    <div class="lts-detail-row">
-                        <dt>Description</dt>
-                        <dd>@(string.IsNullOrWhiteSpace(_case.CaseDescription) ? "-" : _case.CaseDescription)</dd>
-                    </div>
-                </dl>
-            </div>
-
-            <div class="lts-card mt-3">
-                <h6 class="fw-semibold mb-3">Important Dates</h6>
-                <dl class="mb-0">
-                    <div class="lts-detail-row"><dt>Filing Date</dt><dd>@_case.FilingDate.ToString("dd MMM yyyy")</dd></div>
-                    <div class="lts-detail-row"><dt>Institution Date</dt><dd>@_case.InstitutionDate.ToString("dd MMM yyyy")</dd></div>
-                    <div class="lts-detail-row"><dt>Registration Date</dt><dd>@_case.RegistrationDate.ToString("dd MMM yyyy")</dd></div>
-                    <div class="lts-detail-row">
-                        <dt>Expected Disposal</dt>
-                        <dd>@(_case.ExpectedDisposalDate?.ToString("dd MMM yyyy") ?? "-")</dd>
-                    </div>
-                    <div class="lts-detail-row"><dt>Created On</dt><dd>@_case.CreatedDate.ToString("dd MMM yyyy")</dd></div>
-                </dl>
-            </div>
-        </div>
-
-        <div class="col-lg-5">
-            <div class="lts-card">
-                <h6 class="fw-semibold mb-3">Financial Information</h6>
-                <dl class="mb-0">
-                    <div class="lts-detail-row"><dt>Claimed Amount</dt><dd>@_case.ClaimedAmount.ToString("N0")</dd></div>
-                    <div class="lts-detail-row"><dt>Potential Liability</dt><dd>@_case.PotentialLiability.ToString("N0")</dd></div>
-                </dl>
-            </div>
-
-            <div class="lts-card mt-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <h6 class="fw-semibold mb-0">Hearings &amp; Deadlines</h6>
-                </div>
-                <div class="lts-state" style="padding: 1.5rem 0.5rem;">
-                    <div class="lts-state-icon"><i class="bi bi-calendar-event"></i></div>
-                    <div class="lts-state-desc" style="margin-top:0;">
-                        Hearing scheduling and deadline tracking for this case will appear here once those modules are built.
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="lts-tabs mb-3">
+        <button class="lts-tab @(_activeTab == "overview" ? "active" : "")" @onclick='() => _activeTab = "overview"'>
+            <i class="bi bi-info-circle"></i> Overview
+        </button>
+        <button class="lts-tab @(_activeTab == "assignments" ? "active" : "")" @onclick='() => _activeTab = "assignments"'>
+            <i class="bi bi-person-badge"></i> Assignments
+        </button>
+        <button class="lts-tab @(_activeTab == "notes" ? "active" : "")" @onclick='() => _activeTab = "notes"'>
+            <i class="bi bi-journal-text"></i> Notes
+        </button>
+        <button class="lts-tab @(_activeTab == "parties" ? "active" : "")" @onclick='() => _activeTab = "parties"'>
+            <i class="bi bi-people"></i> Parties
+        </button>
+        <button class="lts-tab @(_activeTab == "documents" ? "active" : "")" @onclick='() => _activeTab = "documents"'>
+            <i class="bi bi-folder2-open"></i> Documents
+        </button>
+        <button class="lts-tab @(_activeTab == "hearings" ? "active" : "")" @onclick='() => _activeTab = "hearings"'>
+            <i class="bi bi-calendar-event"></i> Hearings
+        </button>
+        <button class="lts-tab @(_activeTab == "deadlines" ? "active" : "")" @onclick='() => _activeTab = "deadlines"'>
+            <i class="bi bi-hourglass-split"></i> Deadlines
+        </button>
+        <button class="lts-tab @(_activeTab == "milestones" ? "active" : "")" @onclick='() => _activeTab = "milestones"'>
+            <i class="bi bi-flag"></i> Milestones
+        </button>
     </div>
+
+    @if (_activeTab == "overview")
+    {
+        <div class="row">
+            <div class="col-lg-7">
+                <div class="lts-card">
+                    <h6 class="fw-semibold mb-3">Case Information</h6>
+                    <dl class="mb-0">
+                        <div class="lts-detail-row"><dt>Court</dt><dd>@_case.CourtName</dd></div>
+                        <div class="lts-detail-row"><dt>Category</dt><dd>@_case.CategoryName</dd></div>
+                        <div class="lts-detail-row"><dt>Department</dt><dd>@_case.DepartmentName</dd></div>
+                        <div class="lts-detail-row"><dt>Subject Matter</dt><dd>@_case.SubjectMatter</dd></div>
+                        <div class="lts-detail-row">
+                            <dt>Description</dt>
+                            <dd>@(string.IsNullOrWhiteSpace(_case.CaseDescription) ? "-" : _case.CaseDescription)</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div class="lts-card mt-3">
+                    <h6 class="fw-semibold mb-3">Important Dates</h6>
+                    <dl class="mb-0">
+                        <div class="lts-detail-row"><dt>Filing Date</dt><dd>@_case.FilingDate.ToString("dd MMM yyyy")</dd></div>
+                        <div class="lts-detail-row"><dt>Institution Date</dt><dd>@_case.InstitutionDate.ToString("dd MMM yyyy")</dd></div>
+                        <div class="lts-detail-row"><dt>Registration Date</dt><dd>@_case.RegistrationDate.ToString("dd MMM yyyy")</dd></div>
+                        <div class="lts-detail-row">
+                            <dt>Expected Disposal</dt>
+                            <dd>@(_case.ExpectedDisposalDate?.ToString("dd MMM yyyy") ?? "-")</dd>
+                        </div>
+                        <div class="lts-detail-row"><dt>Created On</dt><dd>@_case.CreatedDate.ToString("dd MMM yyyy")</dd></div>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="lts-card">
+                    <h6 class="fw-semibold mb-3">Financial Information</h6>
+                    <dl class="mb-0">
+                        <div class="lts-detail-row"><dt>Claimed Amount</dt><dd>@_case.ClaimedAmount.ToString("N0")</dd></div>
+                        <div class="lts-detail-row"><dt>Potential Liability</dt><dd>@_case.PotentialLiability.ToString("N0")</dd></div>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    }
+    else if (_activeTab == "assignments")
+    {
+        <div class="lts-card">
+            <CaseAssignmentsPanel CaseId="@CaseId" />
+        </div>
+    }
+    else if (_activeTab == "notes")
+    {
+        <div class="lts-card">
+            <CaseNotesPanel CaseId="@CaseId" />
+        </div>
+    }
+    else if (_activeTab == "parties")
+    {
+        <div class="lts-card">
+            <CasePartiesPanel CaseId="@CaseId" />
+        </div>
+    }
+    else if (_activeTab == "documents")
+    {
+        <div class="lts-card">
+            <DocumentsPanel CaseId="@CaseId" />
+        </div>
+    }
+    else if (_activeTab == "hearings")
+    {
+        <div class="lts-card">
+            <HearingsPanel CaseId="@CaseId" />
+        </div>
+    }
+    else if (_activeTab == "deadlines")
+    {
+        <div class="lts-card">
+            <DeadlinesPanel CaseId="@CaseId" />
+        </div>
+    }
+    else if (_activeTab == "milestones")
+    {
+        <div class="lts-card">
+            <MilestonesPanel CaseId="@CaseId" />
+        </div>
+    }
 }
 
 <UpdateCaseStatus @ref="_statusModal" OnUpdated="HandleStatusUpdatedAsync" />
@@ -165,6 +232,7 @@ else
     private CaseDTO? _case;
     private bool _isLoading = true;
     private bool _notFound;
+    private string _activeTab = "overview";
 
     private UpdateCaseStatus _statusModal = default!;
     private ConfirmDialog _confirmDialog = default!;

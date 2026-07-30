@@ -1,6 +1,13 @@
-﻿namespace LTSFrontend.Features.Documents.Services
+using LTSFrontend.Features.Documents.Models;
+
+namespace LTSFrontend.Features.Documents.Services
 {
-    public class IDocumentService
+    public interface IDocumentService
     {
+        Task<List<DocumentDTO>> GetByCaseAsync(long caseId);
+        Task<DocumentDTO?> GetByIdAsync(long documentId);
+        Task<UploadDocumentResponseDTO> UploadAsync(UploadDocumentRequest request);
+        Task DownloadAsync(long documentId);
+        Task<bool> DeleteAsync(long documentId);
     }
 }

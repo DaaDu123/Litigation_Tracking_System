@@ -1,5 +1,68 @@
-﻿<h3>FileUploadBox</h3>
+@* Generic drag-and-select file picker box for document uploads (any file type).
+   Usage:
+     <FileUploadBox Accept=".pdf,.doc,.docx,.jpg,.png" MaxSizeBytes="52428800"
+                    FileSelected="OnFileSelected" /> *@
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="lts-upload-box">
+    <InputFile OnChange="HandleFileChangedAsync" accept="@Accept" disabled="@Disabled" class="lts-upload-input" />
+    <div class="lts-upload-box-content">
+        <i class="bi bi-cloud-arrow-up"></i>
+        @if (_selectedFile != null)
+        {
+            <div class="fw-semibold mt-2">@_selectedFile.Name</div>
+            <div class="text-muted small">@FormatSize(_selectedFile.Size)</div>
+        }
+        else
+        {
+            <div class="fw-semibold mt-2">Click or drop a file here</div>
+            <div class="text-muted small">@HintText</div>
+        }
+    </div>
+</div>
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="lts-form-error mt-1">@_errorMessage</div>
+}
 
 @code {
+    [Parameter] public string Accept { get; set; } = "";
+    [Parameter] public long MaxSizeBytes { get; set; } = 50 * 1024 * 1024;
+    [Parameter] public string HintText { get; set; } = "Up to 50 MB.";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<IBrowserFile?> FileSelected { get; set; }
 
+    private IBrowserFile? _selectedFile;
+    private string? _errorMessage;
+
+    private async Task HandleFileChangedAsync(InputFileChangeEventArgs e)
+    {
+        _errorMessage = null;
+        var file = e.File;
+
+        if (file == null)
+        {
+            _selectedFile = null;
+            await FileSelected.InvokeAsync(null);
+            return;
+        }
+
+        if (file.Size > MaxSizeBytes)
+        {
+            _errorMessage = $"File is too large. Maximum size is {MaxSizeBytes / (1024 * 1024)} MB.";
+            _selectedFile = null;
+            await FileSelected.InvokeAsync(null);
+            return;
+        }
+
+        _selectedFile = file;
+        await FileSelected.InvokeAsync(file);
+    }
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F2} KB",
+        _ => $"{bytes / (1024.0 * 1024):F2} MB"
+    };
 }

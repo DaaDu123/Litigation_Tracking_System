@@ -1,5 +1,179 @@
-﻿<h3>AllLoginHistory</h3>
+@page "/login-history"
+@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
+@using LTSFrontend.Core.Exceptions
+@using LTSFrontend.Features.LoginHistory.Components
+@using LTSFrontend.Features.LoginHistory.Models
+@using LTSFrontend.Features.LoginHistory.Services
+@using LTSFrontend.Shared.Components
+@using LTSFrontend.State
+@using Microsoft.AspNetCore.Authorization
+@inject ILoginHistoryService LoginHistoryService
+@inject ToastService Toast
+
+<PageTitle>Login History - LTS</PageTitle>
+
+<div class="lts-page-header">
+    <div>
+        <h1 class="lts-page-title">Login History</h1>
+        <p class="lts-page-subtitle">Sign-in activity across your firm.</p>
+    </div>
+    <div class="lts-page-header-actions">
+        <PermissionGate Roles="SuperAdmin">
+            <button class="lts-btn lts-btn-outline" @onclick="HandleCleanupAsync">
+                <i class="bi bi-trash3"></i> Clean Up Old Records
+            </button>
+        </PermissionGate>
+    </div>
+</div>
+
+<div class="lts-card p-0">
+    <div class="lts-toolbar" style="padding: 1rem 1.1rem 0;">
+        <div class="lts-toolbar-left">
+            <SearchBox @bind-Value="_search" @bind-Value:after="OnFilterChangedAsync" Placeholder="Search by name or email..." />
+
+            <select class="lts-select" @bind="_status" @bind:after="OnFilterChangedAsync">
+                <option value="">All Statuses</option>
+                <option value="Success">Success</option>
+                <option value="Failed">Failed</option>
+            </select>
+
+            <input type="date" class="lts-select" value="@(_fromDate?.ToString("yyyy-MM-dd"))" @onchange="OnFromDateChangedAsync" title="From date" />
+            <input type="date" class="lts-select" value="@(_toDate?.ToString("yyyy-MM-dd"))" @onchange="OnToDateChangedAsync" title="To date" />
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="lts-state" style="padding: 2rem;">
+            <span class="lts-spinner lts-spinner-md"></span>
+        </div>
+    }
+    else
+    {
+        <LoginHistoryTable Rows="_rows" ShowUser="true" ShowDelete="_canDelete" OnDelete="HandleDeleteAsync" />
+
+        <div style="padding: 0 1.1rem 1.1rem;">
+            <Pagination CurrentPage="_filter.PageNumber" TotalItems="_totalRecords" PageSize="_filter.PageSize" PageChanged="OnPageChangedAsync" />
+        </div>
+    }
+</div>
+
+<ConfirmDialog @ref="_confirmDialog" />
 
 @code {
+    private LoginHistoryFilterDTO _filter = new();
+    private List<LoginHistoryTable.LoginHistoryRow> _rows = new();
+    private int _totalRecords;
+    private bool _isLoading = true;
 
+    // Backend gates actual deletion via the separate "DeleteLoginHistory"
+    // permission (SRS note: intentionally not granted to FirmAdmin by
+    // default) - this only controls whether the button is shown.
+    private readonly bool _canDelete = true;
+
+    private string _search = string.Empty;
+    private string _status = string.Empty;
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
+
+    private ConfirmDialog _confirmDialog = default!;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var result = await LoginHistoryService.GetAllAsync(_filter);
+            _rows = result.Items.Select(LoginHistoryTable.LoginHistoryRow.From).ToList();
+            _totalRecords = result.TotalRecords;
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't load login history", "Please refresh and try again.");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnFilterChangedAsync()
+    {
+        _filter.Search = string.IsNullOrWhiteSpace(_search) ? null : _search;
+        _filter.Status = string.IsNullOrWhiteSpace(_status) ? null : _status;
+        _filter.PageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnFromDateChangedAsync(ChangeEventArgs e)
+    {
+        _fromDate = DateTime.TryParse(e.Value?.ToString(), out var dt) ? dt : null;
+        _filter.FromDate = _fromDate;
+        _filter.PageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnToDateChangedAsync(ChangeEventArgs e)
+    {
+        _toDate = DateTime.TryParse(e.Value?.ToString(), out var dt) ? dt.Date.AddDays(1).AddTicks(-1) : null;
+        _filter.ToDate = _toDate;
+        _filter.PageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _filter.PageNumber = page;
+        await LoadAsync();
+    }
+
+    private async Task HandleDeleteAsync(int loginId)
+    {
+        var confirmed = await _confirmDialog.ShowAsync(
+            "Delete this login history record?", "This cannot be undone.", "Delete", "danger");
+
+        if (!confirmed) return;
+
+        try
+        {
+            await LoginHistoryService.DeleteAsync(loginId);
+            await LoadAsync();
+            Toast.Success("Record deleted", "The login history record has been removed.");
+        }
+        catch (ApiException ex)
+        {
+            Toast.Error("Couldn't delete record", ex.GetFullMessage());
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't delete record", "Please try again.");
+        }
+    }
+
+    private async Task HandleCleanupAsync()
+    {
+        var confirmed = await _confirmDialog.ShowAsync(
+            "Clean up old login history?",
+            "This will permanently delete logged-out records older than 90 days.",
+            "Clean Up", "danger");
+
+        if (!confirmed) return;
+
+        try
+        {
+            var deleted = await LoginHistoryService.CleanupAsync(90);
+            await LoadAsync();
+            Toast.Success("Cleanup complete", $"{deleted} old record(s) deleted.");
+        }
+        catch (ApiException ex)
+        {
+            Toast.Error("Couldn't clean up records", ex.GetFullMessage());
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't clean up records", "Please try again.");
+        }
+    }
 }

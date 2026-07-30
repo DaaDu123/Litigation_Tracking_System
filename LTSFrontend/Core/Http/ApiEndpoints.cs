@@ -90,6 +90,93 @@
             public static string Status(long id) => $"{Root}/{id}/status";
         }
 
+        public static class CaseAssignments
+        {
+            private const string Root = Base + "/caseassignments";
+            public const string Base_ = Root;
+            public static string ByCase(long caseId) => $"{Root}/case/{caseId}";
+            public const string MyCases = Root + "/my-cases";
+            public static string ById(long id) => $"{Root}/{id}";
+            public static string End(long id) => $"{Root}/{id}/end";
+        }
+
+        public static class CaseNotes
+        {
+            private const string Root = Base + "/casenotes";
+            public const string Base_ = Root;
+            public static string ByCase(long caseId) => $"{Root}/case/{caseId}";
+            public static string ById(long id) => $"{Root}/{id}";
+        }
+
+        public static class CaseParties
+        {
+            public static string ByCase(long caseId) => $"{Base}/cases/{caseId}/parties";
+            public static string ById(long caseId, long partyId) => $"{Base}/cases/{caseId}/parties/{partyId}";
+        }
+
+        public static class Hearings
+        {
+            private const string Root = Base + "/hearings";
+            public const string Base_ = Root;
+            public static string ById(long id) => $"{Root}/{id}";
+            public const string Upcoming = Root + "/upcoming";
+            public static string ByCase(long caseId) => $"{Root}/case/{caseId}";
+            public static string Attendance(long hearingId) => $"{Root}/{hearingId}/attendance";
+            public static string AttendanceById(long hearingId, long attendanceId) => $"{Root}/{hearingId}/attendance/{attendanceId}";
+        }
+
+        public static class Deadlines
+        {
+            private const string Root = Base + "/deadlines";
+            public const string Base_ = Root;
+            public static string ById(long id) => $"{Root}/{id}";
+            public const string Upcoming = Root + "/upcoming";
+            public static string ByCase(long caseId) => $"{Root}/case/{caseId}";
+            public static string Complete(long id) => $"{Root}/{id}/complete";
+        }
+
+        public static class Milestones
+        {
+            private const string Root = Base + "/milestones";
+            public const string Base_ = Root;
+            public static string ById(long id) => $"{Root}/{id}";
+            public static string ByCase(long caseId) => $"{Root}/case/{caseId}";
+            public static string Complete(long id) => $"{Root}/{id}/complete";
+        }
+
+        public static class Documents
+        {
+            private const string Root = Base + "/documents";
+            public const string Upload = Root + "/upload";
+            public static string ById(long id) => $"{Root}/{id}";
+            public static string ByCase(long caseId) => $"{Root}/case/{caseId}";
+            public static string Download(long id) => $"{Root}/download/{id}";
+        }
+
+        public static class AuditLogs
+        {
+            public const string Base_ = Base + "/auditlogs";
+        }
+
+        public static class LoginHistory
+        {
+            private const string Root = Base + "/loginhistory";
+            public const string Base_ = Root;
+            public const string My = Root + "/my";
+            public static string ById(int id) => $"{Root}/{id}";
+            public static string Cleanup(int days) => $"{Root}/cleanup?days={days}";
+        }
+
+        public static class Firms
+        {
+            private const string Root = Base + "/firms";
+            public const string Base_ = Root;
+            public static string ById(int id) => $"{Root}/{id}";
+            public static string Block(int id) => $"{Root}/{id}/block";
+            public static string Unblock(int id) => $"{Root}/{id}/unblock";
+            public static string Export(int id) => $"{Root}/{id}/export";
+        }
+
         public static class Permissions
         {
             private const string Root = Base + "/permissions";

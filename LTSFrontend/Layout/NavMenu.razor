@@ -13,6 +13,21 @@
             <i class="bi bi-briefcase"></i> <span class="nav-label">Cases</span>
         </NavLink>
     </div>
+    <div class="nav-item px-3 nav-item-sub">
+        <NavLink class="nav-link" href="cases/my-assigned">
+            <i class="bi bi-person-check"></i> <span class="nav-label">My Assigned Cases</span>
+        </NavLink>
+    </div>
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="hearings">
+            <i class="bi bi-calendar-event"></i> <span class="nav-label">Hearings</span>
+        </NavLink>
+    </div>
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="deadlines">
+            <i class="bi bi-hourglass-split"></i> <span class="nav-label">Deadlines</span>
+        </NavLink>
+    </div>
 
     @* TEMP-DISABLED-FOR-TESTING <AuthorizeView Roles="Partner,FirmAdmin,SuperAdmin"> *@
         <div class="nav-item px-3">
@@ -23,6 +38,11 @@
     @* TEMP-DISABLED-FOR-TESTING </AuthorizeView> *@
 
     @* TEMP-DISABLED-FOR-TESTING <AuthorizeView Roles="SuperAdmin"> *@
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="firms">
+                <i class="bi bi-building"></i> <span class="nav-label">Firm Workspaces</span>
+            </NavLink>
+        </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="roles">
                 <i class="bi bi-shield-lock"></i> <span class="nav-label">Roles &amp; Permissions</span>
@@ -36,6 +56,16 @@
         <div class="nav-item px-3 nav-item-sub">
             <NavLink class="nav-link" href="permissions/matrix">
                 <i class="bi bi-grid-3x3"></i> <span class="nav-label">Permission Matrix</span>
+            </NavLink>
+        </div>
+        <div class="nav-item px-3 nav-item-sub">
+            <NavLink class="nav-link" href="audit-logs">
+                <i class="bi bi-journal-check"></i> <span class="nav-label">Audit Logs</span>
+            </NavLink>
+        </div>
+        <div class="nav-item px-3 nav-item-sub">
+            <NavLink class="nav-link" href="login-history">
+                <i class="bi bi-clock-history"></i> <span class="nav-label">Login History</span>
             </NavLink>
         </div>
     @* TEMP-DISABLED-FOR-TESTING </AuthorizeView> *@
@@ -81,6 +111,11 @@
     <div class="nav-item px-3">
         <NavLink class="nav-link" href="profile">
             <i class="bi bi-person-circle"></i> <span class="nav-label">My Profile</span>
+        </NavLink>
+    </div>
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="login-history/my">
+            <i class="bi bi-clock-history"></i> <span class="nav-label">My Login History</span>
         </NavLink>
     </div>
 </nav>
