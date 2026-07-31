@@ -7,7 +7,6 @@
 @using LTSFrontend.Features.Dashboard.Models
 @using LTSFrontend.Features.Dashboard.Services
 @using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject IDashboardService DashboardService
 @inject ICaseService CaseService
 @inject UserSessionState Session
@@ -34,11 +33,25 @@
 }
 else
 {
+    @*
+        _stats comes from FirmDashboardDTO: FirmWide scope (FirmAdmin/Partner)
+        or AssignedOnly scope (AssociateLawyer/Moharrir/InternParalegal) - the
+        backend decides which based on the signed-in user's own role, so this
+        one page renders correctly for either without the frontend needing to
+        know which. TotalFirmUsers is null under AssignedOnly scope (a lawyer's
+        dashboard has no business showing firm headcount), so that KPI hides
+        itself in that case.
+    *@
     <div class="lts-stat-grid">
         <KpiCard Title="Total Cases" Value="@_totalCases.ToString()" Icon="bi-briefcase" Accent="#1b4fd6" IsLoading="_isLoading" Href="/cases" />
         <KpiCard Title="High Priority" Value="@_highPriorityCount.ToString()" Icon="bi-exclamation-triangle" Accent="#dc2626" IsLoading="_isLoading" Href="/cases" />
-        <KpiCard Title="Firm Users" Value="@_stats?.TotalUsers.ToString()" Icon="bi-people" Accent="#16a34a" IsLoading="_isLoading" Href="/users" />
-        <KpiCard Title="Active Users" Value="@_stats?.ActiveUsers.ToString()" Icon="bi-person-check" Accent="#0891b2" IsLoading="_isLoading" Href="/users" />
+        <KpiCard Title="Upcoming Hearings (7d)" Value="@_stats?.UpcomingHearings7Days.ToString()" Icon="bi-calendar-event" Accent="#7c3aed" IsLoading="_isLoading" Href="/hearings" />
+        <KpiCard Title="Pending Deadlines" Value="@_stats?.PendingDeadlines.ToString()" Icon="bi-hourglass-split" Accent="#d97706" IsLoading="_isLoading" Href="/deadlines" />
+        <KpiCard Title="Overdue Deadlines" Value="@_stats?.OverdueDeadlines.ToString()" Icon="bi-exclamation-octagon" Accent="#dc2626" IsLoading="_isLoading" Href="/deadlines" />
+        @if (_stats?.TotalFirmUsers is not null)
+        {
+            <KpiCard Title="Firm Users" Value="@_stats.TotalFirmUsers?.ToString()" Icon="bi-people" Accent="#16a34a" IsLoading="_isLoading" Href="/users" />
+        }
     </div>
 
     <div class="lts-dashboard-grid">
@@ -51,15 +64,18 @@ else
         <div class="lts-quicklink-grid">
             <a class="lts-quicklink" href="/cases"><i class="bi bi-briefcase"></i> Cases</a>
             <a class="lts-quicklink" href="/cases/create"><i class="bi bi-plus-lg"></i> New Case</a>
-            <a class="lts-quicklink" href="/users"><i class="bi bi-people"></i> Users</a>
-            <a class="lts-quicklink" href="/masters"><i class="bi bi-diagram-3"></i> Master Data</a>
+            @if (_stats?.TotalFirmUsers is not null)
+            {
+                <a class="lts-quicklink" href="/users"><i class="bi bi-people"></i> Users</a>
+                <a class="lts-quicklink" href="/masters"><i class="bi bi-diagram-3"></i> Master Data</a>
+            }
             <a class="lts-quicklink" href="/profile"><i class="bi bi-person-circle"></i> My Profile</a>
         </div>
     </div>
 }
 
 @code {
-    private DashboardDTO? _stats;
+    private FirmDashboardDTO? _stats;
     private List<CaseDTO> _cases = new();
     private int _totalCases;
     private int _highPriorityCount;
@@ -79,7 +95,7 @@ else
         _errorMessage = null;
         try
         {
-            var statsTask = DashboardService.GetStatsAsync();
+            var statsTask = DashboardService.GetFirmStatsAsync();
             // NOTE: no dedicated case-aggregate endpoint exists yet, so we pull a
             // generous page (visibility is already firm/role-scoped server-side)
             // and compute the breakdown client-side. Good enough for a dashboard

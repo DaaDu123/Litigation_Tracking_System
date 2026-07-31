@@ -5,7 +5,6 @@
 @using LTSFrontend.Features.Dashboard.Models
 @using LTSFrontend.Features.Dashboard.Services
 @using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject IDashboardService DashboardService
 @inject UserSessionState Session
 
@@ -14,7 +13,7 @@
 <div class="lts-page-header">
     <div>
         <h1 class="lts-page-title">Admin Dashboard</h1>
-        <p class="lts-page-subtitle">Welcome back, @Session.FullName. Here's a system-wide snapshot.</p>
+        <p class="lts-page-subtitle">Welcome back, @Session.FullName. Here's a platform-wide snapshot.</p>
     </div>
 </div>
 
@@ -31,13 +30,21 @@
 }
 else
 {
+    @*
+        SuperAdmin is the platform owner, not a firm's day-to-day admin - this
+        dashboard is deliberately scoped to workspace/firm custody and
+        system-wide audit visibility only. No case, document, or firm-user
+        data appears here (that's the FirmAdmin/Partner dashboard at
+        /dashboard/management) - see FirmDashboardDTO / SuperAdminDashboardDTO.
+    *@
     <div class="lts-stat-grid">
-        <KpiCard Title="Total Users" Value="@_stats?.TotalUsers.ToString()" Icon="bi-people" Accent="#1b4fd6" IsLoading="_isLoading" Href="/users" />
-        <KpiCard Title="Active Users" Value="@_stats?.ActiveUsers.ToString()" Icon="bi-person-check" Accent="#16a34a" IsLoading="_isLoading" Href="/users" />
-        <KpiCard Title="Roles" Value="@_stats?.TotalRoles.ToString()" Icon="bi-shield-lock" Accent="#7c3aed" IsLoading="_isLoading" Href="/roles" />
-        <KpiCard Title="Permissions" Value="@_stats?.TotalPermissions.ToString()" Icon="bi-key" Accent="#d97706" IsLoading="_isLoading" Href="/permissions/matrix" />
-        <KpiCard Title="Audit Log Entries" Value="@_stats?.TotalAuditLogs.ToString()" Icon="bi-journal-text" Accent="#0891b2" IsLoading="_isLoading" />
-        <KpiCard Title="Active Sessions" Value="@_stats?.TotalRefreshTokens.ToString()" Icon="bi-clock-history" Accent="#dc2626" IsLoading="_isLoading" SubLabel="Non-expired login sessions" />
+        <KpiCard Title="Total Firms" Value="@_stats?.TotalFirms.ToString()" Icon="bi-building" Accent="#1b4fd6" IsLoading="_isLoading" Href="/firms" />
+        <KpiCard Title="Active Firms" Value="@_stats?.ActiveFirms.ToString()" Icon="bi-building-check" Accent="#16a34a" IsLoading="_isLoading" Href="/firms" />
+        <KpiCard Title="Blocked Firms" Value="@_stats?.BlockedFirms.ToString()" Icon="bi-building-slash" Accent="#dc2626" IsLoading="_isLoading" Href="/firms" />
+        <KpiCard Title="Pending Domain Migrations" Value="@_stats?.PendingDomainMigrations.ToString()" Icon="bi-globe" Accent="#7c3aed" IsLoading="_isLoading" Href="/firms" />
+        <KpiCard Title="Firm Admins" Value="@_stats?.TotalFirmAdmins.ToString()" Icon="bi-person-badge" Accent="#d97706" IsLoading="_isLoading" />
+        <KpiCard Title="System Audit Log Entries" Value="@_stats?.TotalSystemAuditLogs.ToString()" Icon="bi-journal-text" Accent="#0891b2" IsLoading="_isLoading" Href="/audit-logs" />
+        <KpiCard Title="Active Sessions" Value="@_stats?.TotalActiveSessions.ToString()" Icon="bi-clock-history" Accent="#0f766e" IsLoading="_isLoading" SubLabel="Non-expired login sessions, all firms" />
     </div>
 
     <div class="lts-dashboard-grid">
@@ -46,11 +53,9 @@ else
         <div class="lts-card">
             <div class="lts-chart-widget-title">Quick Links</div>
             <div class="lts-quicklink-grid">
-                <a class="lts-quicklink" href="/users"><i class="bi bi-people"></i> Users</a>
-                <a class="lts-quicklink" href="/roles"><i class="bi bi-shield-lock"></i> Roles</a>
-                <a class="lts-quicklink" href="/permissions/assign"><i class="bi bi-pencil-square"></i> Assign Permissions</a>
-                <a class="lts-quicklink" href="/masters"><i class="bi bi-diagram-3"></i> Master Data</a>
-                <a class="lts-quicklink" href="/cases"><i class="bi bi-briefcase"></i> Cases</a>
+                <a class="lts-quicklink" href="/firms"><i class="bi bi-building"></i> Firms</a>
+                <a class="lts-quicklink" href="/audit-logs"><i class="bi bi-journal-text"></i> Audit Logs</a>
+                <a class="lts-quicklink" href="/login-history"><i class="bi bi-clock-history"></i> Login History</a>
                 <a class="lts-quicklink" href="/profile"><i class="bi bi-person-circle"></i> My Profile</a>
             </div>
         </div>
@@ -58,7 +63,7 @@ else
 }
 
 @code {
-    private DashboardDTO? _stats;
+    private SuperAdminDashboardDTO? _stats;
     private List<ActivityItem> _activityItems = new();
     private bool _isLoading = true;
     private bool _hasError;
@@ -73,7 +78,7 @@ else
         _errorMessage = null;
         try
         {
-            _stats = await DashboardService.GetStatsAsync();
+            _stats = await DashboardService.GetSuperAdminStatsAsync();
             _activityItems = (_stats?.RecentActivities ?? new())
                 .Select(a => new ActivityItem
                 {
