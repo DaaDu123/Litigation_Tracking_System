@@ -19,7 +19,7 @@ public sealed class UpdateDocumentTypeHandler(AppDbContext _context, ICurrentUse
             throw new NotFoundException("Document type not found.");
         }
 
-        if (!_currentUser.IsSuperAdmin && type.FirmID != _currentUser.FirmID)
+        if (type.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Update denied: user {UserId} attempted to edit a global/other-firm document type {DocumentTypeID}", _currentUser.UserID, request.DocumentTypeID);
             throw new NotFoundException("Document type not found.");

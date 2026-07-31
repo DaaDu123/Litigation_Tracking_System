@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -28,13 +28,13 @@ namespace LTSBackend.Features.Hearings.Commands.UpdateHearing
                 .Include(h => h.Case)
                 .FirstOrDefaultAsync(h => h.HearingID == request.Hearing.HearingId, cancellationToken);
 
-            if (hearing == null || (!_currentUser.IsSuperAdmin && hearing.Case.FirmID != _currentUser.FirmID))
+            if (hearing == null || (hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException("Hearing not found");
 
             // SECURITY FIX (IDOR): controller allows RoleNames.AllLawyers
             // (includes AssociateLawyer/Moharrir), who must be scoped to
             // their assigned cases only.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

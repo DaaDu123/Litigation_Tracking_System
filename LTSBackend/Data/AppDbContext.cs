@@ -833,6 +833,7 @@ public class AppDbContext : DbContext
             new Permission { PermissionID = (int)PermissionEnum.DeleteCases, PermissionName = nameof(PermissionEnum.DeleteCases), Description = "Delete cases" },
             new Permission { PermissionID = (int)PermissionEnum.ViewLoginHistory, PermissionName = nameof(PermissionEnum.ViewLoginHistory), Description = "View this firm's own login history" },
             new Permission { PermissionID = (int)PermissionEnum.DeleteLoginHistory, PermissionName = nameof(PermissionEnum.DeleteLoginHistory), Description = "Delete/cleanup this firm's own login history records" },
+            new Permission { PermissionID = (int)PermissionEnum.ViewAuditLogs, PermissionName = nameof(PermissionEnum.ViewAuditLogs), Description = "View this firm's own audit trail" },
             new Permission { PermissionID = (int)PermissionEnum.UploadDocuments, PermissionName = nameof(PermissionEnum.UploadDocuments), Description = "Upload documents" },
 
             // Partner/Senior Lawyer Permissions
@@ -862,7 +863,10 @@ public class AppDbContext : DbContext
             // Intern/Paralegal Permissions
             new Permission { PermissionID = (int)PermissionEnum.ViewDocumentsReadOnly, PermissionName = nameof(PermissionEnum.ViewDocumentsReadOnly), Description = "View documents (read-only)" },
             new Permission { PermissionID = (int)PermissionEnum.DraftDocuments, PermissionName = nameof(PermissionEnum.DraftDocuments), Description = "Draft legal documents" },
-            new Permission { PermissionID = (int)PermissionEnum.PerformResearch, PermissionName = nameof(PermissionEnum.PerformResearch), Description = "Perform legal research" }
+            new Permission { PermissionID = (int)PermissionEnum.PerformResearch, PermissionName = nameof(PermissionEnum.PerformResearch), Description = "Perform legal research" },
+
+            // Cross-role: every role has its own dashboard
+            new Permission { PermissionID = (int)PermissionEnum.ViewDashboard, PermissionName = nameof(PermissionEnum.ViewDashboard), Description = "View one's own role-scoped dashboard" }
         );
     }
 
@@ -910,7 +914,14 @@ public class AppDbContext : DbContext
             // never existed anywhere in the seed data - see PermissionEnum.cs.
             // DeleteLoginHistory is intentionally NOT granted here (SuperAdmin
             // only) to keep this security-relevant audit trail tamper-resistant.
-            PermissionEnum.ViewLoginHistory);
+            PermissionEnum.ViewLoginHistory,
+            // BUG FIX: same gap as ViewLoginHistory above - AuditLogsController
+            // and DashboardController required these but neither was ever
+            // seeded, so only SuperAdmin (via the old blanket bypass) could
+            // reach them. Both are firm-scoped for FirmAdmin (see
+            // GetAuditLogsHandler / GetFirmDashboardHandler).
+            PermissionEnum.ViewAuditLogs,
+            PermissionEnum.ViewDashboard);
 
         Map(UserRole.Partner,
             PermissionEnum.ViewFirmCaseDirectory,
@@ -924,7 +935,8 @@ public class AppDbContext : DbContext
             PermissionEnum.DownloadDocuments,
             PermissionEnum.UploadDocuments,
             PermissionEnum.ApproveFilings,
-            PermissionEnum.ViewFirmAnalytics);
+            PermissionEnum.ViewFirmAnalytics,
+            PermissionEnum.ViewDashboard);
 
         Map(UserRole.AssociateLawyer,
             PermissionEnum.ViewAssignedCases,
@@ -932,17 +944,20 @@ public class AppDbContext : DbContext
             PermissionEnum.DownloadAssignedDocuments,
             PermissionEnum.AddCaseNotes,
             PermissionEnum.TrackDeadlines,
-            PermissionEnum.LogBillableHours);
+            PermissionEnum.LogBillableHours,
+            PermissionEnum.ViewDashboard);
 
         Map(UserRole.Moharrir,
             PermissionEnum.EnterCaseData,
             PermissionEnum.UploadCaseDocuments,
-            PermissionEnum.MaintainCaseRecords);
+            PermissionEnum.MaintainCaseRecords,
+            PermissionEnum.ViewDashboard);
 
         Map(UserRole.InternParalegal,
             PermissionEnum.ViewDocumentsReadOnly,
             PermissionEnum.DraftDocuments,
-            PermissionEnum.PerformResearch);
+            PermissionEnum.PerformResearch,
+            PermissionEnum.ViewDashboard);
 
         modelBuilder.Entity<RolePermission>().HasData(rolePermissions);
     }

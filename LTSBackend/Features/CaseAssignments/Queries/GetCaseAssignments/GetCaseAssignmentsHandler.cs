@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.CaseAssignments.DTOs;
 using LTSBackend.Services.CurrentUser;
@@ -12,7 +12,7 @@ namespace LTSBackend.Features.CaseAssignments.Queries.GetCaseAssignments
     {
         public async Task<List<CaseAssignmentDetailDTO>> Handle(GetCaseAssignmentsQuery request, CancellationToken cancellationToken)
         {
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
 
@@ -33,7 +33,6 @@ namespace LTSBackend.Features.CaseAssignments.Queries.GetCaseAssignments
                 .Where(a => a.CaseID == request.CaseID);
 
             // Multi-tenant isolation - don't leak another firm's assignments
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(a => a.Case.FirmID == _currentUser.FirmID);
 
             if (request.ActiveOnly)

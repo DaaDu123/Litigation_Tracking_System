@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -15,7 +15,7 @@ namespace LTSBackend.Features.Deadlines.Commands.DeleteDeadline
         {
             var deadline = await _context.Deadlines.Include(d => d.Case).FirstOrDefaultAsync(d => d.DeadlineID == request.DeadlineID, cancellationToken);
 
-            if (deadline == null || (!_currentUser.IsSuperAdmin && deadline.Case.FirmID != _currentUser.FirmID))
+            if (deadline == null || (deadline.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Deadline ID {request.DeadlineID} not found");
 
             int currentUserId = GetCurrentUserId();

@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Users.DTOs;
@@ -34,10 +34,7 @@ public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDTO
             .Where(x => x.IsActive && !x.IsDeleted && x.UserID == request.UserID);
 
         // Multi-tenancy: can't fetch a user outside your own firm.
-        if (!_currentUser.IsSuperAdmin)
-        {
             query = query.Where(x => x.FirmID == _currentUser.FirmID);
-        }
 
         var user = await query
             .Include(x => x.Role)

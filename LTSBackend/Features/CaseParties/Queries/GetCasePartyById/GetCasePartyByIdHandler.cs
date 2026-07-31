@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.CaseParties.DTOs;
 using LTSBackend.Services.CurrentUser;
@@ -16,14 +16,14 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCasePartyById
                 .Include(p => p.Case)
                 .FirstOrDefaultAsync(p => p.PartyID == request.PartyID, cancellationToken);
 
-            if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
+            if (party == null || (party.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Party ID {request.PartyID} not found");
 
             // SECURITY FIX (IDOR): see GetCasePartiesHandler for full rationale -
             // firm scoping alone let any firm user read any case's parties
             // regardless of assignment. 404 (not 403) to avoid disclosing the
             // party's existence to a user who shouldn't see it.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

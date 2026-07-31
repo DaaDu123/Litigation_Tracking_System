@@ -1,4 +1,4 @@
-﻿using LTSBackend.Data;
+using LTSBackend.Data;
 using LTSBackend.Features.CaseParties.DTOs;
 using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.Permissions;
@@ -21,7 +21,7 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCaseParties
             // visibility) or a user actually assigned to THIS case may see it -
             // mirrors the check already done in GetCaseAssignmentsHandler.
             // ================================================================
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
 
@@ -40,7 +40,6 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCaseParties
                 .Where(p => p.CaseID == request.CaseID);
 
             // Multi-tenant isolation
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(p => p.Case.FirmID == _currentUser.FirmID);
 
             return await query

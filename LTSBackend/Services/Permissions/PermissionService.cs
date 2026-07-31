@@ -6,6 +6,34 @@ namespace LTSBackend.Services.Permissions;
 
 public class PermissionService(AppDbContext _context, ILogger<PermissionService> _logger) : IPermissionService
 {
+    // ================================================
+    // Fixed, hard-coded permission set for SuperAdmin (the platform owner).
+    // Deliberately NOT "every permission" - see the Roles SRS: SuperAdmin's
+    // job is workspace provisioning, FirmAdmin account custody, data
+    // export/migration, and immutable system-wide audit logging. Anything
+    // that belongs to a firm's internal operation (cases, documents,
+    // hearings, master data, non-FirmAdmin user management) is intentionally
+    // excluded, even though these permission strings otherwise resemble
+    // "PermissionEnum" / [HasPermission("...")] names used elsewhere.
+    // ManageRoles/ManageSystemUsers are included because Role/RolePermission
+    // and the FirmAdmin account lifecycle are global, non-tenant-scoped
+    // concerns with no other legitimate owner - not because SuperAdmin is
+    // meant to have broad reach.
+    // ================================================
+    private static readonly HashSet<string> SuperAdminPermissions = new(StringComparer.Ordinal)
+    {
+        nameof(PermissionEnum.ManageFirms),          // Firm workspace provisioning/blocking/removal
+        nameof(PermissionEnum.ManageSystemUsers),     // Create/update/remove FirmAdmin accounts only
+        nameof(PermissionEnum.ManageDataMigration),   // Data export / domain migration
+        nameof(PermissionEnum.ViewSystemAuditLogs),   // System-wide audit visibility (all firms)
+        nameof(PermissionEnum.ViewAuditLogs),         // AuditLogsController policy name - unfiltered for SuperAdmin
+        nameof(PermissionEnum.ViewLoginHistory),      // Login-attempt audit trail, all firms
+        nameof(PermissionEnum.DeleteLoginHistory),    // Retention cleanup of login history (audit housekeeping)
+        nameof(PermissionEnum.ViewDashboard),         // SuperAdmin's own platform dashboard
+        "ManageRoles",                                // Global RBAC config - see RolesController for why
+    };
+
+
     // Checks whether a user holds a specific permission. Denies (returns false)
     // for missing/roleless/inactive/deleted/blocked-firm users, so a permission
     // check can never silently "pass" for an account that should not be able
@@ -58,12 +86,23 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
             }
 
             // ================================================
-            // 3. Super Admin implicitly holds every permission.
+            // 3. Super Admin holds ONLY the fixed platform-owner permission
+            //    set below - NOT every permission. Super Admin is scoped to:
+            //    workspace/firm provisioning, FirmAdmin account management,
+            //    system-wide audit/login-history visibility, the platform
+            //    dashboard, and (because Role/RolePermission are global,
+            //    non-tenant-scoped tables with no other legitimate owner -
+            //    see RolesController/PermissionsController) RBAC config.
+            //    Everything firm-internal (cases, documents, hearings,
+            //    master data, firm-level user management) is explicitly
+            //    OUT of scope and falls through to "denied" below, same as
+            //    any other role that lacks the permission.
             // ================================================
             if (user.GetRole() == UserRole.SuperAdmin)
             {
-                _logger.LogDebug("Super Admin - all permissions granted for user {UserId}", userId);
-                return true;
+                bool superAdminAllowed = SuperAdminPermissions.Contains(permission);
+                _logger.LogDebug("Super Admin permission check for {Permission}: {Result}", permission, superAdminAllowed);
+                return superAdminAllowed;
             }
 
             // ================================================
@@ -101,10 +140,11 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
                 return [];
             }
 
-            // Super Admin - every permission that exists.
+            // Super Admin - the fixed platform-owner set only (not every
+            // permission - see SuperAdminPermissions above).
             if (user.GetRole() == UserRole.SuperAdmin)
             {
-                return Enum.GetNames(typeof(PermissionEnum)).ToList();
+                return SuperAdminPermissions.OrderBy(x => x).ToList();
             }
 
             // Otherwise, the role's granted permissions.
@@ -183,15 +223,14 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
         }
     }
 
-    // SRS "View Firm Case Directory": SuperAdmin always sees everything;
-    // otherwise this is a plain permission check against ViewFirmCaseDirectory
-    // (granted to FirmAdmin and Partner in SeedRolePermissions).
+    // SRS "View Firm Case Directory": a plain permission check against
+    // ViewFirmCaseDirectory (granted to FirmAdmin and Partner in
+    // SeedRolePermissions). SuperAdmin is deliberately NOT special-cased
+    // here anymore - case data is firm-internal business, out of scope for
+    // the platform owner - so this now falls through to the same
+    // permission check as everyone else, which correctly denies SuperAdmin.
     public async Task<bool> HasFullCaseDirectoryVisibilityAsync(int userId, CancellationToken cancellationToken = default)
     {
-        var role = await GetUserRoleAsync(userId, cancellationToken);
-        if (role == UserRole.SuperAdmin)
-            return true;
-
         return await HasPermissionAsync(userId, nameof(PermissionEnum.ViewFirmCaseDirectory), cancellationToken);
     }
 

@@ -1,4 +1,4 @@
-﻿using LTSBackend.Data;
+using LTSBackend.Data;
 using LTSBackend.Features.Deadlines.DTOs;
 using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.Permissions;
@@ -14,7 +14,7 @@ namespace LTSBackend.Features.Deadlines.Queries.GetCaseDeadlines
             // SECURITY FIX (IDOR): firm scoping alone let any firm user - including
             // AssociateLawyer/Moharrir/InternParalegal - read deadlines for a case
             // they aren't assigned to. Mirrors GetCaseAssignmentsHandler.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)
@@ -28,7 +28,6 @@ namespace LTSBackend.Features.Deadlines.Queries.GetCaseDeadlines
             var query = _context.Deadlines.AsNoTracking().Where(d => d.CaseID == request.CaseID);
 
             // Multi-tenant isolation
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(d => d.Case.FirmID == _currentUser.FirmID);
 
             if (request.Completed.HasValue)

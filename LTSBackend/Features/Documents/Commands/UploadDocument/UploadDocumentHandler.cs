@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
@@ -56,7 +56,7 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         // ================================================
         var caseRecord = await _context.Cases.AsNoTracking().FirstOrDefaultAsync(x => x.CaseID == request.CaseID, cancellationToken);
 
-        if (caseRecord == null || (!_currentUser.IsSuperAdmin && caseRecord.FirmID != _currentUser.FirmID))
+        if (caseRecord == null || (caseRecord.FirmID != _currentUser.FirmID))
         {
             _logger.LogWarning("Upload failed: Case not found or cross-firm access blocked {CaseId}", request.CaseID);
             throw new NotFoundException($"Case {request.CaseID} not found");

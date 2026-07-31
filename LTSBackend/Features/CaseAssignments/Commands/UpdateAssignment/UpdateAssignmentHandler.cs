@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -20,7 +20,7 @@ namespace LTSBackend.Features.CaseAssignments.Commands.UpdateAssignment
                 .Include(a => a.Case)
                 .FirstOrDefaultAsync(a => a.AssignmentID == request.Assignment.AssignmentID, cancellationToken);
 
-            if (assignment == null || (!_currentUser.IsSuperAdmin && assignment.Case.FirmID != _currentUser.FirmID))
+            if (assignment == null || (assignment.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Assignment ID {request.Assignment.AssignmentID} not found");
 
             if (assignment.EndDate != null)

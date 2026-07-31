@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
@@ -23,10 +23,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         // 1. Find Case (firm-scoped - can't touch another firm's case)
         // ================================================
         var caseQuery = _context.Cases.Where(x => x.CaseID == request.CaseID);
-        if (!_currentUser.IsSuperAdmin)
-        {
             caseQuery = caseQuery.Where(x => x.FirmID == _currentUser.FirmID);
-        }
         var caseToUpdate = await caseQuery.FirstOrDefaultAsync(cancellationToken);
 
         if (caseToUpdate == null)

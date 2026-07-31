@@ -1,4 +1,4 @@
-﻿using LTSBackend.Data;
+using LTSBackend.Data;
 using LTSBackend.Features.CaseNotes.DTOs;
 using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.Permissions;
@@ -26,7 +26,7 @@ namespace LTSBackend.Features.CaseNotes.Queries.GetCaseNotes
             // below) for a case they are not assigned to. Mirrors the check
             // already used in GetCaseAssignmentsHandler.
             // ================================================================
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)
@@ -47,7 +47,6 @@ namespace LTSBackend.Features.CaseNotes.Queries.GetCaseNotes
                 .Where(n => n.CaseID == request.CaseID);
 
             // Multi-tenant isolation - don't leak another firm's case notes
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(n => n.Case.FirmID == _currentUser.FirmID);
 
             var notes = await query

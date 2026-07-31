@@ -30,11 +30,9 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
             .Include(x => x.LegalOfficer)
             .AsQueryable();
 
-        // Multi-tenancy: everyone except SuperAdmin only sees their own firm's cases.
-        if (!_currentUser.IsSuperAdmin)
-        {
+        // Multi-tenancy: firm-scoped. SuperAdmin cannot reach this endpoint at all
+        // (route-level [Authorize] excludes it - case data is FirmAdmin's job).
             query = query.Where(x => x.FirmID == _currentUser.FirmID);
-        }
 
         // ================================================
         // 1b. SECURITY FIX (BOLA): firm-scoping above is necessary but not
@@ -46,7 +44,7 @@ public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _curr
         //     the firm to every role. We scope the query itself (rather
         //     than filtering in memory) so pagination/counts stay correct.
         // ================================================
-        if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+        if (_currentUser.UserID.HasValue)
         {
             bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
 

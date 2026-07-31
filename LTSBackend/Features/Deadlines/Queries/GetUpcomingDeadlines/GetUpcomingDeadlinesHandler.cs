@@ -1,4 +1,4 @@
-﻿using LTSBackend.Data;
+using LTSBackend.Data;
 using LTSBackend.Features.Deadlines.DTOs;
 using LTSBackend.Services.CurrentUser;
 using MediatR;
@@ -15,7 +15,6 @@ namespace LTSBackend.Features.Deadlines.Queries.GetUpcomingDeadlines
             var query = _context.Deadlines.AsNoTracking().Include(d => d.Case).Where(d => !d.Completed);
 
             // FIX: previously this leaked EVERY firm's upcoming deadlines to any logged-in user
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(d => d.Case.FirmID == _currentUser.FirmID);
 
             var deadlines = await query.OrderBy(d => d.DueDate).ToListAsync(cancellationToken);

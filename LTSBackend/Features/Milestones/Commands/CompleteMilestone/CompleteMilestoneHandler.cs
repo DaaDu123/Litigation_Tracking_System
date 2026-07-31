@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -22,11 +22,11 @@ namespace LTSBackend.Features.Milestones.Commands.CompleteMilestone
                 .Include(m => m.Case)
                 .FirstOrDefaultAsync(m => m.MilestoneID == request.MilestoneID, cancellationToken);
 
-            if (milestone == null || (!_currentUser.IsSuperAdmin && milestone.Case.FirmID != _currentUser.FirmID))
+            if (milestone == null || (milestone.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Milestone ID {request.MilestoneID} not found");
 
             // SECURITY FIX (IDOR): see CreateMilestoneHandler for rationale.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

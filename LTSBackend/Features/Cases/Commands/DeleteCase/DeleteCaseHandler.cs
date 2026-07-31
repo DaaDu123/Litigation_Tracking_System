@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
@@ -21,10 +21,7 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
         // 1. Find Case (firm-scoped)
         // ================================================
         var caseQuery = _context.Cases.Where(x => x.CaseID == request.CaseID);
-        if (!_currentUser.IsSuperAdmin)
-        {
             caseQuery = caseQuery.Where(x => x.FirmID == _currentUser.FirmID);
-        }
         var caseToDelete = await caseQuery.FirstOrDefaultAsync(cancellationToken);
 
         if (caseToDelete == null)

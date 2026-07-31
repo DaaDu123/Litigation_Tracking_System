@@ -57,12 +57,16 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
             var role = user.GetRole();
             // ================================================
-            // 3. Super Admin has full access system-wide (no firm scope).
+            // 3. Super Admin has NO document access. Documents are
+            //    firm-internal case material, entirely out of scope for the
+            //    platform owner (see the Roles SRS: SuperAdmin does not
+            //    view/upload/delete any document - that's FirmAdmin's job).
+            //    Deny explicitly rather than falling through.
             // ================================================
             if (role == UserRole.SuperAdmin)
             {
-                _logger.LogDebug("Super Admin - full access to document {DocumentId} action {Action}", documentId, action);
-                return true;
+                _logger.LogWarning("Document access denied - SuperAdmin has no document access by design: {UserId}", userId);
+                return false;
             }
 
             // ================================================
@@ -180,8 +184,13 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
             var role = user.GetRole();
 
+            // Super Admin cannot upload to any case - documents are
+            // firm-internal, out of scope for the platform owner.
             if (role == UserRole.SuperAdmin)
-                return true;
+            {
+                _logger.LogWarning("Upload denied - SuperAdmin has no document access by design: {UserId}", userId);
+                return false;
+            }
 
             // Multi-tenant isolation: the case must belong to the user's own firm.
             var caseFirmId = await _context.Cases
@@ -396,7 +405,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
             return role switch
             {
-                UserRole.SuperAdmin => DocumentAccessLevel.FullAccess,
+                UserRole.SuperAdmin => DocumentAccessLevel.None,
                 UserRole.FirmAdmin => DocumentAccessLevel.FullAccess,
                 UserRole.Partner => DocumentAccessLevel.FullAccess,
                 UserRole.AssociateLawyer => DocumentAccessLevel.ReadWrite,

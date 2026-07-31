@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
@@ -24,13 +24,13 @@ namespace LTSBackend.Features.Hearings.Commands.RecordAttendance
                 .Include(h => h.Case)
                 .FirstOrDefaultAsync(h => h.HearingID == request.Attendance.HearingId, cancellationToken);
 
-            if (hearing == null || (!_currentUser.IsSuperAdmin && hearing.Case.FirmID != _currentUser.FirmID))
+            if (hearing == null || (hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Hearing ID {request.Attendance.HearingId} not found");
 
             // SECURITY FIX (IDOR): controller allows RoleNames.AllFirmUsers
             // (includes AssociateLawyer/Moharrir/InternParalegal), who must be
             // scoped to their assigned cases only.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

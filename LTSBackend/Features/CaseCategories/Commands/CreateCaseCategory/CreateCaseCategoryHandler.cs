@@ -26,7 +26,7 @@ public sealed class CreateCaseCategoryHandler(AppDbContext _context, ICurrentUse
         // SuperAdmin creates a system-wide global category (FirmID null). FirmAdmin creates one scoped to their own firm.
         var category = new CaseCategory
         {
-            FirmID = _currentUser.IsSuperAdmin ? null : _currentUser.FirmID,
+            FirmID = _currentUser.FirmID,
             CategoryName = request.CategoryName,
             Description = request.Description,
             IsActive = request.IsActive

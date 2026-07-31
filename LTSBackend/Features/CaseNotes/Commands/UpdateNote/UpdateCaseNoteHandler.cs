@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -21,7 +21,7 @@ namespace LTSBackend.Features.CaseNotes.Commands.UpdateNote
                 .Include(n => n.Case)
                 .FirstOrDefaultAsync(n => n.NoteID == request.Note.NoteID, cancellationToken);
 
-            if (note == null || (!_currentUser.IsSuperAdmin && note.Case.FirmID != _currentUser.FirmID))
+            if (note == null || (note.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Note ID {request.Note.NoteID} not found");
 
             int currentUserId = GetCurrentUserId();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,7 +29,6 @@ namespace LTSBackend.Features.Hearings.Queries.GetUpcomingHearings
                 .Where(h => h.HearingDate >= DateTime.UtcNow);
 
             // FIX: previously this leaked EVERY firm's upcoming hearings to any logged-in user
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(h => h.Case.FirmID == _currentUser.FirmID);
 
             if (request.CaseId.HasValue)

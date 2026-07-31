@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -17,7 +17,7 @@ namespace LTSBackend.Features.Milestones.Commands.DeleteMilestone
                 .Include(m => m.Case)
                 .FirstOrDefaultAsync(m => m.MilestoneID == request.MilestoneID, cancellationToken);
 
-            if (milestone == null || (!_currentUser.IsSuperAdmin && milestone.Case.FirmID != _currentUser.FirmID))
+            if (milestone == null || (milestone.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Milestone ID {request.MilestoneID} not found");
 
             int currentUserId = GetCurrentUserId();

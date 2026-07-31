@@ -70,6 +70,18 @@ public enum PermissionEnum
     /// </summary>
     DeleteLoginHistory = 207,
 
+    /// <summary>
+    /// View this firm's own audit trail (AuditLogsController). BUG FIX:
+    /// same class of gap as ViewLoginHistory above - [HasPermission("ViewAuditLogs")]
+    /// existed on the controller but this permission was never seeded to
+    /// any role, so only SuperAdmin (via the old blanket bypass) could ever
+    /// view audit logs. GetAuditLogsHandler already scopes non-SuperAdmin
+    /// callers to their own firm's users, so this is safe to grant to
+    /// FirmAdmin (SRS §5.10.7 "System Administrator Interface" - Audit Logs
+    /// panel - which per-firm maps to FirmAdmin, not the platform SuperAdmin).
+    /// </summary>
+    ViewAuditLogs = 208,
+
     // ===== PARTNER / SENIOR LAWYER =====
     /// <summary>
     /// View firm-wide case portfolio
@@ -182,5 +194,18 @@ public enum PermissionEnum
     /// <summary>
     /// Assist with research
     /// </summary>
-    PerformResearch = 603
+    PerformResearch = 603,
+
+    // ===== CROSS-ROLE (every authenticated role has its own dashboard) =====
+    /// <summary>
+    /// View one's own role-scoped dashboard (DashboardController). BUG FIX:
+    /// same gap as ViewLoginHistory/ViewAuditLogs above - this permission
+    /// was never seeded to any role, so only SuperAdmin (via the old
+    /// blanket bypass) could ever load a dashboard. Every role gets this -
+    /// GetSuperAdminDashboardHandler / GetFirmDashboardHandler each return a
+    /// different, role-appropriate DTO shape, so granting the permission
+    /// broadly does NOT mean everyone sees the same data (Roles SRS: "no
+    /// one can use or view another role's dashboard").
+    /// </summary>
+    ViewDashboard = 701
 }

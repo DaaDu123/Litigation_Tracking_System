@@ -1,4 +1,4 @@
-﻿using LTSBackend.Data;
+using LTSBackend.Data;
 using LTSBackend.Features.Users.DTOs;
 using LTSBackend.Features.Users.Queries.GetAllUsers;
 using LTSBackend.Services.CurrentUser;
@@ -16,11 +16,9 @@ public class GetAllUsersQueryHandler(AppDbContext _context,ICurrentUserService _
 
         var query = _context.Users.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted);
 
-        // Multi-tenancy: everyone except SuperAdmin only sees their own firm's users.
-        if (!_currentUser.IsSuperAdmin)
-        {
+        // Multi-tenancy: firm-scoped. SuperAdmin cannot reach this endpoint at all
+        // (route-level [Authorize] excludes it - user directory is FirmAdmin's job).
             query = query.Where(x => x.FirmID == _currentUser.FirmID);
-        }
 
         var users = await query
             .Include(x => x.Role)

@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -17,7 +17,7 @@ namespace LTSBackend.Features.CaseParties.Commands.DeleteCaseParty
                 .Include(p => p.Case)
                 .FirstOrDefaultAsync(p => p.PartyID == request.PartyID, cancellationToken);
 
-            if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
+            if (party == null || (party.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Party ID {request.PartyID} not found");
 
             int currentUserId = GetCurrentUserId();

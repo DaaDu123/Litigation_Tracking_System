@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -19,11 +19,11 @@ namespace LTSBackend.Features.Hearings.Commands.UpdateAttendance
                 .Include(a => a.Hearing).ThenInclude(h => h.Case)
                 .FirstOrDefaultAsync(a => a.AttendanceID == request.AttendanceId, cancellationToken);
 
-            if (attendance == null || (!_currentUser.IsSuperAdmin && attendance.Hearing.Case.FirmID != _currentUser.FirmID))
+            if (attendance == null || (attendance.Hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Attendance ID {request.AttendanceId} not found");
 
             // SECURITY FIX (IDOR): see RecordAttendanceHandler for rationale.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

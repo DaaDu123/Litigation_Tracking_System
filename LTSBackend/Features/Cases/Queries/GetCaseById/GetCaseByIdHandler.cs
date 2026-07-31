@@ -27,10 +27,7 @@ public class GetCaseByIdHandler(AppDbContext _context, ICurrentUserService _curr
             .Include(x => x.LegalOfficer)
             .Where(x => x.CaseID == request.CaseID);
 
-        if (!_currentUser.IsSuperAdmin)
-        {
             query = query.Where(x => x.FirmID == _currentUser.FirmID);
-        }
 
         var caseRecord = await query.FirstOrDefaultAsync(cancellationToken);
 
@@ -52,7 +49,7 @@ public class GetCaseByIdHandler(AppDbContext _context, ICurrentUserService _curr
         //     the CaseID. We return 404 (not 403) so an unassigned case's
         //     existence isn't disclosed to a user who shouldn't see it.
         // ================================================
-        if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+        if (_currentUser.UserID.HasValue)
         {
             bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
 

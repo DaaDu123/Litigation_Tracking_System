@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -22,11 +22,11 @@ namespace LTSBackend.Features.Deadlines.Commands.CompleteDeadline
                 .Include(d => d.Case)
                 .FirstOrDefaultAsync(d => d.DeadlineID == request.DeadlineID, cancellationToken);
 
-            if (deadline == null || (!_currentUser.IsSuperAdmin && deadline.Case.FirmID != _currentUser.FirmID))
+            if (deadline == null || (deadline.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Deadline ID {request.DeadlineID} not found");
 
             // SECURITY FIX (IDOR): see CreateDeadlineHandler for rationale.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

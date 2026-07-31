@@ -34,7 +34,7 @@ public sealed class UpdateDepartmentHandler(AppDbContext _context, ICurrentUserS
         // 1b. Ownership check: a FirmAdmin may edit only their OWN firm's
         //     custom department - never a system-wide global department.
         // ================================================
-        if (!_currentUser.IsSuperAdmin && department.FirmID != _currentUser.FirmID)
+        if (department.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Update denied: user {UserId} attempted to edit a global/other-firm department {DepartmentID}", _currentUser.UserID, request.DepartmentID);
             throw new NotFoundException("Department not found.");

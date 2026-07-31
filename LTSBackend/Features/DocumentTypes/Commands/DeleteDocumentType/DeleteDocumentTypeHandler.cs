@@ -17,7 +17,7 @@ public sealed class DeleteDocumentTypeHandler(AppDbContext _context, ICurrentUse
             throw new NotFoundException("Document type not found.");
         }
 
-        if (!_currentUser.IsSuperAdmin && type.FirmID != _currentUser.FirmID)
+        if (type.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Delete denied: user {UserId} attempted to delete a global/other-firm document type {DocumentTypeID}", _currentUser.UserID, request.DocumentTypeID);
             throw new NotFoundException("Document type not found.");

@@ -17,7 +17,7 @@ public sealed class DeleteCaseStatusHandler(AppDbContext _context, ICurrentUserS
             throw new NotFoundException("Case status not found.");
         }
 
-        if (!_currentUser.IsSuperAdmin && status.FirmID != _currentUser.FirmID)
+        if (status.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Delete denied: user {UserId} attempted to delete a global/other-firm status {StatusID}", _currentUser.UserID, request.StatusID);
             throw new NotFoundException("Case status not found.");

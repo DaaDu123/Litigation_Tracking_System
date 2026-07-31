@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -15,7 +15,7 @@ namespace LTSBackend.Features.Hearings.Commands.DeleteHearing
         {
             var hearing = await _context.Hearings.Include(h => h.Case).FirstOrDefaultAsync(h => h.HearingID == request.HearingId, cancellationToken);
 
-            if (hearing == null || (!_currentUser.IsSuperAdmin && hearing.Case.FirmID != _currentUser.FirmID))
+            if (hearing == null || (hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException("Hearing not found");
 
             // Delete associated attendance records first

@@ -1,4 +1,4 @@
-﻿using LTSBackend.Data;
+using LTSBackend.Data;
 using LTSBackend.Features.Hearings.DTOs;
 using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.Permissions;
@@ -12,7 +12,7 @@ namespace LTSBackend.Features.Hearings.Queries.GetHearingAttendance
         public async Task<List<HearingAttendanceDTO>> Handle(GetHearingAttendanceQuery request, CancellationToken cancellationToken)
         {
             // SECURITY FIX (IDOR): see RecordAttendanceHandler for rationale.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)
@@ -29,7 +29,6 @@ namespace LTSBackend.Features.Hearings.Queries.GetHearingAttendance
                 .Include(a => a.Hearing)
                 .Where(a => a.HearingID == request.HearingId);
 
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(a => a.Hearing.Case.FirmID == _currentUser.FirmID);
 
             return await query.Select(a => new HearingAttendanceDTO

@@ -22,7 +22,7 @@ public sealed class CreateCaseStatusHandler(AppDbContext _context, ICurrentUserS
 
         var status = new CaseStatus
         {
-            FirmID = _currentUser.IsSuperAdmin ? null : _currentUser.FirmID,
+            FirmID = _currentUser.FirmID,
             StatusName = request.StatusName,
             SequenceNo = request.SequenceNo,
             ColorCode = request.ColorCode,

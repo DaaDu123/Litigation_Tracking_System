@@ -17,7 +17,7 @@ public sealed class DeleteCaseStageHandler(AppDbContext _context, ICurrentUserSe
             throw new NotFoundException("Case stage not found.");
         }
 
-        if (!_currentUser.IsSuperAdmin && stage.FirmID != _currentUser.FirmID)
+        if (stage.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Delete denied: user {UserId} attempted to delete a global/other-firm stage {StageID}", _currentUser.UserID, request.StageID);
             throw new NotFoundException("Case stage not found.");

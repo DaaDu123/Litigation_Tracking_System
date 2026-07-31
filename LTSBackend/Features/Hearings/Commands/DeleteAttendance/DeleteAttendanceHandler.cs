@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -17,7 +17,7 @@ namespace LTSBackend.Features.Hearings.Commands.DeleteAttendance
                 .Include(a => a.Hearing).ThenInclude(h => h.Case)
                 .FirstOrDefaultAsync(a => a.AttendanceID == request.AttendanceId, cancellationToken);
 
-            if (attendance == null || (!_currentUser.IsSuperAdmin && attendance.Hearing.Case.FirmID != _currentUser.FirmID))
+            if (attendance == null || (attendance.Hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Attendance ID {request.AttendanceId} not found");
 
             int currentUserId = GetCurrentUserId();

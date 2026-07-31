@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,13 +32,13 @@ namespace LTSBackend.Features.Hearings.Commands.CreateHearing
         {
             // Validate case exists AND belongs to the acting user's firm
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Hearing.CaseId, cancellationToken);
-            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
+            if (caseEntity == null || (caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException("Case not found");
 
             // SECURITY FIX (IDOR): controller allows RoleNames.AllLawyers
             // (includes AssociateLawyer/Moharrir), who must be scoped to
             // their assigned cases only.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

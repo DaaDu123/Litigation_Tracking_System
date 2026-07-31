@@ -47,7 +47,7 @@ public sealed class CreateCourtHandler(AppDbContext _context, ICurrentUserServic
         // ================================================
         var court = new Court
         {
-            FirmID = _currentUser.IsSuperAdmin ? null : _currentUser.FirmID,
+            FirmID = _currentUser.FirmID,
             CourtName = request.CourtName,
             CourtType = request.CourtType,
             Jurisdiction = request.Jurisdiction,

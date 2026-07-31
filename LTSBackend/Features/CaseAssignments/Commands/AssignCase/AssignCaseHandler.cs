@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Models.Security;
@@ -25,7 +25,7 @@ namespace LTSBackend.Features.CaseAssignments.Commands.AssignCase
         public async Task<long> Handle(AssignCaseCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Assignment.CaseID, cancellationToken);
-            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
+            if (caseEntity == null || (caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Case ID {request.Assignment.CaseID} not found");
 
             // FIX: user being assigned must belong to the same firm as the case

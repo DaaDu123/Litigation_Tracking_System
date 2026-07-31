@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.CurrentUser;
@@ -22,13 +22,13 @@ namespace LTSBackend.Features.CaseParties.Commands.UpdateCaseParty
                 .Include(p => p.Case)
                 .FirstOrDefaultAsync(p => p.PartyID == request.Party.PartyID, cancellationToken);
 
-            if (party == null || (!_currentUser.IsSuperAdmin && party.Case.FirmID != _currentUser.FirmID))
+            if (party == null || (party.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Party ID {request.Party.PartyID} not found");
 
             // SECURITY FIX (IDOR): see CreateCasePartyHandler for rationale -
             // Update is open to AssociateLawyer/Moharrir who must be scoped to
             // their assigned cases only.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

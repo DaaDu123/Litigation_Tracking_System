@@ -22,7 +22,7 @@ public sealed class CreateCaseStageHandler(AppDbContext _context, ICurrentUserSe
 
         var stage = new CaseStage
         {
-            FirmID = _currentUser.IsSuperAdmin ? null : _currentUser.FirmID,
+            FirmID = _currentUser.FirmID,
             StageName = request.StageName,
             Description = request.Description,
             IsActive = request.IsActive

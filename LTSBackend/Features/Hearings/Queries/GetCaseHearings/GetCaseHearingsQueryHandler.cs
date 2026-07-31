@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,7 +29,7 @@ namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
             // SECURITY FIX (IDOR): firm scoping alone let any firm user - including
             // AssociateLawyer/Moharrir/InternParalegal - read hearings for a case
             // they aren't assigned to. Mirrors GetCaseAssignmentsHandler.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)
@@ -48,7 +48,6 @@ namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
                 .Where(h => h.CaseID == request.CaseId);
 
             // Multi-tenant isolation
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(h => h.Case.FirmID == _currentUser.FirmID);
 
             query = query.OrderByDescending(h => h.HearingDate);

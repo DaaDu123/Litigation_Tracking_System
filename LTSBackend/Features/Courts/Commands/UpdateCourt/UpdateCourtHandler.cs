@@ -37,7 +37,7 @@ public sealed class UpdateCourtHandler(AppDbContext _context, ICurrentUserServic
         //     custom court - never a system-wide global court (FirmID
         //     null), which would affect every other firm using it.
         // ================================================
-        if (!_currentUser.IsSuperAdmin && court.FirmID != _currentUser.FirmID)
+        if (court.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Update denied: user {UserId} attempted to edit a global/other-firm court {CourtID}", _currentUser.UserID, request.CourtID);
             throw new NotFoundException("Court not found.");

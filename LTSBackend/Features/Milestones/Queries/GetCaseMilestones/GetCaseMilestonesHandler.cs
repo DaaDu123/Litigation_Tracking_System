@@ -1,4 +1,4 @@
-﻿using LTSBackend.Data;
+using LTSBackend.Data;
 using LTSBackend.Features.Milestones.DTOs;
 using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.Permissions;
@@ -14,7 +14,7 @@ namespace LTSBackend.Features.Milestones.Queries.GetCaseMilestones
             // SECURITY FIX (IDOR): firm scoping alone let any firm user - including
             // AssociateLawyer/Moharrir/InternParalegal - read milestones for a case
             // they aren't assigned to. Mirrors GetCaseAssignmentsHandler.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)
@@ -31,7 +31,6 @@ namespace LTSBackend.Features.Milestones.Queries.GetCaseMilestones
                 .Where(m => m.CaseID == request.CaseID);
 
             // Multi-tenant isolation
-            if (!_currentUser.IsSuperAdmin)
                 query = query.Where(m => m.Case.FirmID == _currentUser.FirmID);
 
             var milestones = await query

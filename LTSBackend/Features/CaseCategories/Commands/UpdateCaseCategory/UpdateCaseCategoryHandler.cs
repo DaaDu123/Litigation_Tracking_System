@@ -20,7 +20,7 @@ public sealed class UpdateCaseCategoryHandler(AppDbContext _context, ICurrentUse
         }
 
         // Ownership check: a FirmAdmin may edit only their OWN firm's custom category - never a global one.
-        if (!_currentUser.IsSuperAdmin && category.FirmID != _currentUser.FirmID)
+        if (category.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Update denied: user {UserId} attempted to edit a global/other-firm category {CategoryID}", _currentUser.UserID, request.CategoryID);
             throw new NotFoundException("Case category not found.");

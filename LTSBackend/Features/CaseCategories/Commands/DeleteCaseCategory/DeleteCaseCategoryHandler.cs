@@ -18,7 +18,7 @@ public sealed class DeleteCaseCategoryHandler(AppDbContext _context, ICurrentUse
         }
 
         // Ownership check: a FirmAdmin may delete only their OWN firm's custom category - never a global one.
-        if (!_currentUser.IsSuperAdmin && category.FirmID != _currentUser.FirmID)
+        if (category.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Delete denied: user {UserId} attempted to delete a global/other-firm category {CategoryID}", _currentUser.UserID, request.CategoryID);
             throw new NotFoundException("Case category not found.");

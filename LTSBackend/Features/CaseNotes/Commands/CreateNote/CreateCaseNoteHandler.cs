@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
@@ -17,13 +17,13 @@ namespace LTSBackend.Features.CaseNotes.Commands.CreateNote
         public async Task<long> Handle(CreateCaseNoteCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Note.CaseID, cancellationToken);
-            if (caseEntity == null || (!_currentUser.IsSuperAdmin && caseEntity.FirmID != _currentUser.FirmID))
+            if (caseEntity == null || (caseEntity.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Case ID {request.Note.CaseID} not found");
 
             // SECURITY FIX (IDOR): controller allows RoleNames.AllFirmUsers
             // (includes AssociateLawyer/Moharrir/InternParalegal), who per the
             // roles spec must be scoped to their assigned cases only.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

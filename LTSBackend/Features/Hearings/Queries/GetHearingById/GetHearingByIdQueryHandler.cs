@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,11 +33,11 @@ namespace LTSBackend.Features.Hearings.Queries.GetHearingById
                 .Where(h => h.HearingID == request.HearingId)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (hearing == null || (!_currentUser.IsSuperAdmin && hearing.Case.FirmID != _currentUser.FirmID))
+            if (hearing == null || (hearing.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException("Hearing not found");
 
             // SECURITY FIX (IDOR): see GetCaseHearingsQueryHandler for rationale.
-            if (!_currentUser.IsSuperAdmin && _currentUser.UserID.HasValue)
+            if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
                 if (!hasFullVisibility)

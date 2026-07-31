@@ -22,7 +22,7 @@ public sealed class CreateDocumentTypeHandler(AppDbContext _context, ICurrentUse
 
         var type = new DocumentType
         {
-            FirmID = _currentUser.IsSuperAdmin ? null : _currentUser.FirmID,
+            FirmID = _currentUser.FirmID,
             TypeName = request.TypeName,
             Description = request.Description,
             IsActive = request.IsActive

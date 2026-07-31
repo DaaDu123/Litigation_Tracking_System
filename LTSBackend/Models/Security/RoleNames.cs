@@ -19,14 +19,20 @@ public static class RoleNames
     public const string SuperAdminOnly = SuperAdmin;
 
     /// <summary>
-    /// Firm Admin + Super Admin - firm and system management
+    /// Firm Admin only. Super Admin is deliberately EXCLUDED - firm-level
+    /// management (master data, firm users, cases, documents) is entirely
+    /// FirmAdmin's domain, not the platform owner's. Kept the historical
+    /// name (rather than renaming every call site) but the value no longer
+    /// includes SuperAdmin.
     /// </summary>
-    public const string FirmAdminAndAbove = FirmAdmin + "," + SuperAdmin;
+    public const string FirmAdminAndAbove = FirmAdmin;
 
     /// <summary>
-    /// Partner + Firm Admin + Super Admin - senior management
+    /// Partner + Firm Admin. Super Admin is deliberately EXCLUDED for the
+    /// same reason as FirmAdminAndAbove above - senior firm management is
+    /// not a platform-owner task.
     /// </summary>
-    public const string PartnerAndAbove = Partner + "," + FirmAdmin + "," + SuperAdmin;
+    public const string PartnerAndAbove = Partner + "," + FirmAdmin;
 
     /// <summary>
     /// All lawyers - Partner, Associate, Moharrir with permissions
@@ -40,11 +46,14 @@ public static class RoleNames
                                       Moharrir + "," + InternParalegal;
 
     /// <summary>
-    /// All staff INCLUDING Super Admin. Use this on endpoints whose docstring/spec
-    /// says "SuperAdmin: all cases" etc. — AllFirmUsers alone excludes SuperAdmin,
-    /// which previously locked platform owners out of their own read endpoints.
+    /// REVERTED: this used to add Super Admin back onto firm-wide read
+    /// endpoints (e.g. case directory). Per the updated Roles policy, Super
+    /// Admin does not view case data at all, so this is now just an alias
+    /// for AllFirmUsers. Kept as a separate name (rather than deleting) so
+    /// existing [Authorize(Roles = RoleNames.AllFirmUsersAndSuperAdmin)]
+    /// call sites don't need to change.
     /// </summary>
-    public const string AllFirmUsersAndSuperAdmin = AllFirmUsers + "," + SuperAdmin;
+    public const string AllFirmUsersAndSuperAdmin = AllFirmUsers;
 
     /// <summary>
     /// Document viewers - Lawyers and authorized Moharrir
@@ -52,12 +61,14 @@ public static class RoleNames
     public const string CanViewDocuments = Partner + "," + AssociateLawyer + "," + Moharrir;
 
     /// <summary>
-    /// Case creators - Partner and above
+    /// Case creators - Partner and Firm Admin. Super Admin excluded - case
+    /// creation is firm business, not a platform-owner task.
     /// </summary>
-    public const string CanCreateCases = Partner + "," + FirmAdmin + "," + SuperAdmin;
+    public const string CanCreateCases = Partner + "," + FirmAdmin;
 
     /// <summary>
-    /// Case assignment managers - Partner and Firm Admin
+    /// Case assignment managers - Partner and Firm Admin. Super Admin
+    /// excluded - case assignment is firm business, not a platform-owner task.
     /// </summary>
-    public const string CanAssignCases = Partner + "," + FirmAdmin + "," + SuperAdmin;
+    public const string CanAssignCases = Partner + "," + FirmAdmin;
 }

@@ -61,7 +61,7 @@ public sealed class CreateDepartmentHandler(AppDbContext _context, ICurrentUserS
         // ================================================
         var department = new Department
         {
-            FirmID = _currentUser.IsSuperAdmin ? null : _currentUser.FirmID,
+            FirmID = _currentUser.FirmID,
             DepartmentName = request.DepartmentName,
             DepartmentCode = request.DepartmentCode,
             Description = request.Description,

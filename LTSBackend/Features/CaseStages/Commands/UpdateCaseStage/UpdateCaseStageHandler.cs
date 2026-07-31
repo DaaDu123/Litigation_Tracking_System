@@ -19,7 +19,7 @@ public sealed class UpdateCaseStageHandler(AppDbContext _context, ICurrentUserSe
             throw new NotFoundException("Case stage not found.");
         }
 
-        if (!_currentUser.IsSuperAdmin && stage.FirmID != _currentUser.FirmID)
+        if (stage.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Update denied: user {UserId} attempted to edit a global/other-firm stage {StageID}", _currentUser.UserID, request.StageID);
             throw new NotFoundException("Case stage not found.");
