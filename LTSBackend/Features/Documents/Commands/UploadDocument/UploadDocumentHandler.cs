@@ -101,6 +101,13 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         // ================================================
         // 6. Create document record
         // ================================================
+        // ================================================
+        // DRAFT WORKFLOW (SRS - Intern/Paralegal): "All uploaded work
+        // remains in Draft until approved by Partner or Firm Admin."
+        // Every other role's upload is published immediately.
+        // ================================================
+        bool isInternUpload = user.GetRole() == UserRole.InternParalegal;
+
         var document = new Document
         {
             CaseID = request.CaseID,
@@ -113,7 +120,8 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
             UploadedBy = request.UserID,
             UploadedDate = DateTime.UtcNow,
             IsLatest = true,
-            Remarks = request.Remarks
+            Remarks = request.Remarks,
+            IsDraft = isInternUpload
         };
 
         _context.Documents.Add(document);
@@ -159,7 +167,7 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         // ================================================
         // 8. Create audit log
         // ================================================
-        var auditLog = _auditService.Create(request.UserID, $"Document Upload: {document.DocumentName} to Case {request.CaseID}");
+        var auditLog = _auditService.Create(request.UserID, $"Document Upload: {document.DocumentName} to Case {request.CaseID}" + (isInternUpload ? " (Draft - pending approval)" : ""));
 
         _context.AuditLogs.Add(auditLog);
         await _context.SaveChangesAsync(cancellationToken);

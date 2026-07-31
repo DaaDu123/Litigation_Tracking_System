@@ -51,6 +51,16 @@ public class GetDocumentHandler(AppDbContext _context, IDocumentPermissionServic
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.UserID == document.UploadedBy, cancellationToken);
 
+        string? approvedByName = null;
+        if (document.ApprovedBy.HasValue)
+        {
+            approvedByName = await _context.Users
+                .AsNoTracking()
+                .Where(x => x.UserID == document.ApprovedBy.Value)
+                .Select(x => x.FullName)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         var documentDetail = new DocumentDetailDTO
         {
             DocumentID = document.DocumentID,
@@ -64,7 +74,10 @@ public class GetDocumentHandler(AppDbContext _context, IDocumentPermissionServic
             IsLatest = document.IsLatest,
             UploadedBy = user?.FullName ?? "Unknown User",
             UploadedDate = document.UploadedDate,
-            Remarks = document.Remarks ?? string.Empty
+            Remarks = document.Remarks ?? string.Empty,
+            IsDraft = document.IsDraft,
+            ApprovedByName = approvedByName,
+            ApprovedDate = document.ApprovedDate
         };
 
         _logger.LogInformation("Document retrieved successfully: {DocumentId}", request.DocumentID);

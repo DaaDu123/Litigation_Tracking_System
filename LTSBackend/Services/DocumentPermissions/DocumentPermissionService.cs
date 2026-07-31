@@ -78,18 +78,33 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
             // ================================================
             if (documentId > 0)
             {
-                var documentFirmId = await _context.Documents
+                var docInfo = await _context.Documents
                     .IgnoreQueryFilters()
                     .AsNoTracking()
                     .Where(d => d.DocumentID == documentId)
-                    .Select(d => (int?)d.Case.FirmID)
+                    .Select(d => new { FirmId = (int?)d.Case.FirmID, d.IsDraft, d.UploadedBy })
                     .FirstOrDefaultAsync(cancellationToken);
 
-                if (documentFirmId == null || documentFirmId != user.FirmID)
+                if (docInfo == null || docInfo.FirmId == null || docInfo.FirmId != user.FirmID)
                 {
                     _logger.LogWarning(
                         "User {UserId} (Firm {UserFirmId}) denied cross-firm access to document {DocumentId} (Firm {DocFirmId})",
-                        userId, user.FirmID, documentId, documentFirmId);
+                        userId, user.FirmID, documentId, docInfo?.FirmId);
+                    return false;
+                }
+
+                // ================================================
+                // DRAFT WORKFLOW (SRS - Intern/Paralegal): a draft document
+                // is visible only to its own uploader and to Partner/
+                // FirmAdmin (who are the only ones who can approve it).
+                // Every other role - including AssociateLawyer/Moharrir who
+                // would otherwise be assigned to the same case - is denied
+                // View/Download until the document is approved.
+                // ================================================
+                bool canSeeDrafts = role == UserRole.FirmAdmin || role == UserRole.Partner;
+                if (docInfo.IsDraft && docInfo.UploadedBy != userId && !canSeeDrafts && action is "View" or "Download")
+                {
+                    _logger.LogDebug("Document {DocumentId} is a pending draft - denied for user {UserId} (role {Role})", documentId, userId, role);
                     return false;
                 }
             }

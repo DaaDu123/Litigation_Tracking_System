@@ -483,6 +483,15 @@ namespace LTSBackend.Migrations
                     b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("ApprovedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ApprovedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDraft")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsLatest")
                         .HasColumnType("bit");
 

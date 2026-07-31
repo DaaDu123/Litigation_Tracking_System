@@ -155,9 +155,11 @@ namespace LTSBackend.Features.Documents.Queries.GetCaseDocuments
             //    where applicable.
             // ================================================
             var uploaderIds = documents.Select(d => d.UploadedBy).Distinct().ToList();
+            var approverIds = documents.Where(d => d.ApprovedBy.HasValue).Select(d => d.ApprovedBy!.Value).Distinct().ToList();
+            var allNameIds = uploaderIds.Union(approverIds).ToList();
             var uploaderNames = await _context.Users
                 .AsNoTracking()
-                .Where(u => uploaderIds.Contains(u.UserID))
+                .Where(u => allNameIds.Contains(u.UserID))
                 .ToDictionaryAsync(u => u.UserID, u => u.FullName, cancellationToken);
 
             var caseNumber = await _context.Cases
@@ -166,10 +168,21 @@ namespace LTSBackend.Features.Documents.Queries.GetCaseDocuments
                 .Select(c => c.CaseNumber)
                 .FirstOrDefaultAsync(cancellationToken) ?? "Unknown";
 
+            // ================================================
+            // DRAFT WORKFLOW (SRS - Intern/Paralegal): a draft document is
+            // only listed for its own uploader and for Partner/FirmAdmin
+            // (who approve it) - hidden from everyone else, including other
+            // case-team members, until approved.
+            // ================================================
+            bool canSeeDrafts = role == UserRole.FirmAdmin || role == UserRole.Partner;
+
             var result = new List<DocumentDetailDTO>();
             foreach (var document in documents)
             {
                 if (moharrirVisibleDocIds != null && !moharrirVisibleDocIds.Contains(document.DocumentID))
+                    continue;
+
+                if (document.IsDraft && document.UploadedBy != request.UserID && !canSeeDrafts)
                     continue;
 
                 result.Add(new DocumentDetailDTO
@@ -185,7 +198,10 @@ namespace LTSBackend.Features.Documents.Queries.GetCaseDocuments
                     IsLatest = document.IsLatest,
                     UploadedBy = uploaderNames.TryGetValue(document.UploadedBy, out var name) ? name : "Unknown User",
                     UploadedDate = document.UploadedDate,
-                    Remarks = document.Remarks ?? string.Empty
+                    Remarks = document.Remarks ?? string.Empty,
+                    IsDraft = document.IsDraft,
+                    ApprovedByName = document.ApprovedBy.HasValue && uploaderNames.TryGetValue(document.ApprovedBy.Value, out var approverName) ? approverName : null,
+                    ApprovedDate = document.ApprovedDate
                 });
             }
 

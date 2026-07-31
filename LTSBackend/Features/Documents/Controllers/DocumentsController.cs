@@ -1,6 +1,7 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Authorization;
+using LTSBackend.Features.Documents.Commands.ApproveDocument;
 using LTSBackend.Features.Documents.Commands.DeleteDocument;
 using LTSBackend.Features.Documents.Commands.DownloadDocument;
 using LTSBackend.Features.Documents.Commands.UploadDocument;
@@ -247,6 +248,52 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
         {
             _logger.LogError(ex, "Failed to retrieve document");
             return BadRequest(ApiResponse<bool>.FailureResponse($"Failed to retrieve document: {ex.Message}"));
+        }
+    }
+
+    // =====================================================
+    // APPROVE DOCUMENT (Draft Workflow)
+    // =====================================================
+    /// <summary>
+    /// Approves a draft document uploaded by an Intern/Paralegal.
+    /// SRS: "All uploaded work remains in Draft until approved by
+    /// Partner or Firm Admin." Role-restricted to Partner/FirmAdmin;
+    /// tenant isolation and "must still be a draft" are enforced in the
+    /// handler.
+    /// </summary>
+    [HttpPost("{documentId}/approve")]
+    [Authorize(Roles = RoleNames.PartnerAndAbove)]
+    public async Task<IActionResult> ApproveDocument(long documentId)
+    {
+        _logger.LogInformation("Approve document request - ID: {DocumentId}", documentId);
+
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
+        }
+
+        try
+        {
+            var command = new ApproveDocumentCommand(documentId) { UserID = userId };
+            var result = await _mediator.Send(command);
+
+            return Ok(ApiResponse<bool>.SuccessResponse(result, "Document approved successfully"));
+        }
+        catch (NotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Approve failed - document not found {DocumentId}", documentId);
+            return NotFound(ApiResponse<bool>.FailureResponse(ex.Message));
+        }
+        catch (ValidationException ex)
+        {
+            _logger.LogWarning(ex, "Approve failed - validation error {DocumentId}", documentId);
+            return BadRequest(ApiResponse<bool>.FailureResponse(string.Join(" ", ex.Errors)));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Document approval failed");
+            return BadRequest(ApiResponse<bool>.FailureResponse($"Approval failed: {ex.Message}"));
         }
     }
 
