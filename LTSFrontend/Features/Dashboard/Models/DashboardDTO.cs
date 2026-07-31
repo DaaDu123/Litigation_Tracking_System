@@ -9,6 +9,12 @@ namespace LTSFrontend.Features.Dashboard.Models
         public int TotalPermissions { get; set; }
         public int TotalAuditLogs { get; set; }
         public int TotalRefreshTokens { get; set; }
+
+        // SuperAdmin-only figures (0 for firm-scoped users)
+        public int TotalFirms { get; set; }
+        public int ActiveFirms { get; set; }
+        public int BlockedFirms { get; set; }
+
         public List<RecentActivityDTO> RecentActivities { get; set; } = new();
     }
 }
