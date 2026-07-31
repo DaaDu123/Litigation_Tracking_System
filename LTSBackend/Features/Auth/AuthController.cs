@@ -151,15 +151,16 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<ForgotPasswordResponseDTO>.SuccessResponse(result, result.Message));
     }
 
-    // SECURITY: rate limited (see Program.cs "auth-critical" policy) — the
-    // reset OTP is the same 6-digit format as registration, same
-    // brute-force concern applies.
+    // SECURITY: rate limited (see Program.cs "auth-critical" policy) —
+    // the token itself is a high-entropy single-use secret (see
+    // ForgotPasswordHandler), but the endpoint is still rate limited to
+    // slow down any attempt to brute-force it.
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-critical")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command)
     {
-        _logger.LogInformation("Password reset request for email: {Email}", command.Email);
+        _logger.LogInformation("Password reset request received (via reset link)");
         var result = await _mediator.Send(command);
         return Ok(ApiResponse<ResetPasswordResponseDTO>.SuccessResponse(result, result.Message));
     }

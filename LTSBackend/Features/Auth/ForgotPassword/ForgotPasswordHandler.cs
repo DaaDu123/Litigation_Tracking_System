@@ -1,15 +1,20 @@
-﻿using LTSBackend.Comman.Enum;
-using LTSBackend.Data;
+﻿using LTSBackend.Data;
 using LTSBackend.Models.Security;
 using LTSBackend.Services.Email;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace LTSBackend.Features.Auth.ForgotPassword;
 
-public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailService, ILogger<ForgotPasswordHandler> _logger) : IRequestHandler<ForgotPasswordCommand, ForgotPasswordResponseDTO>
+public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailService, IConfiguration _configuration, ILogger<ForgotPasswordHandler> _logger) : IRequestHandler<ForgotPasswordCommand, ForgotPasswordResponseDTO>
 {
+    // Link is valid for 30 minutes - long enough for someone to check their
+    // email without rushing, short enough to limit the exposure window of
+    // an intercepted link.
+    private const int TokenExpiryMinutes = 30;
+
     public async Task<ForgotPasswordResponseDTO> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Forgot password requested for email: {Email}", request.Email);
@@ -17,13 +22,12 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
         // ================================================
         // Generic response - we always return this regardless of whether
         // the email exists or not. This protects against "user enumeration"
-        // attacks (so no one can guess which email is
-        // registered).
+        // attacks (so no one can guess which email is registered).
         // ================================================
         var genericResponse = new ForgotPasswordResponseDTO
         {
             Email = request.Email,
-            Message = "If this email is registered in our system, an OTP code has been sent. Please also check your spam/junk folder."
+            Message = "If this email is registered in our system, a password reset link has been sent. Please also check your spam/junk folder."
         };
 
         // ================================================
@@ -36,48 +40,44 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
 
         if (user == null)
         {
-            _logger.LogWarning("Forgot password: No user found for {Email} (returning a generic response)",request.Email);
+            _logger.LogWarning("Forgot password: No user found for {Email} (returning a generic response)", request.Email);
             return genericResponse;
         }
 
         if (!user.IsActive)
         {
-            _logger.LogWarning("Forgot password: User is inactive: {Email} (returning generic response)",request.Email);
+            _logger.LogWarning("Forgot password: User is inactive: {Email} (returning generic response)", request.Email);
             return genericResponse;
         }
 
         // ================================================
-        // 2. Remove old unused PasswordReset OTPs
-        //    (do not touch OTPs for the Registration purpose)
+        // 2. Invalidate any old, unused reset tokens for this user so only
+        //    the most recently requested link is ever valid.
         // ================================================
-        var oldOtps = await _context.UserOtps
-            .Where(x =>
-                x.Email == request.Email &&
-                !x.IsUsed &&
-                x.Purpose == OtpPurpose.PasswordReset)
+        var oldTokens = await _context.PasswordResetTokens
+            .Where(x => x.Email == request.Email && !x.IsUsed)
             .ToListAsync(cancellationToken);
 
-        if (oldOtps.Count > 0)
+        if (oldTokens.Count > 0)
         {
-            _context.UserOtps.RemoveRange(oldOtps);
+            _context.PasswordResetTokens.RemoveRange(oldTokens);
             await _context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation(
-                "Removed {Count} old password-reset OTPs for {Email}",
-                oldOtps.Count,
-                request.Email);
+            _logger.LogInformation("Removed {Count} old password-reset token(s) for {Email}", oldTokens.Count, request.Email);
         }
 
         // ================================================
-        // 3. Nayi OTP generate aur save kare (Purpose = PasswordReset)
+        // 3. Generate a cryptographically secure token. Only its SHA-256
+        //    hash is stored - the raw value exists solely in the email
+        //    link, so a database leak cannot be used to reset passwords.
         // ================================================
-        string otpCode = GenerateSecureOtp();
+        string rawToken = GenerateSecureToken();
+        string tokenHash = HashToken(rawToken);
 
-        _context.UserOtps.Add(new UserOtp
+        _context.PasswordResetTokens.Add(new PasswordResetToken
         {
             Email = request.Email,
-            OtpCode = otpCode,
-            Purpose = OtpPurpose.PasswordReset,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            TokenHash = tokenHash,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(TokenExpiryMinutes),
             IsUsed = false,
             UserID = user.UserID,
             CreatedAt = DateTime.UtcNow
@@ -85,28 +85,44 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Password-reset OTP generated for user: {UserId}", user.UserID);
+        _logger.LogInformation("Password-reset token generated for user: {UserId}", user.UserID);
 
         // ================================================
-        // 4. Email bhejain - fail ho jaye to bhi generic response
-        //    hi wapas jaye (taake attacker ko pata na chale)
+        // 4. Build the reset link and email it - fail silently (still
+        //    return the generic response) so an attacker can't use send
+        //    failures to enumerate valid accounts.
         // ================================================
         try
         {
-            await _emailService.SendOtpEmailAsync(user.Email, user.FullName, otpCode);
-            _logger.LogInformation("Password-reset OTP email sent to: {Email}", request.Email);
+            string frontendBaseUrl = _configuration["FrontendSettings:BaseUrl"]?.TrimEnd('/') ?? string.Empty;
+            string resetLink = $"{frontendBaseUrl}/reset-password?token={Uri.EscapeDataString(rawToken)}";
+
+            await _emailService.SendPasswordResetLinkAsync(user.Email, user.FullName, resetLink, TokenExpiryMinutes);
+            _logger.LogInformation("Password-reset link email sent to: {Email}", request.Email);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send password-reset OTP email to: {Email}", request.Email);
+            _logger.LogError(ex, "Failed to send password-reset link email to: {Email}", request.Email);
             // Don't throw - for security we keep returning the generic response
         }
 
         return genericResponse;
     }
 
-    private static string GenerateSecureOtp()
+    private static string GenerateSecureToken()
     {
-        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString("D6");
+        // 32 random bytes -> URL-safe base64 (no padding), i.e. a 43-char
+        // single-use token with 256 bits of entropy.
+        var bytes = RandomNumberGenerator.GetBytes(32);
+        return Convert.ToBase64String(bytes)
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
+    }
+
+    private static string HashToken(string rawToken)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken));
+        return Convert.ToHexString(bytes);
     }
 }

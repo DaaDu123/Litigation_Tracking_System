@@ -1,10 +1,11 @@
-﻿using LTSBackend.Comman.Enum;
-using LTSBackend.Comman.Exceptions;
+﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace LTSBackend.Features.Auth.ResetPassword;
 
@@ -27,52 +28,47 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
         _logger = logger;
     }
 
-    public async Task<ResetPasswordResponseDTO> Handle(ResetPasswordCommand request,CancellationToken cancellationToken)
+    public async Task<ResetPasswordResponseDTO> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Password reset attempt for email: {Email}", request.Email);
+        _logger.LogInformation("Password reset attempt via reset link");
 
         // ================================================
-        // 1. Find and validate OTP (PURPOSE must be PasswordReset)
+        // 1. Hash the incoming token and look it up directly - we never
+        //    trust an email supplied by the client for this flow; the
+        //    token alone (and only the token) identifies the account.
         // ================================================
-        var otp = await _context.UserOtps
+        string tokenHash = HashToken(request.Token);
+
+        var resetToken = await _context.PasswordResetTokens
+            .Include(x => x.User)
             .FirstOrDefaultAsync(x =>
-                x.Email == request.Email &&
-                x.OtpCode == request.OtpCode &&
-                x.Purpose == OtpPurpose.PasswordReset &&
+                x.TokenHash == tokenHash &&
                 !x.IsUsed &&
                 x.ExpiresAt > DateTime.UtcNow,
                 cancellationToken);
 
-        if (otp == null)
+        if (resetToken == null || resetToken.User == null)
         {
-            _logger.LogWarning("Password reset failed: Invalid or expired OTP for email: {Email}", request.Email);
-            throw new ValidationException(new List<string> { "Invalid or expired OTP code." });
+            _logger.LogWarning("Password reset failed: invalid, expired, or already-used reset link");
+            throw new ValidationException(new List<string> { "This reset link is invalid or has expired. Please request a new one." });
         }
 
-        // ================================================
-        // 2. Find user
-        // ================================================
-        var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == request.Email,cancellationToken);
-
-        if (user == null)
-        {
-            _logger.LogError("Password reset failed: User not found for email: {Email}", request.Email);
-            throw new NotFoundException("User not found.");
-        }
+        var user = resetToken.User;
 
         // ================================================
-        // 3. Update password
+        // 2. Update password
         // ================================================
         user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;
 
         // ================================================
-        // 4. Mark OTP as used
+        // 3. Mark token as used (single-use link)
         // ================================================
-        otp.IsUsed = true;
+        resetToken.IsUsed = true;
 
         // ================================================
-        // 5. Revoke all active refresh tokens
+        // 4. Rotate security stamp and revoke all active refresh tokens,
+        //    so any device already logged in is signed out after a reset.
         // ================================================
         user.SecurityStamp = Guid.NewGuid().ToString("N");
 
@@ -89,12 +85,12 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
             user.UserID);
 
         // ================================================
-        // 6. Create audit log
+        // 5. Create audit log
         // ================================================
-        _context.AuditLogs.Add(_auditService.Create(user.UserID, "Password Reset via OTP"));
+        _context.AuditLogs.Add(_auditService.Create(user.UserID, "Password Reset via Email Link"));
 
         // ================================================
-        // 7. Save changes
+        // 6. Save changes
         // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -105,5 +101,11 @@ public class ResetPasswordHandler : IRequestHandler<ResetPasswordCommand, ResetP
             Email = user.Email,
             Message = "Password reset successfully! You can now login with your new password."
         };
+    }
+
+    private static string HashToken(string rawToken)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken));
+        return Convert.ToHexString(bytes);
     }
 }

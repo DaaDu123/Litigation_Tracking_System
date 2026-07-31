@@ -6,17 +6,9 @@ public class ResetPasswordValidator : AbstractValidator<ResetPasswordCommand>
 {
     public ResetPasswordValidator()
     {
-        RuleFor(x => x.Email)
+        RuleFor(x => x.Token)
             .NotEmpty()
-            .WithMessage("Email is required.")
-            .EmailAddress()
-            .WithMessage("Invalid email format.");
-
-        RuleFor(x => x.OtpCode)
-            .NotEmpty()
-            .WithMessage("OTP code is required.")
-            .Length(6)
-            .WithMessage("OTP must be exactly 6 digits.");
+            .WithMessage("Reset token is required.");
 
         RuleFor(x => x.NewPassword)
             .NotEmpty()

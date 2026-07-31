@@ -57,6 +57,7 @@ public class User
     // Collections
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
     public ICollection<UserOtp> UserOtps { get; set; } = [];
+    public ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = [];
     public ICollection<LoginHistory> LoginHistories { get; set; } = [];
     /// <summary>
     /// Gets the user's role as an enum, or null if not defined.

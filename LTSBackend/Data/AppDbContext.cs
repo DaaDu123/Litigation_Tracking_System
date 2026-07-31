@@ -77,6 +77,7 @@ public class AppDbContext : DbContext
     public DbSet<RolePermission> RolePermissions { get; set; } = null!;
     public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
     public DbSet<UserOtp> UserOtps { get; set; } = null!;
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
     public DbSet<LoginHistory> LoginHistories { get; set; } = null!;
 
     // ================================================================
@@ -140,6 +141,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.FirmID);
             entity.HasMany(e => e.RefreshTokens).WithOne(r => r.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.UserOtps).WithOne(o => o.User).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.PasswordResetTokens).WithOne(t => t.User).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.LoginHistories).WithOne(l => l.User).OnDelete(DeleteBehavior.Cascade);
 
             // Global filter: hide soft-deleted users, and restrict every
@@ -227,6 +229,26 @@ public class AppDbContext : DbContext
             // password), so BypassTenantFilter is true there and this filter
             // only matters for any future authenticated OTP management view.
             entity.HasQueryFilter(e => BypassTenantFilter || e.User == null || e.User.FirmID == RequestFirmId);
+        });
+
+        // ================================================================
+        // ✅ PASSWORDRESETTOKEN ENTITY CONFIGURATION
+        // ================================================================
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.HasKey(e => e.TokenID);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.HasOne(e => e.User).WithMany(u => u.PasswordResetTokens).HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade).IsRequired();
+            // TokenHash is looked up directly (never Email+code), and must be unique
+            // so a hash collision can never resolve to more than one live token.
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+
+            // Same reasoning as UserOtp: this flow runs before authentication
+            // (BypassTenantFilter is true there), the filter only matters for
+            // any future authenticated admin view over these tokens.
+            entity.HasQueryFilter(e => BypassTenantFilter || e.User == null || e.User!.FirmID == RequestFirmId);
         });
 
         // ================================================================
@@ -589,9 +611,10 @@ public class AppDbContext : DbContext
     }
 
     // ====================================================================================
-    // USERS - Complete seed users with all roles (using BCrypt hashes)
-    // ⚠️ NOTE: In production, use actual BCrypt.Net-Next hashed passwords
-    // These are placeholder hashes - REPLACE with real bcrypt hashes before deployment
+    // USERS - Complete seed users with all roles (using real BCrypt hashes)
+    // ⚠️ All six seeded accounts below share the same demo password: Demo@12345
+    // Each has its own distinct salt (hashes differ) even though the password matches.
+    // These are DEV/DEMO credentials only - rotate or remove before any real deployment.
     // ====================================================================================
     // ====================================================================================
     // BUG FIX (CRITICAL): none of the six seeded demo users had RoleID set.
@@ -615,7 +638,7 @@ public class AppDbContext : DbContext
                 UserID = 1,
                 Email = "superadmin@lts.pk",
                 FullName = "Super Administrator",
-                PasswordHash = "$2a$11$placeholder_superadmin_hash_replace_in_production",
+                PasswordHash = "$2a$12$mnEYm2TirTnpNbZnz07S..gjd6klD5GFraAi5WJRqyr4yB1t0imd6", // Demo@12345
                 FirmID = null,
                 RoleID = (int)UserRole.SuperAdmin,
                 Designation = "System Administrator",
@@ -630,7 +653,7 @@ public class AppDbContext : DbContext
                 UserID = 2,
                 Email = "admin@demolaw.pk",
                 FullName = "Firm Administrator",
-                PasswordHash = "$2a$11$placeholder_firmadmin_hash_replace_in_production",
+                PasswordHash = "$2a$12$aW90FxlGx4mqKoBvNUZ5TurErcGgJNpN2/r8wu/MsCI3LsN4Wrhte", // Demo@12345
                 FirmID = 1,
                 RoleID = (int)UserRole.FirmAdmin,
                 Designation = "Firm Administrator",
@@ -645,7 +668,7 @@ public class AppDbContext : DbContext
                 UserID = 3,
                 Email = "partner@demolaw.pk",
                 FullName = "Muhammad Ashraf (Partner)",
-                PasswordHash = "$2a$11$placeholder_partner_hash_replace_in_production",
+                PasswordHash = "$2a$12$B7zvJrv3ubJs.W9M/QiCDO2ZkSo7q569cqUmCXBzyRGfJO14uIKRG", // Demo@12345
                 FirmID = 1,
                 RoleID = (int)UserRole.Partner,
                 Designation = "Senior Partner",
@@ -660,7 +683,7 @@ public class AppDbContext : DbContext
                 UserID = 4,
                 Email = "associate@demolaw.pk",
                 FullName = "Ayesha Khan (Associate)",
-                PasswordHash = "$2a$11$placeholder_associate_hash_replace_in_production",
+                PasswordHash = "$2a$12$H76onrsOSDwWi3CGjGz4J.IJx7x5kKaCJ2Jk/fDxlEUfQhYrPDddC", // Demo@12345
                 FirmID = 1,
                 RoleID = (int)UserRole.AssociateLawyer,
                 Designation = "Associate Lawyer",
@@ -675,7 +698,7 @@ public class AppDbContext : DbContext
                 UserID = 5,
                 Email = "moharrir@demolaw.pk",
                 FullName = "Hassan Ali (Moharrir)",
-                PasswordHash = "$2a$11$placeholder_moharrir_hash_replace_in_production",
+                PasswordHash = "$2a$12$xBm7jXWO7osy9u4A2r1LmO606ZwKNNj6Lico4zq0ndcsew.WMx7ui", // Demo@12345
                 FirmID = 1,
                 RoleID = (int)UserRole.Moharrir,
                 Designation = "Legal Clerk",
@@ -690,7 +713,7 @@ public class AppDbContext : DbContext
                 UserID = 6,
                 Email = "intern@demolaw.pk",
                 FullName = "Amna Saeed (Intern)",
-                PasswordHash = "$2a$11$placeholder_intern_hash_replace_in_production",
+                PasswordHash = "$2a$12$53G3.jdH6VkrF.dRg9pdgOzSw28kvZo4y31V99DZ4Lii2oqVLNkXy", // Demo@12345
                 FirmID = 1,
                 RoleID = (int)UserRole.InternParalegal,
                 Designation = "Paralegal Intern",
