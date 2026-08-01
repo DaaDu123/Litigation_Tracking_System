@@ -89,9 +89,12 @@
         </Authorized>
     </AuthorizeView>
 
-    @* Master Data configuration - firm roles only, not SuperAdmin (managing
-       a firm's own reference data is firm-internal, not a platform task). *@
-    <AuthorizeView Roles="FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal">
+    @* Master Data configuration - FirmAdmin only (SRS: "Firm Admin can
+       configure: Case Categories... create, edit and delete custom case
+       categories" - no other role manages reference data). Matches the
+       [Authorize(Roles = "FirmAdmin")] now restored on every page under
+       Features/Masters. *@
+    <AuthorizeView Roles="FirmAdmin">
         <Authorized>
             <div class="nav-section-title">Configuration</div>
 

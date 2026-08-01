@@ -1,5 +1,5 @@
 @page "/audit-logs"
-@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
+@attribute [Authorize(Roles = "SuperAdmin")]
 @using LTSFrontend.Features.AuditLogs.Components
 @using LTSFrontend.Features.AuditLogs.Models
 @using LTSFrontend.Features.AuditLogs.Services

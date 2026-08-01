@@ -1,5 +1,5 @@
 @page "/masters"
-@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
+@attribute [Authorize(Roles = "FirmAdmin")]
 @using Microsoft.AspNetCore.Authorization
 
 <PageTitle>Master Data - LTS</PageTitle>

@@ -1,6 +1,6 @@
 @page "/permissions/assign"
 @page "/permissions/assign/{RoleId:int}"
-@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize(Roles = "SuperAdmin")] *@
+@attribute [Authorize(Roles = "SuperAdmin")]
 @using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.Permissions.Components
 @using LTSFrontend.Features.Permissions.Models

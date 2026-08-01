@@ -1,5 +1,5 @@
 @page "/cases/{CaseId:long}/documents"
-@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
+@attribute [Authorize(Roles = "FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal")]
 @using LTSFrontend.Features.Documents.Components
 @using Microsoft.AspNetCore.Authorization
 

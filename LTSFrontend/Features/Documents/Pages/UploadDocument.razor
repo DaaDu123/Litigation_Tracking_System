@@ -1,5 +1,5 @@
 @page "/cases/{CaseId:long}/documents/upload"
-@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
+@attribute [Authorize(Roles = "FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal")]
 @using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.Documents.Components
 @using LTSFrontend.Features.Documents.Models

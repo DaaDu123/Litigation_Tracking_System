@@ -1,5 +1,5 @@
 @page "/hearings"
-@*TEMP-DISABLED-FOR-TESTING: @attribute [Authorize] *@
+@attribute [Authorize(Roles = "FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal")]
 @using LTSFrontend.Features.Hearings.Models
 @using LTSFrontend.Features.Hearings.Services
 @using LTSFrontend.Features.Masters.Models

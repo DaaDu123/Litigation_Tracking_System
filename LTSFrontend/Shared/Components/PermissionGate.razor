@@ -11,12 +11,8 @@
     [Parameter] public string Roles { get; set; } = string.Empty;
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    // TEMP-DISABLED-FOR-TESTING: always allow, ignoring Roles/Session, so every
-    // action button is visible while pages are being checked. Restore the real
-    // check below before going live:
-    // private bool IsAllowed =>
-    //     !string.IsNullOrWhiteSpace(Session.Role) &&
-    //     Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    //         .Contains(Session.Role, StringComparer.OrdinalIgnoreCase);
-    private bool IsAllowed => true;
+    private bool IsAllowed =>
+        !string.IsNullOrWhiteSpace(Session.Role) &&
+        Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Contains(Session.Role, StringComparer.OrdinalIgnoreCase);
 }
