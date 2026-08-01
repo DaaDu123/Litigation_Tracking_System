@@ -39,10 +39,7 @@ else
         <KpiCard Title="Total Firms" Value="@_stats?.TotalFirms.ToString()" Icon="bi-building" Accent="#1b4fd6" IsLoading="_isLoading" Href="/firms" />
         <KpiCard Title="Active Firms" Value="@_stats?.ActiveFirms.ToString()" Icon="bi-building-check" Accent="#16a34a" IsLoading="_isLoading" Href="/firms" />
         <KpiCard Title="Blocked Firms" Value="@_stats?.BlockedFirms.ToString()" Icon="bi-building-x" Accent="#dc2626" IsLoading="_isLoading" Href="/firms" />
-        <KpiCard Title="Firm Admins" Value="@_stats?.TotalFirmAdmins.ToString()" Icon="bi-person-badge" Accent="#7c3aed" IsLoading="_isLoading" />
         <KpiCard Title="Audit Log Entries" Value="@_stats?.TotalSystemAuditLogs.ToString()" Icon="bi-journal-text" Accent="#0891b2" IsLoading="_isLoading" Href="/audit-logs" />
-        <KpiCard Title="Active Sessions" Value="@_stats?.TotalActiveSessions.ToString()" Icon="bi-clock-history" Accent="#d97706" IsLoading="_isLoading" SubLabel="Non-expired login sessions" />
-        <KpiCard Title="Pending Domain Migrations" Value="@_stats?.PendingDomainMigrations.ToString()" Icon="bi-hdd-network" Accent="#dc2626" IsLoading="_isLoading" Href="/firms" />
     </div>
 
     <div class="lts-dashboard-grid">

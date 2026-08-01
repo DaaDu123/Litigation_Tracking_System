@@ -151,6 +151,7 @@
             public static string ById(long id) => $"{Root}/{id}";
             public static string ByCase(long caseId) => $"{Root}/case/{caseId}";
             public static string Download(long id) => $"{Root}/download/{id}";
+            public static string Approve(long id) => $"{Root}/{id}/approve";
         }
 
         public static class AuditLogs

@@ -45,10 +45,24 @@ else
 
     <div class="lts-page-header">
         <div>
-            <h1 class="lts-page-title">@_document.DocumentName</h1>
+            <h1 class="lts-page-title d-flex align-items-center gap-2">
+                @_document.DocumentName
+                @if (_document.IsDraft)
+                {
+                    <span class="lts-badge lts-badge-warning">Draft - Pending Approval</span>
+                }
+            </h1>
             <p class="lts-page-subtitle">@_document.DocumentType &middot; Version @_document.VersionNo</p>
         </div>
         <div class="lts-page-header-actions">
+            @if (_document.IsDraft)
+            {
+                <PermissionGate Roles="Partner,FirmAdmin">
+                    <button class="lts-btn lts-btn-outline" @onclick="HandleApproveAsync">
+                        <i class="bi bi-check2-circle"></i> Approve
+                    </button>
+                </PermissionGate>
+            }
             <button class="lts-btn lts-btn-primary" @onclick="HandleDownloadAsync">
                 <i class="bi bi-download"></i> Download
             </button>
@@ -67,6 +81,11 @@ else
             <div class="lts-detail-row"><dt>Case</dt><dd>@_document.CaseNumber</dd></div>
             <div class="lts-detail-row"><dt>Uploaded By</dt><dd>@_document.UploadedBy</dd></div>
             <div class="lts-detail-row"><dt>Uploaded On</dt><dd>@_document.UploadedDate.ToString("dd MMM yyyy HH:mm")</dd></div>
+            @if (!_document.IsDraft && !string.IsNullOrWhiteSpace(_document.ApprovedByName))
+            {
+                <div class="lts-detail-row"><dt>Approved By</dt><dd>@_document.ApprovedByName</dd></div>
+                <div class="lts-detail-row"><dt>Approved On</dt><dd>@_document.ApprovedDate?.ToString("dd MMM yyyy HH:mm")</dd></div>
+            }
             <div class="lts-detail-row">
                 <dt>Remarks</dt>
                 <dd>@(string.IsNullOrWhiteSpace(_document.Remarks) ? "-" : _document.Remarks)</dd>
@@ -120,6 +139,26 @@ else
         catch (Exception)
         {
             Toast.Error("Couldn't download document", "Please try again.");
+        }
+    }
+
+    private async Task HandleApproveAsync()
+    {
+        if (_document == null) return;
+
+        try
+        {
+            await DocumentService.ApproveAsync(_document.DocumentID);
+            Toast.Success("Document approved", $"\"{_document.DocumentName}\" is now published.");
+            _document = await DocumentService.GetByIdAsync(DocumentId);
+        }
+        catch (ApiException ex)
+        {
+            Toast.Error("Couldn't approve document", ex.GetFullMessage());
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't approve document", "Please try again.");
         }
     }
 

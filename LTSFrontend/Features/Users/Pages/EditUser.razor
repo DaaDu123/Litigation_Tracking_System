@@ -47,7 +47,7 @@ else if (_model != null)
                     <label class="form-label">Role</label>
                     <select class="form-select" @bind="_model.RoleID">
                         <option value="">-- Select Role --</option>
-                        @foreach (var role in UserRoleExtensions.All)
+                        @foreach (var role in _roleOptions)
                         {
                             <option value="@role.Id">@role.Name</option>
                         }
@@ -102,6 +102,14 @@ else if (_model != null)
     private bool _isBusy;
     private string? _errorMessage;
 
+    // Firm Admin can only assign Partner/AssociateLawyer/Moharrir/InternParalegal
+    // (mirrors the backend RoleHierarchy fix - "Firm Admin cannot create/assign
+    // another Firm Admin"). If the user being edited already holds a role outside
+    // that set (e.g. they're the workspace's FirmAdmin), keep it in the list so
+    // the dropdown doesn't silently drop/corrupt their existing role - the
+    // backend will still reject any attempt to actually change it to that role.
+    private List<(int Id, string Name)> _roleOptions = UserRoleExtensions.AssignableByFirmAdmin.ToList();
+
     protected override async Task OnInitializedAsync()
     {
         _isLoading = true;
@@ -124,6 +132,14 @@ else if (_model != null)
                 RoleID = user.RoleID,
                 IsActive = user.IsActive
             };
+
+            if (user.RoleID.HasValue && !_roleOptions.Any(r => r.Id == user.RoleID.Value))
+            {
+                _roleOptions = new List<(int Id, string Name)>(_roleOptions)
+                {
+                    (user.RoleID.Value, UserRoleExtensions.NameOf(user.RoleID.Value))
+                };
+            }
         }
         catch (ApiException ex)
         {

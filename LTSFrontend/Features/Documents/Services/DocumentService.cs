@@ -77,5 +77,11 @@ namespace LTSFrontend.Features.Documents.Services
 
         public Task<bool> DeleteAsync(long documentId) =>
             _api.DeleteAsync<bool>(ApiEndpoints.Documents.ById(documentId));
+
+        public async Task<bool> ApproveAsync(long documentId)
+        {
+            var result = await _api.PostAsync<bool>(ApiEndpoints.Documents.Approve(documentId));
+            return result;
+        }
     }
 }

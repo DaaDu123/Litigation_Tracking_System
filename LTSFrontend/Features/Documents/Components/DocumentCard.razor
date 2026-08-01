@@ -1,6 +1,7 @@
 @* Small card representing a single document row, used by DocumentsPanel/DocumentList.
-   Usage: <DocumentCard Document="d" OnDownload="HandleDownloadAsync" OnDelete="HandleDeleteAsync" ShowDelete="canDelete" /> *@
+   Usage: <DocumentCard Document="d" OnDownload="HandleDownloadAsync" OnDelete="HandleDeleteAsync" OnApprove="HandleApproveAsync" ShowDelete="canDelete" /> *@
 @using LTSFrontend.Features.Documents.Models
+@using LTSFrontend.Shared.Components
 
 <div class="lts-card d-flex align-items-center justify-content-between" style="padding: 0.75rem 1rem;">
     <div class="d-flex align-items-center gap-3">
@@ -8,8 +9,12 @@
             <i class="bi @IconFor(Document.FileName)"></i>
         </div>
         <div>
-            <div class="fw-semibold">
+            <div class="fw-semibold d-flex align-items-center gap-2">
                 <a href="@($"/documents/{Document.DocumentID}")">@Document.DocumentName</a>
+                @if (Document.IsDraft)
+                {
+                    <span class="lts-badge lts-badge-warning" title="Pending approval by Partner/Firm Admin">Draft</span>
+                }
             </div>
             <div class="text-muted small">
                 @Document.DocumentType &middot; @Document.FormattedFileSize &middot;
@@ -18,6 +23,14 @@
         </div>
     </div>
     <div class="d-flex align-items-center gap-2">
+        @if (Document.IsDraft)
+        {
+            <PermissionGate Roles="Partner,FirmAdmin">
+                <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="() => OnApprove.InvokeAsync(Document)" title="Approve draft">
+                    <i class="bi bi-check2-circle"></i> Approve
+                </button>
+            </PermissionGate>
+        }
         <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="() => OnDownload.InvokeAsync(Document)" title="Download">
             <i class="bi bi-download"></i>
         </button>
@@ -35,6 +48,7 @@
     [Parameter] public bool ShowDelete { get; set; }
     [Parameter] public EventCallback<DocumentDTO> OnDownload { get; set; }
     [Parameter] public EventCallback<DocumentDTO> OnDelete { get; set; }
+    [Parameter] public EventCallback<DocumentDTO> OnApprove { get; set; }
 
     private static string IconFor(string fileName)
     {

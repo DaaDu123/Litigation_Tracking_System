@@ -9,5 +9,6 @@ namespace LTSFrontend.Features.Documents.Services
         Task<UploadDocumentResponseDTO> UploadAsync(UploadDocumentRequest request);
         Task DownloadAsync(long documentId);
         Task<bool> DeleteAsync(long documentId);
+        Task<bool> ApproveAsync(long documentId);
     }
 }

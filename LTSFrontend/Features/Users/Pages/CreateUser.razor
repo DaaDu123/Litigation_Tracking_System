@@ -46,7 +46,7 @@
                 <label class="form-label">Role</label>
                 <select class="form-select" @bind="_model.RoleID">
                     <option value="">-- Select Role --</option>
-                    @foreach (var role in UserRoleExtensions.All)
+                    @foreach (var role in UserRoleExtensions.AssignableByFirmAdmin)
                     {
                         <option value="@role.Id">@role.Name</option>
                     }

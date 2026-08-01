@@ -38,7 +38,7 @@ else
     <div class="d-flex flex-column gap-2">
         @foreach (var d in _documents)
         {
-            <DocumentCard Document="d" ShowDelete="CanDelete" OnDownload="HandleDownloadAsync" OnDelete="HandleDeleteAsync" />
+            <DocumentCard Document="d" ShowDelete="CanDelete" OnDownload="HandleDownloadAsync" OnDelete="HandleDeleteAsync" OnApprove="HandleApproveAsync" />
         }
     </div>
 }
@@ -110,6 +110,24 @@ else
         catch (Exception)
         {
             Toast.Error("Couldn't delete document", "Please try again.");
+        }
+    }
+
+    private async Task HandleApproveAsync(DocumentDTO d)
+    {
+        try
+        {
+            await DocumentService.ApproveAsync(d.DocumentID);
+            await LoadAsync();
+            Toast.Success("Document approved", $"\"{d.DocumentName}\" is now published.");
+        }
+        catch (ApiException ex)
+        {
+            Toast.Error("Couldn't approve document", ex.GetFullMessage());
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't approve document", "Please try again.");
         }
     }
 }
