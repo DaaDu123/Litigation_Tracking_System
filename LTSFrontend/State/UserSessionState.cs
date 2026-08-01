@@ -3,7 +3,7 @@
     /// <summary>
     /// Scoped (one instance per user circuit/session) holder for the
     /// currently logged-in user's token + basic profile info.
-    /// AuthTokenHandler reads AccessToken from here on every API call.
+    /// ApiClient reads AccessToken from here on every API call.
     /// </summary>
     public class UserSessionState
     {

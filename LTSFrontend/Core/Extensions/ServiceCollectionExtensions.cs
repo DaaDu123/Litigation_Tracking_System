@@ -44,10 +44,15 @@ namespace LTSFrontend.Core.Extensions
             // Registered through IHttpClientFactory so the underlying
             // SocketsHttpHandler (and its TCP/TLS connections) is pooled
             // and reused across requests/circuits instead of a brand new
-            // handler + connection being created every time (this was the
-            // main cause of slow page loads).
-            services.AddScoped<AuthTokenHandler>();
-
+            // handler + connection being created every time.
+            //
+            // NOTE: the Bearer token is attached inside ApiClient itself,
+            // NOT via AddHttpMessageHandler<T>() - a scoped service (like
+            // UserSessionState) injected into a handler registered that
+            // way gets resolved from IHttpClientFactory's own internal,
+            // pooled scope instead of the current circuit's scope, which
+            // silently breaks per-user auth. See ApiClient's constructor
+            // comment for the full explanation.
             services.AddHttpClient<ApiClient>((sp, client) =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -56,7 +61,6 @@ namespace LTSFrontend.Core.Extensions
                 client.BaseAddress = new Uri(baseUrl);
                 client.Timeout = TimeSpan.FromSeconds(100);
             })
-            .AddHttpMessageHandler<AuthTokenHandler>()
             .ConfigurePrimaryHttpMessageHandler(sp =>
             {
                 var env = sp.GetRequiredService<IHostEnvironment>();

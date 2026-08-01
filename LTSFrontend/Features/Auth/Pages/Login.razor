@@ -98,7 +98,12 @@
                 result.UserID, result.FullName, result.Email, role,
                 result.AccessToken, result.AccessTokenExpiry);
 
-            Navigation.NavigateTo("/", forceLoad: true);
+            // No forceLoad: the session is already live in this circuit
+            // (MarkUserAsAuthenticatedAsync above both set it in-memory and
+            // notified Blazor's auth infrastructure), so a normal SPA-style
+            // navigation is enough and avoids re-triggering the
+            // prerender-vs-JS-interop race a hard reload would risk.
+            Navigation.NavigateTo("/");
         }
         catch (ApiException ex)
         {

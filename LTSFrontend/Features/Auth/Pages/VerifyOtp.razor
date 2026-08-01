@@ -107,7 +107,10 @@
                 result.UserID, result.FullName, result.Email, role,
                 result.AccessToken, DateTime.UtcNow.AddMinutes(60));
 
-            Navigation.NavigateTo("/", forceLoad: true);
+            // No forceLoad - see Login.razor comment: session is already
+            // live in this circuit, a hard reload only risks the
+            // prerender-vs-JS-interop race.
+            Navigation.NavigateTo("/");
         }
         catch (ApiException ex)
         {
