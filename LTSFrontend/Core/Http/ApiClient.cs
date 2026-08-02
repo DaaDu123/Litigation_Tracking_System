@@ -17,6 +17,14 @@ namespace LTSFrontend.Core.Http
 
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+        // Guards TryRefreshAccessTokenAsync so that several requests firing
+        // at once right as the token expires (e.g. a page that kicks off
+        // 3-4 API calls in parallel on load) don't each independently hit
+        // POST /auth/refresh-token - only the first waits on the real
+        // network call, the rest wait on this lock and then reuse whatever
+        // token it produced.
+        private readonly SemaphoreSlim _refreshLock = new(1, 1);
+
         // ================================================================
         // ROOT-CAUSE FIX: the Bearer token used to be attached by a
         // DelegatingHandler (AuthTokenHandler) wired in via
@@ -103,9 +111,92 @@ namespace LTSFrontend.Core.Http
                 }
             }
 
+            // ================================================================
+            // SILENT TOKEN REFRESH: the access token is short-lived (60 min
+            // by default - see JwtSettings.ExpiryMinutes on the backend).
+            // Without this, once it expires every single request would
+            // start failing with 401 until the user manually logs out and
+            // back in, even though a perfectly valid refresh-token cookie
+            // exists. Refresh proactively - a little before actual expiry -
+            // using that HttpOnly cookie, so requests always go out with a
+            // live token instead of reactively retrying after a 401 (which
+            // would mean cloning/resending the original request, including
+            // any multipart file-upload content that can only be read
+            // once - proactive refresh avoids that whole class of bugs).
+            // ================================================================
+            bool hasKnownIdentity = _session.UserID != 0;
+            bool tokenMissingOrExpiring = string.IsNullOrWhiteSpace(_session.AccessToken) ||
+                !_session.AccessTokenExpiry.HasValue || _session.AccessTokenExpiry.Value <= DateTime.UtcNow.AddSeconds(30);
+
+            if (hasKnownIdentity && tokenMissingOrExpiring)
+            {
+                await TryRefreshAccessTokenAsync();
+            }
+
             if (!string.IsNullOrWhiteSpace(_session.AccessToken))
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _session.AccessToken);
+            }
+        }
+
+        private async Task<bool> TryRefreshAccessTokenAsync()
+        {
+            await _refreshLock.WaitAsync();
+            try
+            {
+                // Someone else may have already refreshed while we were
+                // waiting for the lock - re-check before making another
+                // network call.
+                if (!string.IsNullOrWhiteSpace(_session.AccessToken) && _session.AccessTokenExpiry.HasValue &&
+                    _session.AccessTokenExpiry.Value > DateTime.UtcNow.AddSeconds(30))
+                {
+                    return true;
+                }
+
+                // Talk to the raw HttpClient directly here, NOT this
+                // class's own SendAsync<T> - that would recurse back into
+                // EnsureAuthorizationHeaderAsync. The refresh-token cookie
+                // (HttpOnly, sent automatically) is all this endpoint
+                // needs; it's [AllowAnonymous] on the backend.
+                var request = new HttpRequestMessage(HttpMethod.Post, ApiEndpoints.Auth.RefreshToken);
+                var response = await Http.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return false;
+                }
+
+                var raw = await response.Content.ReadAsStringAsync();
+                var parsed = JsonSerializer.Deserialize<ApiResponse<Features.Auth.Models.RefreshTokenResponseDTO>>(raw, JsonOptions);
+
+                if (parsed?.Success != true || parsed.Data == null)
+                {
+                    return false;
+                }
+
+                _session.UpdateAccessToken(parsed.Data.AccessToken, parsed.Data.AccessTokenExpiry);
+
+                // Persist the refreshed token too, so a brand new circuit
+                // (new tab, F5) started right after this also picks up the
+                // live token instead of the now-stale one that was
+                // originally saved at login.
+                await _tokenStorage.SaveSessionAsync(new StoredSession(
+                    _session.UserID, _session.FullName, _session.Email, _session.Role,
+                    _session.AccessToken!, _session.AccessTokenExpiry!.Value));
+
+                return true;
+            }
+            catch
+            {
+                // Network hiccup, refresh token genuinely expired/revoked,
+                // etc. - fall through and let the original request go out
+                // with whatever token (possibly none) we already have; the
+                // resulting 401, if any, surfaces normally to the caller.
+                return false;
+            }
+            finally
+            {
+                _refreshLock.Release();
             }
         }
 

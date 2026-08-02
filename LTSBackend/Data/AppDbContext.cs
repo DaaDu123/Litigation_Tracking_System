@@ -10,6 +10,24 @@ using LTSBackend.Comman.Enum;
 
 namespace LTSBackend.Data;
 
+/// <summary>
+/// AppDbContext: Main Database Context with Complete Seed Data.
+///
+/// Contains all DbSets, relationships, constraints, global multi-tenant
+/// query filters, and complete seed data for production-ready
+/// initialization.
+///
+/// TENANT ISOLATION (SRS "Multi-Tenant Security" / "Row-Level Security"):
+/// every tenant-owned table is given a global query filter below so that
+/// EVERY query issued through this context - in every handler, in every
+/// feature slice, present or future - is automatically scoped to the
+/// calling user's own firm. This is enforced here, once, instead of
+/// relying on every single handler remembering to add its own
+/// ".Where(x => x.FirmID == ...)" - a single missed filter in any one
+/// handler would otherwise be a full cross-tenant data leak (IDOR).
+/// Handlers that legitimately need to bypass this (e.g. this class's own
+/// authorization services) call ".IgnoreQueryFilters()" explicitly.
+/// </summary>
 public class AppDbContext : DbContext
 {
     private readonly IHttpContextAccessor? _httpContextAccessor;
