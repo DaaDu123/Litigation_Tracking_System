@@ -87,55 +87,62 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
         }
 
         // ================================================
-        // 4. Begin transaction
+        // 4. Begin transaction (wrapped in CreateExecutionStrategy since
+        //    EnableRetryOnFailure is on - see CreateFirmCommandHandler for
+        //    the full explanation).
         // ================================================
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync(cancellationToken);
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            // ================================================
-            // 5. Remove old permissions
-            // ================================================
-            _context.RolePermissions.RemoveRange(role.RolePermissions);
-            await _context.SaveChangesAsync(cancellationToken);
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
 
-            _logger.LogInformation("Removed {Count} old permissions for role: {RoleID}",
-                role.RolePermissions.Count, request.RoleID);
+            try
+            {
+                // ================================================
+                // 5. Remove old permissions
+                // ================================================
+                _context.RolePermissions.RemoveRange(role.RolePermissions);
+                await _context.SaveChangesAsync(cancellationToken);
 
-            // ================================================
-            // 6. Assign new permissions
-            // ================================================
-            var rolePermissions = permissionIds
-                .Select(permissionId => new RolePermission
-                {
-                    RoleID = request.RoleID,
-                    PermissionID = permissionId
-                });
+                _logger.LogInformation("Removed {Count} old permissions for role: {RoleID}",
+                    role.RolePermissions.Count, request.RoleID);
 
-            await _context.RolePermissions.AddRangeAsync(
-                rolePermissions,
-                cancellationToken);
+                // ================================================
+                // 6. Assign new permissions
+                // ================================================
+                var rolePermissions = permissionIds
+                    .Select(permissionId => new RolePermission
+                    {
+                        RoleID = request.RoleID,
+                        PermissionID = permissionId
+                    });
 
-            await _context.SaveChangesAsync(cancellationToken);
+                await _context.RolePermissions.AddRangeAsync(
+                    rolePermissions,
+                    cancellationToken);
 
-            _logger.LogInformation("Assigned {Count} new permissions to role: {RoleID}",
-                permissionIds.Count, request.RoleID);
+                await _context.SaveChangesAsync(cancellationToken);
 
-            // ================================================
-            // 7. Commit transaction
-            // ================================================
-            await transaction.CommitAsync(cancellationToken);
+                _logger.LogInformation("Assigned {Count} new permissions to role: {RoleID}",
+                    permissionIds.Count, request.RoleID);
 
-            _logger.LogInformation("Permissions assigned successfully to role: {RoleID}", request.RoleID);
+                // ================================================
+                // 7. Commit transaction
+                // ================================================
+                await transaction.CommitAsync(cancellationToken);
 
-            return true;
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError("Assign permissions failed - transaction rolled back");
-            throw;
-        }
+                _logger.LogInformation("Permissions assigned successfully to role: {RoleID}", request.RoleID);
+
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError("Assign permissions failed - transaction rolled back");
+                throw;
+            }
+        });
     }
 }

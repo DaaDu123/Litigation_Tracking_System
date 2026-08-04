@@ -31,43 +31,58 @@ public class CreateFirmCommandHandler(
         if (emailExists)
             throw new ValidationException([$"Email '{request.AdminEmail}' already exists."]);
 
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        // ================================================================
+        // EnableRetryOnFailure (Program.cs / AppDbContextFactory) means EF
+        // Core's SqlServerRetryingExecutionStrategy is active, which does
+        // NOT allow a manually-opened transaction to span multiple retried
+        // operations - it throws InvalidOperationException at runtime if
+        // you try. Every retriable unit of work (transaction + everything
+        // inside it) must instead run through CreateExecutionStrategy().
+        // ExecuteAsync(...), which knows how to safely retry the *whole*
+        // block (including re-opening the transaction) as one atomic unit.
+        // ================================================================
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        // 3. Create the firm
-        var firm = new Firm
+        return await strategy.ExecuteAsync(async () =>
         {
-            FirmName = request.FirmName,
-            FirmCode = request.FirmCode.Trim().ToUpperInvariant(),
-            Address = request.Address,
-            ContactEmail = request.ContactEmail,
-            ContactPhone = request.ContactPhone,
-            CreatedBy = request.ActingUserID,
-            CreatedAt = DateTime.UtcNow
-        };
-        _context.Firms.Add(firm);
-        await _context.SaveChangesAsync(cancellationToken);
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
-        // 4. Bootstrap the firm's first Firm Admin account
-        var admin = new User
-        {
-            EmployeeNo = $"EMP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..4].ToUpperInvariant()}",
-            FullName = request.AdminFullName,
-            Email = request.AdminEmail,
-            PasswordHash = _passwordService.HashPassword(request.AdminPassword),
-            RoleID = (int)UserRole.FirmAdmin,
-            FirmID = firm.FirmID,
-            IsActive = true,
-            IsDeleted = false,
-            CreatedAt = DateTime.UtcNow
-        };
-        _context.Users.Add(admin);
-        await _context.SaveChangesAsync(cancellationToken);
+            // 3. Create the firm
+            var firm = new Firm
+            {
+                FirmName = request.FirmName,
+                FirmCode = request.FirmCode.Trim().ToUpperInvariant(),
+                Address = request.Address,
+                ContactEmail = request.ContactEmail,
+                ContactPhone = request.ContactPhone,
+                CreatedBy = request.ActingUserID,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Firms.Add(firm);
+            await _context.SaveChangesAsync(cancellationToken);
 
-        await transaction.CommitAsync(cancellationToken);
+            // 4. Bootstrap the firm's first Firm Admin account
+            var admin = new User
+            {
+                EmployeeNo = $"EMP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..4].ToUpperInvariant()}",
+                FullName = request.AdminFullName,
+                Email = request.AdminEmail,
+                PasswordHash = _passwordService.HashPassword(request.AdminPassword),
+                RoleID = (int)UserRole.FirmAdmin,
+                FirmID = firm.FirmID,
+                IsActive = true,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Users.Add(admin);
+            await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Firm {FirmName} ({FirmCode}) created with admin {AdminEmail}",
-            firm.FirmName, firm.FirmCode, admin.Email);
+            await transaction.CommitAsync(cancellationToken);
 
-        return firm.FirmID;
+            _logger.LogInformation("Firm {FirmName} ({FirmCode}) created with admin {AdminEmail}",
+                firm.FirmName, firm.FirmCode, admin.Email);
+
+            return firm.FirmID;
+        });
     }
 }

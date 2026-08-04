@@ -34,34 +34,42 @@ public sealed class CreateRoleHandler(AppDbContext _context) : IRequestHandler<C
                 "One or more permissions are invalid."
             });
 
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync(cancellationToken);
+        // EnableRetryOnFailure requires any manual transaction to run
+        // through CreateExecutionStrategy().ExecuteAsync(...) - see the
+        // comment in CreateFirmCommandHandler for the full explanation.
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            var role = new Role
-            {
-                RoleName = request.RoleName,
-                Description = request.Description
-            };
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
 
-            _context.Roles.Add(role);
-            await _context.SaveChangesAsync(cancellationToken);
-            var rolePermissions = validPermissions.Select(permissionId => new RolePermission
+            try
             {
-                RoleID = role.RoleID,
-                PermissionID = permissionId
-            });
+                var role = new Role
+                {
+                    RoleName = request.RoleName,
+                    Description = request.Description
+                };
 
-            await _context.RolePermissions.AddRangeAsync(rolePermissions, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            return role.RoleID;
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
+                _context.Roles.Add(role);
+                await _context.SaveChangesAsync(cancellationToken);
+                var rolePermissions = validPermissions.Select(permissionId => new RolePermission
+                {
+                    RoleID = role.RoleID,
+                    PermissionID = permissionId
+                });
+
+                await _context.RolePermissions.AddRangeAsync(rolePermissions, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return role.RoleID;
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
     }
 }

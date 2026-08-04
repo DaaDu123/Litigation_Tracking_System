@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal")]
 @using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Core.Models
+@using LTSFrontend.Features.Cases.Components
 @using LTSFrontend.Features.Cases.Models
 @using LTSFrontend.Features.Cases.Services
 @using LTSFrontend.Features.Masters.Models
@@ -56,55 +57,11 @@
 </div>
 
 <div class="lts-card p-0">
-    <div class="lts-toolbar" style="padding: 1rem 1.1rem 0;">
-        <div class="lts-toolbar-left">
-            <SearchBox @bind-Value="_searchTerm" @bind-Value:after="OnFilterChanged"
-                       Placeholder="Search by case number, title, or reference..." />
-
-            <select class="lts-select" @bind="_courtFilter" @bind:after="OnFilterChanged">
-                <option value="0">All Courts</option>
-                @foreach (var court in _courts)
-                {
-                    <option value="@court.CourtID">@court.CourtName</option>
-                }
-            </select>
-
-            <select class="lts-select" @bind="_statusFilter" @bind:after="OnFilterChanged">
-                <option value="0">All Statuses</option>
-                @foreach (var status in _statuses)
-                {
-                    <option value="@status.StatusID">@status.StatusName</option>
-                }
-            </select>
-
-            <select class="lts-select" @bind="_priorityFilter" @bind:after="OnFilterChanged">
-                <option value="">All Priorities</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
-            </select>
-        </div>
-        <div class="lts-toolbar-right">
-            <select class="lts-select" @bind="_pageSize" @bind:after="OnFilterChanged" style="min-width:110px;">
-                <option value="10">10 / page</option>
-                <option value="25">25 / page</option>
-                <option value="50">50 / page</option>
-            </select>
-
-            <div class="lts-view-toggle">
-                <button class="@(_viewMode == "table" ? "active" : "")" title="Table view" @onclick='() => _viewMode = "table"'>
-                    <i class="bi bi-table"></i>
-                </button>
-                <button class="@(_viewMode == "grid" ? "active" : "")" title="Card view" @onclick='() => _viewMode = "grid"'>
-                    <i class="bi bi-grid-3x3-gap"></i>
-                </button>
-            </div>
-
-            <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="() => LoadAsync()" title="Refresh" disabled="@_isLoading">
-                <i class="bi bi-arrow-clockwise @(_isLoading ? "spin" : "")"></i>
-            </button>
-        </div>
-    </div>
+    <CaseFilterPanel @bind-SearchTerm="_searchTerm" @bind-CourtFilter="_courtFilter"
+                      @bind-StatusFilter="_statusFilter" @bind-PriorityFilter="_priorityFilter"
+                      @bind-PageSize="_pageSize" @bind-ViewMode="_viewMode"
+                      Courts="_courts" Statuses="_statuses" IsLoading="_isLoading"
+                      OnFilterChanged="OnFilterChanged" OnRefresh="() => LoadAsync()" />
 
     <div style="padding: 1rem 1.1rem;">
         @if (_isLoading)
@@ -229,33 +186,7 @@
             <div class="lts-grid-view">
                 @foreach (var c in _cases)
                 {
-                    <div class="lts-entity-card">
-                        <div class="lts-entity-card-header">
-                            <div class="lts-entity-card-title">@c.CaseTitle</div>
-                            <span class="lts-badge lts-badge-@PriorityBadgeClass(c.Priority)">@c.Priority</span>
-                        </div>
-                        <div class="lts-entity-card-meta"><i class="bi bi-hash"></i>@c.CaseNumber</div>
-                        <div class="lts-entity-card-meta"><i class="bi bi-bank"></i>@c.CourtName</div>
-                        <div class="lts-entity-card-meta"><i class="bi bi-flag"></i>@c.StatusName &middot; @c.StageName</div>
-
-                        <div class="lts-entity-card-footer">
-                            <button class="lts-btn lts-btn-ghost lts-btn-sm" @onclick='() => Nav.NavigateTo($"/cases/{c.CaseID}")'>
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <PermissionGate Roles="Partner,FirmAdmin,SuperAdmin">
-                                <div class="lts-row-actions">
-                                    <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Edit" @onclick='() => Nav.NavigateTo($"/cases/{c.CaseID}/edit")'>
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <PermissionGate Roles="FirmAdmin,SuperAdmin">
-                                        <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Delete" @onclick="() => HandleDeleteAsync(c)">
-                                            <i class="bi bi-trash text-danger"></i>
-                                        </button>
-                                    </PermissionGate>
-                                </div>
-                            </PermissionGate>
-                        </div>
-                    </div>
+                    <CaseCard Case="c" OnView="ViewCase" OnEdit="EditCase" OnDelete="HandleDeleteAsync" />
                 }
             </div>
             <Pagination CurrentPage="_pageNumber" TotalItems="_totalRecords" PageSize="_pageSize" PageChanged="OnPageChanged" />
@@ -363,6 +294,10 @@
         _pageNumber = page;
         await LoadAsync();
     }
+
+    private void ViewCase(CaseDTO c) => Nav.NavigateTo($"/cases/{c.CaseID}");
+
+    private void EditCase(CaseDTO c) => Nav.NavigateTo($"/cases/{c.CaseID}/edit");
 
     private async Task HandleDeleteAsync(CaseDTO c)
     {

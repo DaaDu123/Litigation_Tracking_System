@@ -218,6 +218,54 @@ namespace LTSFrontend.Core.Http
 
             var raw = await response.Content.ReadAsStringAsync(ct);
 
+            // ================================================================
+            // ROOT-CAUSE FIX: error responses were being deserialized into
+            // ApiResponse<T> - the SAME T the caller expects back on
+            // success (e.g. `int` for CreateFirmAsync). LTSBackend's error
+            // envelope never sets Data, so it comes back as JSON null/
+            // absent; System.Text.Json refuses to bind that into a
+            // non-nullable value-type T (int/long/bool), throws
+            // JsonException, which the old code silently swallowed - along
+            // with the perfectly good Message/Errors sitting right next to
+            // that Data field in the same payload. That's why validation
+            // errors (e.g. "Firm code can only contain letters, numbers,
+            // and hyphens.") were showing up on screen as a generic
+            // "Request failed with status 400" instead of the real reason.
+            //
+            // Fix: parse error bodies with a small envelope that has no
+            // Data property at all, so it can never fail to bind regardless
+            // of what T the caller asked for. Only ever deserialize into
+            // ApiResponse<T> once we know the call actually succeeded.
+            // ================================================================
+            if (!response.IsSuccessStatusCode)
+            {
+                string message = $"Request failed with status {(int)response.StatusCode} ({response.StatusCode}).";
+                List<string>? errors = null;
+
+                if (!string.IsNullOrWhiteSpace(raw))
+                {
+                    try
+                    {
+                        var problem = JsonSerializer.Deserialize<ApiErrorEnvelope>(raw, JsonOptions);
+                        if (problem != null)
+                        {
+                            if (!string.IsNullOrWhiteSpace(problem.Message))
+                            {
+                                message = problem.Message;
+                            }
+                            errors = problem.Errors;
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        // Not JSON at all (e.g. an IIS/Kestrel error page) -
+                        // keep the generic status-code fallback message.
+                    }
+                }
+
+                throw new ApiException(message, (int)response.StatusCode, errors);
+            }
+
             ApiResponse<T>? parsed = null;
             if (!string.IsNullOrWhiteSpace(raw))
             {
@@ -229,13 +277,6 @@ namespace LTSFrontend.Core.Http
                 {
                     parsed = null;
                 }
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var message = parsed?.Message ??
-                    $"Request failed with status {(int)response.StatusCode} ({response.StatusCode}).";
-                throw new ApiException(message, (int)response.StatusCode, parsed?.Errors);
             }
 
             // If expected return type is bool and response is successful with null/empty content

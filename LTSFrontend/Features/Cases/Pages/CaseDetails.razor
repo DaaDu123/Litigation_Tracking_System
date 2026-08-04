@@ -4,6 +4,7 @@
 @using LTSFrontend.Features.CaseAssignments.Components
 @using LTSFrontend.Features.CaseNotes.Components
 @using LTSFrontend.Features.CaseParties.Components
+@using LTSFrontend.Features.Cases.Components
 @using LTSFrontend.Features.Cases.Models
 @using LTSFrontend.Features.Cases.Services
 @using LTSFrontend.Features.Deadlines.Components
@@ -112,6 +113,9 @@ else
         <button class="lts-tab @(_activeTab == "overview" ? "active" : "")" @onclick='() => _activeTab = "overview"'>
             <i class="bi bi-info-circle"></i> Overview
         </button>
+        <button class="lts-tab @(_activeTab == "timeline" ? "active" : "")" @onclick='() => _activeTab = "timeline"'>
+            <i class="bi bi-clock-history"></i> Timeline
+        </button>
         <button class="lts-tab @(_activeTab == "assignments" ? "active" : "")" @onclick='() => _activeTab = "assignments"'>
             <i class="bi bi-person-badge"></i> Assignments
         </button>
@@ -177,6 +181,12 @@ else
                     </dl>
                 </div>
             </div>
+        </div>
+    }
+    else if (_activeTab == "timeline")
+    {
+        <div class="lts-card">
+            <CaseTimeline CaseId="@CaseId" />
         </div>
     }
     else if (_activeTab == "assignments")

@@ -42,8 +42,14 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         // ================================================
-        // 3. Start transaction
+        // 3. Start transaction (wrapped in CreateExecutionStrategy since
+        //    EnableRetryOnFailure is on - see CreateFirmCommandHandler for
+        //    the full explanation).
         // ================================================
+        var strategy = _context.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
+        {
         await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
         try
         {
@@ -150,6 +156,7 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
             _logger.LogError(ex, "Case delete fail ho gya: {CaseID}", request.CaseID);
             throw;
         }
+        });
     }
     // SECURITY FIX: see UpdateCaseHandler.GetCurrentUserId for full
     // rationale - previously defaulted to UserID = 1 (SuperAdmin) instead

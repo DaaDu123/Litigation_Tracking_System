@@ -13,18 +13,14 @@ namespace LTSBackend.Features.Auth.Register;
 
 public class RegisterHandler(AppDbContext _context, IPasswordService _passwordService, IEmailService _emailService, IAuditService _auditService, ILogger<RegisterHandler> _logger) : IRequestHandler<RegisterCommand, RegisterResponseDTO>
 {
-    public async Task<RegisterResponseDTO> Handle(
-        RegisterCommand request,
-        CancellationToken cancellationToken)
+    public async Task<RegisterResponseDTO> Handle(RegisterCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting registration for email: {Email}", request.Email);
 
         // ================================================
         // 1. Check if email already exists
         // ================================================
-        bool emailExists = await _context.Users
-            .AsNoTracking()
-            .AnyAsync(x => x.Email == request.Email, cancellationToken);
+        bool emailExists = await _context.Users.AsNoTracking().AnyAsync(x => x.Email == request.Email, cancellationToken);
 
         if (emailExists)
         {
@@ -35,24 +31,27 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         // ================================================
         // 2. Resolve the firm this user is registering into
         // ================================================
-        var firm = await _context.Firms
-            .FirstOrDefaultAsync(x => x.FirmCode == request.FirmCode.Trim().ToUpper(), cancellationToken);
+        var firm = await _context.Firms.FirstOrDefaultAsync(x => x.FirmCode == request.FirmCode.Trim().ToUpper(), cancellationToken);
 
         if (firm == null)
+        {
             throw new ValidationException(["Invalid firm code. Please obtain the correct code from your Firm Administrator."]);
+        }
 
         if (firm.IsDeleted)
+        {
             throw new ValidationException(["This firm workspace is no longer active."]);
+        }
 
         if (firm.IsBlocked)
+        {
             throw new ValidationException(["This firm workspace is currently blocked. Please contact your Firm Administrator."]);
+        }
 
         // ================================================
         // 3. Get default role (InternParalegal)
         // ================================================
-        var defaultRole = await _context.Roles
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.RoleID == (int)UserRole.InternParalegal, cancellationToken);
+        var defaultRole = await _context.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.RoleID == (int)UserRole.InternParalegal, cancellationToken);
 
         if (defaultRole == null)
         {
@@ -86,9 +85,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         // ================================================
         // 4. Clean up old unused Registration OTPs
         // ================================================
-        var oldOtps = await _context.UserOtps
-            .Where(x => x.Email == request.Email && !x.IsUsed && x.Purpose == OtpPurpose.Registration)
-            .ToListAsync(cancellationToken);
+        var oldOtps = await _context.UserOtps.Where(x => x.Email == request.Email && !x.IsUsed && x.Purpose == OtpPurpose.Registration).ToListAsync(cancellationToken);
 
         if (oldOtps.Count > 0)
         {

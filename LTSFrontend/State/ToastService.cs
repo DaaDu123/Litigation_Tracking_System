@@ -1,21 +1,5 @@
 namespace LTSFrontend.State
 {
-    public enum ToastType
-    {
-        Success,
-        Error,
-        Warning,
-        Info
-    }
-
-    public class ToastMessage
-    {
-        public Guid Id { get; } = Guid.NewGuid();
-        public ToastType Type { get; init; }
-        public string Title { get; init; } = string.Empty;
-        public string? Detail { get; init; }
-    }
-
     /// <summary>
     /// Scoped (one per user circuit) pub/sub service that powers the
     /// app-wide toast notification stack. Any page/service can call

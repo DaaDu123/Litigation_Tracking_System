@@ -97,62 +97,70 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
         }
 
         // ================================================
-        // 5. Begin transaction
+        // 5. Begin transaction (wrapped in CreateExecutionStrategy since
+        //    EnableRetryOnFailure is on - see CreateFirmCommandHandler for
+        //    the full explanation of why a bare BeginTransactionAsync
+        //    throws under that configuration).
         // ================================================
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync(cancellationToken);
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            // ================================================
-            // 6. Update role
-            // ================================================
-            role.RoleName = request.RoleName;
-            role.Description = request.Description;
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
 
-            // ================================================
-            // 7. Remove old permissions
-            // ================================================
-            _context.RolePermissions.RemoveRange(role.RolePermissions);
-            await _context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                // ================================================
+                // 6. Update role
+                // ================================================
+                role.RoleName = request.RoleName;
+                role.Description = request.Description;
 
-            _logger.LogInformation("Removed old permissions for role: {RoleID}", request.RoleID);
+                // ================================================
+                // 7. Remove old permissions
+                // ================================================
+                _context.RolePermissions.RemoveRange(role.RolePermissions);
+                await _context.SaveChangesAsync(cancellationToken);
 
-            // ================================================
-            // 8. Assign new permissions
-            // ================================================
-            var rolePermissions = validPermissions
-                .Select(permissionId => new RolePermission
-                {
-                    RoleID = role.RoleID,
-                    PermissionID = permissionId
-                });
+                _logger.LogInformation("Removed old permissions for role: {RoleID}", request.RoleID);
 
-            await _context.RolePermissions.AddRangeAsync(
-                rolePermissions,
-                cancellationToken);
+                // ================================================
+                // 8. Assign new permissions
+                // ================================================
+                var rolePermissions = validPermissions
+                    .Select(permissionId => new RolePermission
+                    {
+                        RoleID = role.RoleID,
+                        PermissionID = permissionId
+                    });
 
-            await _context.SaveChangesAsync(cancellationToken);
+                await _context.RolePermissions.AddRangeAsync(
+                    rolePermissions,
+                    cancellationToken);
 
-            _logger.LogInformation(
-                "Role {RoleID} assigned {Count} new permissions",
-                request.RoleID,
-                validPermissions.Count);
+                await _context.SaveChangesAsync(cancellationToken);
 
-            // ================================================
-            // 9. Commit transaction
-            // ================================================
-            await transaction.CommitAsync(cancellationToken);
+                _logger.LogInformation(
+                    "Role {RoleID} assigned {Count} new permissions",
+                    request.RoleID,
+                    validPermissions.Count);
 
-            _logger.LogInformation("Role updated successfully: {RoleID}", request.RoleID);
+                // ================================================
+                // 9. Commit transaction
+                // ================================================
+                await transaction.CommitAsync(cancellationToken);
 
-            return true;
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError("Role update failed - transaction rolled back");
-            throw;
-        }
+                _logger.LogInformation("Role updated successfully: {RoleID}", request.RoleID);
+
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError("Role update failed - transaction rolled back");
+                throw;
+            }
+        });
     }
 }

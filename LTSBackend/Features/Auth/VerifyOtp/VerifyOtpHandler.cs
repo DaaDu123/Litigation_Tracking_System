@@ -15,9 +15,7 @@ namespace LTSBackend.Features.Auth.VerifyOtp;
 public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<VerifyOtpHandler> _logger) : IRequestHandler<VerifyOtpCommand, VerifyOtpResponseDTO>
 {
 
-    public async Task<VerifyOtpResponseDTO> Handle(
-        VerifyOtpCommand request,
-        CancellationToken cancellationToken)
+    public async Task<VerifyOtpResponseDTO> Handle(VerifyOtpCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("OTP verification attempt for email: {Email}", request.Email);
 
@@ -36,8 +34,7 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
         if (otp == null)
         {
             _logger.LogWarning("OTP verification failed: Invalid or expired OTP for email: {Email}", request.Email);
-            throw new ValidationException(
-                new List<string> { "Invalid or expired OTP code." });
+            throw new ValidationException(new List<string> { "Invalid or expired OTP code." });
         }
 
         // ================================================

@@ -72,46 +72,53 @@ public class DeleteRoleHandler : IRequestHandler<DeleteRoleCommand, bool>
         }
 
         // ================================================
-        // 4. Begin transaction
+        // 4. Begin transaction (wrapped in CreateExecutionStrategy since
+        //    EnableRetryOnFailure is on - see CreateFirmCommandHandler for
+        //    the full explanation).
         // ================================================
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync(cancellationToken);
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            // ================================================
-            // 5. Remove all permissions for this role
-            // ================================================
-            _context.RolePermissions.RemoveRange(role.RolePermissions);
-            await _context.SaveChangesAsync(cancellationToken);
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
 
-            _logger.LogInformation(
-                "Removed {Count} permissions for role: {RoleID}",
-                role.RolePermissions.Count,
-                request.RoleID);
+            try
+            {
+                // ================================================
+                // 5. Remove all permissions for this role
+                // ================================================
+                _context.RolePermissions.RemoveRange(role.RolePermissions);
+                await _context.SaveChangesAsync(cancellationToken);
 
-            // ================================================
-            // 6. Delete role
-            // ================================================
-            _context.Roles.Remove(role);
-            await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation(
+                    "Removed {Count} permissions for role: {RoleID}",
+                    role.RolePermissions.Count,
+                    request.RoleID);
 
-            _logger.LogInformation("Role permissions deleted, removing role: {RoleID}", request.RoleID);
+                // ================================================
+                // 6. Delete role
+                // ================================================
+                _context.Roles.Remove(role);
+                await _context.SaveChangesAsync(cancellationToken);
 
-            // ================================================
-            // 7. Commit transaction
-            // ================================================
-            await transaction.CommitAsync(cancellationToken);
+                _logger.LogInformation("Role permissions deleted, removing role: {RoleID}", request.RoleID);
 
-            _logger.LogInformation("Role deleted successfully: {RoleID}", request.RoleID);
+                // ================================================
+                // 7. Commit transaction
+                // ================================================
+                await transaction.CommitAsync(cancellationToken);
 
-            return true;
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError("Role deletion failed - transaction rolled back");
-            throw;
-        }
+                _logger.LogInformation("Role deleted successfully: {RoleID}", request.RoleID);
+
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError("Role deletion failed - transaction rolled back");
+                throw;
+            }
+        });
     }
 }

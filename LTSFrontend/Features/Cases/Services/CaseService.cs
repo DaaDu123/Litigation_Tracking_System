@@ -65,13 +65,19 @@ namespace LTSFrontend.Features.Cases.Services
                 form.CurrentLegalOfficerID
             });
 
-        public Task<bool> UpdateAsync(UpdateCaseDTO form) =>
-            _api.PutAsync<bool>(ApiEndpoints.Cases.ById(form.CaseID), form);
+        public Task<bool> UpdateAsync(UpdateCaseDTO form)
+        {
+            return _api.PutAsync<bool>(ApiEndpoints.Cases.ById(form.CaseID), form);
+        }
 
-        public Task<bool> DeleteAsync(long id) =>
-            _api.DeleteAsync<bool>(ApiEndpoints.Cases.ById(id));
+        public Task<bool> DeleteAsync(long id)
+        {
+            return _api.DeleteAsync<bool>(ApiEndpoints.Cases.ById(id));
+        }
 
-        public Task<bool> UpdateStatusAsync(long id, int newStatusID, string? remarks) =>
-            _api.PutAsync<bool>(ApiEndpoints.Cases.Status(id), new { NewStatusID = newStatusID, Remarks = remarks });
+        public Task<bool> UpdateStatusAsync(long id, int newStatusID, string? remarks)
+        {
+            return _api.PutAsync<bool>(ApiEndpoints.Cases.Status(id), new { NewStatusID = newStatusID, Remarks = remarks });
+        }
     }
 }
