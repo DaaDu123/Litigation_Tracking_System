@@ -108,6 +108,12 @@ h1:focus {
     font-size: 2.25rem;
 }
 
+.auth-brand-icon img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
 .auth-brand-inner h1 {
     font-size: 1.6rem;
     font-weight: 700;
@@ -255,22 +261,20 @@ h1:focus {
         flex: 0 0 auto;
     }
 
-        .lts-sidebar .brand i {
-            width: 2.1rem;
-            height: 2.1rem;
+        .lts-sidebar .brand .brand-logo {
+            width: 2.3rem;
+            height: 2.3rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 0.6rem;
-            background: linear-gradient(135deg, var(--lts-blue) 0%, var(--lts-blue-light) 100%);
-            color: #fff;
-            font-size: 1.05rem;
+            object-fit: contain;
             box-shadow: 0 4px 10px rgba(27, 79, 214, 0.45);
             flex: 0 0 auto;
         }
 
         .lts-sidebar .brand-text {
-            font-size: 1.05rem;
+            font-size: 1.35rem;
         }
 
     .lts-sidebar nav {
@@ -487,6 +491,13 @@ h1:focus {
     display: flex;
     align-items: center;
     gap: 0.6rem;
+}
+
+.topbar-brand-logo {
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 0.4rem;
+    object-fit: contain;
 }
 
 .lts-icon-btn {
