@@ -29,7 +29,6 @@ namespace LTSFrontend.Features.Users.Services
         public async Task<int> CreateAsync(CreateUserDTO dto, IBrowserFile? profileImage = null)
         {
             using var form = await BuildFormAsync(dto, profileImage, includePassword: true);
-            // ✅ FIXED: '?? 0' removed
             return await _api.PostFormAsync<int>(ApiEndpoints.Users.Base_, form);
         }
 
@@ -42,13 +41,11 @@ namespace LTSFrontend.Features.Users.Services
             form.Add(new StringContent(dto.UserID.Value.ToString()), "UserID");
             form.Add(new StringContent(dto.IsActive.ToString()), "IsActive");
 
-            // ✅ FIXED: '?? false' removed
             return await _api.PutFormAsync<bool>(ApiEndpoints.Users.ById(dto.UserID.Value), form);
         }
 
         public async Task<bool> DeleteAsync(int id)
         {
-            // ✅ FIXED: '?? false' removed
             return await _api.DeleteAsync<bool>(ApiEndpoints.Users.ById(id));
         }
 

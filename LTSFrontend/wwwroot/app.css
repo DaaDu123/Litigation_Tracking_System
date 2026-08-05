@@ -447,7 +447,8 @@ h1:focus {
 .lts-sidebar {
     width: 250px;
     min-width: 250px;
-    transition: width 0.2s ease, min-width 0.2s ease, transform 0.25s ease;
+    flex-basis: 250px;
+    transition: width 0.2s ease, min-width 0.2s ease, flex-basis 0.2s ease, transform 0.25s ease;
     position: sticky;
     top: 0;
     height: 100vh;
@@ -461,6 +462,7 @@ h1:focus {
 .sidebar-collapsed .lts-sidebar {
     width: 76px;
     min-width: 76px;
+    flex-basis: 76px;
 }
 
 .sidebar-collapsed .lts-sidebar .brand-text,
@@ -477,6 +479,45 @@ h1:focus {
 
 .lts-sidebar-backdrop {
     display: none;
+}
+
+/* ---------- Sidebar show/hide handle ---------- */
+.lts-sidebar-handle {
+    position: sticky;
+    top: 1.15rem;
+    align-self: flex-start;
+    z-index: 41;
+    width: 1.6rem;
+    height: 1.6rem;
+    margin-left: -0.8rem;
+    flex: 0 0 auto;
+    border: 1px solid var(--lts-border);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--lts-navy, #1b3a8a);
+    box-shadow: var(--lts-shadow-sm, 0 1px 2px rgba(16, 33, 77, 0.06));
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    padding: 0;
+    cursor: pointer;
+    transition: left 0.25s ease, transform 0.15s ease;
+}
+
+.lts-sidebar-handle:hover {
+    transform: scale(1.08);
+}
+
+.sidebar-hidden .lts-sidebar {
+    width: 0;
+    min-width: 0;
+    flex-basis: 0;
+    overflow: hidden;
+    box-shadow: none;
+}
+
+.sidebar-hidden .lts-sidebar-handle {
+    margin-left: 0.6rem;
 }
 
 .lts-topbar {
