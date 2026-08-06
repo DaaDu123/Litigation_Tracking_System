@@ -48,6 +48,22 @@ namespace LTSFrontend.Features.Auth.Services
             return result!;
         }
 
+        public async Task<bool> ChangePasswordAsync(ChangePasswordRequest request)
+        {
+            // ConfirmNewPassword is a client-only field used for the match
+            // check in ChangePasswordRequest.Validate(); the backend
+            // ChangePasswordCommand only has OldPassword/NewPassword (UserID
+            // is populated server-side from the JWT, never sent by us).
+            var payload = new
+            {
+                request.OldPassword,
+                request.NewPassword
+            };
+
+            var result = await _api.PostAsync<bool>(ApiEndpoints.Auth.ChangePassword, payload);
+            return result;
+        }
+
         public async Task<ForgotPasswordResponseDTO> ForgotPasswordAsync(ForgotPasswordRequest request)
         {
             var result = await _api.PostAsync<ForgotPasswordResponseDTO>(ApiEndpoints.Auth.ForgotPassword, request);
