@@ -1,5 +1,5 @@
 using LTSFrontend.Core.Http;
-using LTSFrontend.Features.Deadlines.Models;
+using LTSFrontend.Features.Deadlines.DTOs;
 
 namespace LTSFrontend.Features.Deadlines.Services
 {

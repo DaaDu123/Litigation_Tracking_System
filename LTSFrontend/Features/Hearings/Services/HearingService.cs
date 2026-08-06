@@ -1,5 +1,5 @@
 using LTSFrontend.Core.Http;
-using LTSFrontend.Features.Hearings.Models;
+using LTSFrontend.Features.Hearings.DTOs;
 
 namespace LTSFrontend.Features.Hearings.Services
 {

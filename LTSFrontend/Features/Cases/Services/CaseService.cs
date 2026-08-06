@@ -1,6 +1,6 @@
 using LTSFrontend.Core.Http;
-using LTSFrontend.Core.Models;
-using LTSFrontend.Features.Cases.Models;
+using LTSFrontend.Core.DTOs;
+using LTSFrontend.Features.Cases.DTOs;
 
 namespace LTSFrontend.Features.Cases.Services
 {

@@ -1,4 +1,4 @@
-using LTSFrontend.Features.Documents.Models;
+using LTSFrontend.Features.Documents.DTOs;
 
 namespace LTSFrontend.Features.Documents.Services
 {

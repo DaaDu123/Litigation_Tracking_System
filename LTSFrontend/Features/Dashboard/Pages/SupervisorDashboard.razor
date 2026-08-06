@@ -1,10 +1,10 @@
 @page "/dashboard/supervisor"
 @attribute [Authorize(Roles = "Partner")]
 @using LTSFrontend.Core.Exceptions
-@using LTSFrontend.Features.Cases.Models
+@using LTSFrontend.Features.Cases.DTOs
 @using LTSFrontend.Features.Cases.Services
 @using LTSFrontend.Features.Dashboard.Components
-@using LTSFrontend.Features.Dashboard.Models
+@using LTSFrontend.Features.Dashboard.DTOs
 @using LTSFrontend.State
 @using Microsoft.AspNetCore.Authorization
 @inject ICaseService CaseService

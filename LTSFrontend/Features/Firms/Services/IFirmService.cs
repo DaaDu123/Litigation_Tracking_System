@@ -1,4 +1,4 @@
-using LTSFrontend.Features.Firms.Models;
+using LTSFrontend.Features.Firms.DTOs;
 
 namespace LTSFrontend.Features.Firms.Services
 {

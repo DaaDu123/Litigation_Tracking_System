@@ -1,4 +1,4 @@
-using LTSFrontend.Features.CaseParties.Models;
+using LTSFrontend.Features.CaseParties.DTOs;
 
 namespace LTSFrontend.Features.CaseParties.Services
 {

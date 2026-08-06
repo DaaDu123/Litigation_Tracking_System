@@ -1,5 +1,5 @@
 using LTSFrontend.Core.Http;
-using LTSFrontend.Features.CaseNotes.Models;
+using LTSFrontend.Features.CaseNotes.DTOs;
 
 namespace LTSFrontend.Features.CaseNotes.Services
 {

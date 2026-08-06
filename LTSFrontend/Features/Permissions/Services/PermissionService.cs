@@ -1,5 +1,5 @@
 using LTSFrontend.Core.Http;
-using LTSFrontend.Features.Permissions.Models;
+using LTSFrontend.Features.Permissions.DTOs;
 
 namespace LTSFrontend.Features.Permissions.Services
 {

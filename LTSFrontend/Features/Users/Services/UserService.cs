@@ -1,5 +1,5 @@
 using LTSFrontend.Core.Http;
-using LTSFrontend.Features.Users.Models;
+using LTSFrontend.Features.Users.DTOs;
 using Microsoft.AspNetCore.Components.Forms;
 
 namespace LTSFrontend.Features.Users.Services

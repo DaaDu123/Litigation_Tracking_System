@@ -2,7 +2,8 @@
 @attribute [Authorize]
 @using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Core.Http
-@using LTSFrontend.Features.Profile.Models
+@using LTSFrontend.Features.Profile.Components
+@using LTSFrontend.Features.Profile.DTOs
 @using LTSFrontend.Features.Profile.Services
 @using LTSFrontend.Shared.Components
 @using LTSFrontend.State
@@ -43,77 +44,9 @@
     }
     else
     {
-        @if (!string.IsNullOrWhiteSpace(_apiError))
-        {
-            <div class="lts-form-error mb-3" style="background: var(--lts-danger-bg); padding: 0.6rem 0.85rem; border-radius: var(--lts-radius-sm);">
-                <i class="bi bi-exclamation-circle-fill"></i>
-                <span style="white-space: pre-line;">@_apiError</span>
-            </div>
-        }
-
-        <EditForm Model="_form" OnValidSubmit="HandleSubmitAsync">
-            <DataAnnotationsValidator />
-
-            <div class="lts-form-group">
-                <label class="lts-form-label">Profile Photo</label>
-                <FileUploadInput CurrentImageUrl="@_currentImageUrl" Disabled="@_isSaving" FileSelected="OnFileSelected" />
-            </div>
-
-            <div class="lts-form-group">
-                <label class="lts-form-label">Full Name <span class="required">*</span></label>
-                <InputText @bind-Value="_form.FullName" class="lts-form-control" maxlength="150" disabled="@_isSaving" />
-                <ValidationMessage For="() => _form.FullName" class="lts-form-error" />
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="lts-form-group">
-                        <label class="lts-form-label">Email</label>
-                        <input type="email" class="lts-form-control" value="@_profile?.Email" disabled />
-                        <div class="lts-form-hint">Email cannot be changed here.</div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="lts-form-group">
-                        <label class="lts-form-label">Role</label>
-                        <input type="text" class="lts-form-control" value="@(_profile?.RoleName ?? "-")" disabled />
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="lts-form-group">
-                        <label class="lts-form-label">Phone</label>
-                        <InputText @bind-Value="_form.Phone" class="lts-form-control" maxlength="20"
-                                   placeholder="e.g. +92 300 1234567" disabled="@_isSaving" />
-                        <ValidationMessage For="() => _form.Phone" class="lts-form-error" />
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="lts-form-group">
-                        <label class="lts-form-label">Department</label>
-                        <InputText @bind-Value="_form.Department" class="lts-form-control" maxlength="100" disabled="@_isSaving" />
-                        <ValidationMessage For="() => _form.Department" class="lts-form-error" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="lts-modal-footer" style="padding: 1.25rem 0 0; margin-top: 0.5rem; justify-content: flex-start; gap: 0.6rem;">
-                <button type="submit" class="lts-btn lts-btn-primary" disabled="@_isSaving">
-                    @if (_isSaving)
-                    {
-                        <span class="lts-spinner lts-spinner-sm"></span>
-                        <span>Saving...</span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-check-lg"></i>
-                        <span>Save Changes</span>
-                    }
-                </button>
-            </div>
-        </EditForm>
+        <ProfileEditForm Profile="_profile" Form="_form" IsSaving="_isSaving" ApiError="@_apiError"
+                         CurrentImageUrl="@_currentImageUrl" FileSelected="OnFileSelected"
+                         OnValidSubmit="HandleSubmitAsync" />
     }
 </div>
 

@@ -1,5 +1,5 @@
 using LTSFrontend.Core.Http;
-using LTSFrontend.Features.Masters.Models;
+using LTSFrontend.Features.Masters.DTOs;
 
 namespace LTSFrontend.Features.Masters.Services
 {

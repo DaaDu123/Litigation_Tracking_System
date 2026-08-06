@@ -1,5 +1,5 @@
 using LTSFrontend.Core.Http;
-using LTSFrontend.Features.Dashboard.Models;
+using LTSFrontend.Features.Dashboard.DTOs;
 
 namespace LTSFrontend.Features.Dashboard.Services
 {

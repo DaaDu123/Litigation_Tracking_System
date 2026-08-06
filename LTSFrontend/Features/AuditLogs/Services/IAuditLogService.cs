@@ -1,5 +1,5 @@
-using LTSFrontend.Core.Models;
-using LTSFrontend.Features.AuditLogs.Models;
+using LTSFrontend.Core.DTOs;
+using LTSFrontend.Features.AuditLogs.DTOs;
 
 namespace LTSFrontend.Features.AuditLogs.Services
 {

@@ -1,11 +1,11 @@
 @page "/cases"
 @attribute [Authorize(Roles = "FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal")]
 @using LTSFrontend.Core.Exceptions
-@using LTSFrontend.Core.Models
+@using LTSFrontend.Core.DTOs
 @using LTSFrontend.Features.Cases.Components
-@using LTSFrontend.Features.Cases.Models
+@using LTSFrontend.Features.Cases.DTOs
 @using LTSFrontend.Features.Cases.Services
-@using LTSFrontend.Features.Masters.Models
+@using LTSFrontend.Features.Masters.DTOs
 @using LTSFrontend.Features.Masters.Services
 @using LTSFrontend.Shared.Components
 @using LTSFrontend.State
@@ -15,6 +15,7 @@
 @inject IMasterDataService MasterDataService
 @inject ToastService Toast
 @inject NavigationManager Nav
+@inject CaseFilterState FilterState
 
 <PageTitle>Cases - LTS</PageTitle>
 
@@ -205,6 +206,8 @@
     private bool _hasError;
     private string? _errorMessage;
 
+    // Seeded from CaseFilterState so a person who opens a case and comes
+    // back lands on the same search/filter/page instead of starting over.
     private string _searchTerm = string.Empty;
     private int _courtFilter = 0;
     private int _statusFilter = 0;
@@ -222,8 +225,29 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _searchTerm = FilterState.SearchTerm;
+        _courtFilter = FilterState.CourtFilter;
+        _statusFilter = FilterState.StatusFilter;
+        _priorityFilter = FilterState.PriorityFilter;
+        _viewMode = FilterState.ViewMode;
+        _pageNumber = FilterState.PageNumber;
+        _pageSize = FilterState.PageSize;
+
         await LoadLookupsAsync();
         await LoadAsync();
+    }
+
+    // Mirrors the current filter/page selections back into the scoped
+    // CaseFilterState so they survive navigating to a case and back.
+    private void PersistFilterState()
+    {
+        FilterState.SearchTerm = _searchTerm;
+        FilterState.CourtFilter = _courtFilter;
+        FilterState.StatusFilter = _statusFilter;
+        FilterState.PriorityFilter = _priorityFilter;
+        FilterState.ViewMode = _viewMode;
+        FilterState.PageNumber = _pageNumber;
+        FilterState.PageSize = _pageSize;
     }
 
     private async Task LoadLookupsAsync()
@@ -276,6 +300,7 @@
     private async Task OnFilterChanged()
     {
         _pageNumber = 1;
+        PersistFilterState();
         await LoadAsync();
     }
 
@@ -286,12 +311,14 @@
         _statusFilter = 0;
         _priorityFilter = string.Empty;
         _pageNumber = 1;
+        PersistFilterState();
         await LoadAsync();
     }
 
     private async Task OnPageChanged(int page)
     {
         _pageNumber = page;
+        PersistFilterState();
         await LoadAsync();
     }
 

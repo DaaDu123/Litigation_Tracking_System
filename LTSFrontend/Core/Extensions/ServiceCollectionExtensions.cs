@@ -109,6 +109,8 @@ namespace LTSFrontend.Core.Extensions
 
             // App-wide UI services
             services.AddScoped<ToastService>();
+            services.AddScoped<AppState>();
+            services.AddScoped<CaseFilterState>();
 
             return services;
         }

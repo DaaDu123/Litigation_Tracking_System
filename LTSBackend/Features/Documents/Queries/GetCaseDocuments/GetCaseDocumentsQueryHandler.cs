@@ -6,56 +6,41 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Documents.Queries.GetCaseDocuments
 {
-    /// <summary>
-    /// Lists every document attached to a case, filtered down to only the
-    /// documents the requesting user is actually permitted to view.
-    ///
-    /// PERFORMANCE NOTE: this intentionally does NOT call
-    /// IDocumentPermissionService.CanUserAccessDocumentAsync() per document.
-    /// That method re-loads the user (with Role+Firm) and re-checks firm
-    /// isolation from scratch on every single call - calling it once per
-    /// document turned a list of N documents into roughly 2N+ sequential
-    /// DB round trips and made the Documents tab visibly slow to load.
-    /// Every access rule that method enforces (user active, firm not
-    /// blocked, cross-firm isolation, role rule, case-assignment) is the
-    /// SAME for every document in this result set because they all belong
-    /// to the same case - so it's resolved once here. The only thing that
-    /// can legitimately vary per document is a Moharrir's per-document
-    /// permission override, which is fetched in a single batched query
-    /// instead of one query per document.
-    /// </summary>
-    public class GetCaseDocumentsQueryHandler : IRequestHandler<GetCaseDocumentsQuery, List<DocumentDetailDTO>>
+    public class GetCaseDocumentsQueryHandler (AppDbContext _context) : IRequestHandler<GetCaseDocumentsQuery, List<DocumentDetailDTO>>
     {
-        private readonly AppDbContext _context;
-
-        public GetCaseDocumentsQueryHandler(AppDbContext context)
-        {
-            _context = context;
-        }
 
         public async Task<List<DocumentDetailDTO>> Handle(GetCaseDocumentsQuery request, CancellationToken cancellationToken)
         {
             // ================================================
             // 1. Resolve the case's FirmID directly (works even if the case
-            //    has zero documents yet) and the requesting user, in parallel.
+            //    has zero documents yet) and the requesting user.
+            //
+            // BUG FIX: these two queries were previously kicked off together
+            // and awaited via Task.WhenAll(caseFirmIdTask, userTask). Both
+            // tasks share the SAME AppDbContext/DbConnection instance, and
+            // EF Core's DbContext is not thread-safe - it does not support
+            // multiple operations running concurrently on it. Running them
+            // "in parallel" like that reliably throws
+            // "A second operation was started on this context before a
+            // previous operation completed" as soon as both queries hit the
+            // database at the same time, which is exactly the exception the
+            // debugger was breaking on at this line. A single AppDbContext
+            // can still run several queries per request - they just have to
+            // be awaited one at a time (or use separate DbContext/DI scopes
+            // for true parallelism, which isn't needed here).
             // ================================================
-            var caseFirmIdTask = _context.Cases
+            var caseFirmId = await _context.Cases
                 .AsNoTracking()
                 .Where(c => c.CaseID == request.CaseID)
                 .Select(c => (int?)c.FirmID)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            var userTask = _context.Users
+            var user = await _context.Users
                 .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Include(u => u.Role)
                 .Include(u => u.Firm)
                 .FirstOrDefaultAsync(u => u.UserID == request.UserID, cancellationToken);
-
-            await Task.WhenAll(caseFirmIdTask, userTask);
-
-            var caseFirmId = caseFirmIdTask.Result;
-            var user = userTask.Result;
 
             if (caseFirmId == null || user == null || user.IsDeleted || !user.IsActive)
                 return new List<DocumentDetailDTO>();

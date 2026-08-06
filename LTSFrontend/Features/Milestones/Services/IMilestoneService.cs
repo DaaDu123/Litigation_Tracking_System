@@ -1,4 +1,4 @@
-using LTSFrontend.Features.Milestones.Models;
+using LTSFrontend.Features.Milestones.DTOs;
 
 namespace LTSFrontend.Features.Milestones.Services
 {

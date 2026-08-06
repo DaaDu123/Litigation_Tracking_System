@@ -1,4 +1,4 @@
-using LTSFrontend.Features.CaseAssignments.Models;
+using LTSFrontend.Features.CaseAssignments.DTOs;
 
 namespace LTSFrontend.Features.CaseAssignments.Services
 {

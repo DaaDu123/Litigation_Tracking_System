@@ -1,4 +1,4 @@
-using LTSFrontend.Features.Auth.Models;
+using LTSFrontend.Features.Auth.DTOs;
 
 namespace LTSFrontend.Features.Auth.Services
 {

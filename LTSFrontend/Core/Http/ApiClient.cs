@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using LTSFrontend.Core.Auth;
 using LTSFrontend.Core.Exceptions;
-using LTSFrontend.Core.Models;
+using LTSFrontend.Core.DTOs;
 using LTSFrontend.State;
 
 namespace LTSFrontend.Core.Http
@@ -167,7 +167,7 @@ namespace LTSFrontend.Core.Http
                 }
 
                 var raw = await response.Content.ReadAsStringAsync();
-                var parsed = JsonSerializer.Deserialize<ApiResponse<Features.Auth.Models.RefreshTokenResponseDTO>>(raw, JsonOptions);
+                var parsed = JsonSerializer.Deserialize<ApiResponse<Features.Auth.DTOs.RefreshTokenResponseDTO>>(raw, JsonOptions);
 
                 if (parsed?.Success != true || parsed.Data == null)
                 {

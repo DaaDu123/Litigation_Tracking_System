@@ -1,107 +1,91 @@
-﻿@page "/users"
+@page "/users"
 @attribute [Authorize(Roles = "Partner,FirmAdmin")]
 @using LTSFrontend.Core.Exceptions
-@using LTSFrontend.Features.Users.Models
+@using LTSFrontend.Features.Users.Components
+@using LTSFrontend.Features.Users.DTOs
 @using LTSFrontend.Features.Users.Services
+@using LTSFrontend.Shared.Components
 @using LTSFrontend.State
 @using Microsoft.AspNetCore.Authorization
 @inject IUserService UserService
 @inject UserSessionState Session
-@inject NavigationManager Navigation
+@inject ToastService Toast
 
 <PageTitle>User Management - LTS</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">User Management</h4>
+<div class="lts-page-header">
+    <div>
+        <h1 class="lts-page-title">User Management</h1>
+        <p class="lts-page-subtitle">Manage the people in your firm's workspace and the roles they hold.</p>
+    </div>
     @if (CanManageUsers)
     {
-        <button class="btn btn-primary" @onclick="GoToCreate">
-            <i class="bi bi-plus-lg me-1"></i> Add User
-        </button>
-    }
-</div>
-
-@if (!string.IsNullOrWhiteSpace(_errorMessage))
-{
-    <div class="alert alert-danger">@_errorMessage</div>
-}
-
-<div class="lts-card">
-    <div class="mb-3">
-        <input type="text" class="form-control" style="max-width: 320px;"
-               placeholder="Search by name or email..." @bind="_searchTerm" @bind:event="oninput" />
-    </div>
-
-    @if (_isLoading)
-    {
-        <p class="text-muted mb-0"><span class="spinner-border spinner-border-sm me-2"></span>Loading users...</p>
-    }
-    else if (FilteredUsers.Count == 0)
-    {
-        <p class="text-muted mb-0">No users found.</p>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table align-middle">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Department</th>
-                        <th>Status</th>
-                        @if (CanManageUsers)
-                        {
-                            <th class="text-end">Actions</th>
-                        }
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var user in FilteredUsers)
-                    {
-                        <tr>
-                            <td>@user.FullName</td>
-                            <td>@user.Email</td>
-                            <td>@(user.RoleName ?? "-")</td>
-                            <td>@(user.Department ?? "-")</td>
-                            <td>
-                                @if (user.IsActive)
-                                {
-                                    <span class="badge text-bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge text-bg-secondary">Inactive</span>
-                                }
-                            </td>
-                            @if (CanManageUsers)
-                            {
-                                <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-secondary me-1"
-                                            @onclick="() => GoToEdit(user.UserID)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger"
-                                            disabled="@(user.UserID == Session.UserID)"
-                                            @onclick="() => HandleDeleteAsync(user)">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </td>
-                            }
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="lts-page-header-actions">
+            <button class="lts-btn lts-btn-primary" @onclick="OpenCreateAsync">
+                <i class="bi bi-plus-lg"></i> Add User
+            </button>
         </div>
     }
 </div>
+
+<div class="lts-stat-grid">
+    <div class="lts-stat-card" style="--accent:#1b4fd6;">
+        <div class="lts-stat-icon"><i class="bi bi-people"></i></div>
+        <div>
+            <div class="lts-stat-value">@(_isLoading ? "-" : _users.Count.ToString())</div>
+            <div class="lts-stat-label">Total Users</div>
+        </div>
+    </div>
+    <div class="lts-stat-card" style="--accent:#16a34a;">
+        <div class="lts-stat-icon"><i class="bi bi-person-check"></i></div>
+        <div>
+            <div class="lts-stat-value">@(_isLoading ? "-" : _users.Count(u => u.IsActive).ToString())</div>
+            <div class="lts-stat-label">Active</div>
+        </div>
+    </div>
+</div>
+
+<div class="lts-card p-0">
+    <div class="lts-toolbar" style="padding: 1rem 1.1rem 0;">
+        <div class="lts-toolbar-left">
+            <SearchBox @bind-Value="_searchTerm" @bind-Value:after="ResetToFirstPage"
+                       Placeholder="Search by name or email..." />
+        </div>
+        <div class="lts-toolbar-right">
+            <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="LoadAsync" title="Refresh" disabled="@_isLoading">
+                <i class="bi bi-arrow-clockwise @(_isLoading ? "spin" : "")"></i>
+            </button>
+        </div>
+    </div>
+
+    <div style="padding: 1rem 1.1rem;">
+        <UserTable Users="PagedUsers" IsLoading="_isLoading" HasError="_hasError" ErrorMessage="_errorMessage"
+                   OnRetry="LoadAsync" CanManage="CanManageUsers" CurrentUserId="Session.UserID"
+                   HasActiveFilters="!string.IsNullOrWhiteSpace(_searchTerm)"
+                   OnEdit="OpenEditAsync" OnDelete="HandleDeleteAsync" />
+
+        @if (!_isLoading && !_hasError && FilteredUsers.Count > 0)
+        {
+            <Pagination CurrentPage="_currentPage" TotalItems="FilteredUsers.Count" PageSize="_pageSize" PageChanged="OnPageChanged" />
+        }
+    </div>
+</div>
+
+<UserFormModal @ref="_formModal" OnSaved="HandleSavedAsync" />
+<ConfirmDialog @ref="_confirmDialog" />
 
 @code {
     private List<UserDTO> _users = new();
     private string _searchTerm = string.Empty;
     private bool _isLoading = true;
+    private bool _hasError;
     private string? _errorMessage;
+
+    private int _currentPage = 1;
+    private readonly int _pageSize = 10;
+
+    private UserFormModal _formModal = default!;
+    private ConfirmDialog _confirmDialog = default!;
 
     private bool CanManageUsers => Session.Role is "FirmAdmin" or "SuperAdmin";
 
@@ -112,14 +96,18 @@
                 u.FullName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
                 u.Email.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
+    private List<UserDTO> PagedUsers =>
+        FilteredUsers.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList();
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadUsersAsync();
+        await LoadAsync();
     }
 
-    private async Task LoadUsersAsync()
+    private async Task LoadAsync()
     {
         _isLoading = true;
+        _hasError = false;
         _errorMessage = null;
         try
         {
@@ -127,11 +115,13 @@
         }
         catch (ApiException ex)
         {
+            _hasError = true;
             _errorMessage = ex.GetFullMessage();
         }
         catch (Exception)
         {
-            _errorMessage = "Users load nahi ho sake. Please try again.";
+            _hasError = true;
+            _errorMessage = "Users could not be loaded. Please check your connection and try again.";
         }
         finally
         {
@@ -139,28 +129,46 @@
         }
     }
 
+    private void ResetToFirstPage() => _currentPage = 1;
+
+    private void OnPageChanged(int page) => _currentPage = page;
+
+    private Task OpenCreateAsync() => _formModal.OpenForCreateAsync();
+
+    private Task OpenEditAsync(UserDTO user) => _formModal.OpenForEditAsync(user);
+
+    private async Task HandleSavedAsync(bool wasEdit)
+    {
+        await LoadAsync();
+        Toast.Success(wasEdit ? "User updated" : "User created",
+            wasEdit ? "The user's details have been saved." : "The new user can now sign in with their password.");
+    }
+
     private async Task HandleDeleteAsync(UserDTO user)
     {
         if (user.UserID == Session.UserID)
             return;
 
-        _errorMessage = null;
+        var confirmed = await _confirmDialog.ShowAsync(
+            $"Deactivate \"{user.FullName}\"?",
+            "They will no longer be able to sign in. This can be reversed by editing the user later.",
+            "Deactivate", "danger");
+
+        if (!confirmed) return;
+
         try
         {
             await UserService.DeleteAsync(user.UserID);
-            await LoadUsersAsync();
+            await LoadAsync();
+            Toast.Success("User deactivated", $"\"{user.FullName}\" can no longer sign in.");
         }
         catch (ApiException ex)
         {
-            _errorMessage = ex.GetFullMessage();
+            Toast.Error("Couldn't deactivate user", ex.GetFullMessage());
         }
         catch (Exception)
         {
-            _errorMessage = "User deactivate nahi ho saka. Please try again.";
+            Toast.Error("Couldn't deactivate user", "Please try again.");
         }
     }
-
-    private void GoToCreate() => Navigation.NavigateTo("/users/create");
-
-    private void GoToEdit(int userId) => Navigation.NavigateTo($"/users/edit/{userId}");
 }

@@ -1,5 +1,5 @@
-using LTSFrontend.Core.Models;
-using LTSFrontend.Features.LoginHistory.Models;
+using LTSFrontend.Core.DTOs;
+using LTSFrontend.Features.LoginHistory.DTOs;
 
 namespace LTSFrontend.Features.LoginHistory.Services
 {

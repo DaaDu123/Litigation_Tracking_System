@@ -1,6 +1,6 @@
 using LTSFrontend.Core.Exceptions;
 using LTSFrontend.Core.Http;
-using LTSFrontend.Features.Firms.Models;
+using LTSFrontend.Features.Firms.DTOs;
 using Microsoft.JSInterop;
 
 namespace LTSFrontend.Features.Firms.Services
