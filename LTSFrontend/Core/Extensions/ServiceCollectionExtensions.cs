@@ -13,6 +13,7 @@ using LTSFrontend.Features.Firms.Services;
 using LTSFrontend.Features.Hearings.Services;
 using LTSFrontend.Features.LoginHistory.Services;
 using LTSFrontend.Features.Milestones.Services;
+using LTSFrontend.Features.Notifications.Services;
 using LTSFrontend.Features.Dashboard.Services;
 using LTSFrontend.Features.Masters.Services;
 using LTSFrontend.Features.Permissions.Services;
@@ -104,6 +105,7 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IProfileService, ProfileService>();
             services.AddScoped<IDashboardService, DashboardService>();
+            services.AddScoped<INotificationService, NotificationService>();
 
             // App-wide UI services
             services.AddScoped<ToastService>();

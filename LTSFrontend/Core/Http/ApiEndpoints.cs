@@ -196,5 +196,15 @@
         {
             public const string Stats = Base + "/dashboard";
         }
+
+        public static class Notifications
+        {
+            private const string Root = Base + "/notifications";
+            public const string Base_ = Root;
+            public const string UnreadCount = Root + "/unread-count";
+            public static string MarkAsRead(long id) => $"{Root}/{id}/read";
+            public const string MarkAllAsRead = Root + "/read-all";
+            public static string ById(long id) => $"{Root}/{id}";
+        }
     }
 }

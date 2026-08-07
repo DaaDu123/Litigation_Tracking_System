@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @using LTSFrontend.Core.Auth
 @using LTSFrontend.Features.Auth.Services
+@using LTSFrontend.Features.Notifications.Components
 @using LTSFrontend.Shared.Components
 @using LTSFrontend.State
 @using Microsoft.AspNetCore.Components.Authorization
@@ -36,9 +37,7 @@
                 <button class="lts-icon-btn" title="Toggle theme" @onclick="ToggleThemeAsync">
                     <i class="bi @(_isDarkTheme ? "bi-sun" : "bi-moon-stars")"></i>
                 </button>
-                <button class="lts-icon-btn" title="Notifications">
-                    <i class="bi bi-bell"></i>
-                </button>
+                <NotificationBell />
                 <div class="dropdown">
                     <button class="lts-user-chip dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         <span class="lts-avatar">@Initials</span>
