@@ -17,8 +17,10 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public AuditLogFilterDTO Filter { get; set; } = default!;
-    [Parameter] public EventCallback FilterChanged { get; set; }
+    [Parameter, EditorRequired]
+    public AuditLogFilterDTO Filter { get; set; } = default!;
+    [Parameter]
+    public EventCallback FilterChanged { get; set; }
 
     private string _search = string.Empty;
     private DateTime? _fromDate;

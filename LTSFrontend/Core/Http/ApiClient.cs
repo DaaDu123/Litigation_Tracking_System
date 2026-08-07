@@ -25,32 +25,6 @@ namespace LTSFrontend.Core.Http
         // token it produced.
         private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
-        // ================================================================
-        // ROOT-CAUSE FIX: the Bearer token used to be attached by a
-        // DelegatingHandler (AuthTokenHandler) wired in via
-        // AddHttpMessageHandler<T>(). That is a well-known ASP.NET Core
-        // pitfall: IHttpClientFactory builds/pools its message-handler
-        // pipeline in its OWN internal DI scope, separate from - and
-        // reused across - the actual per-circuit/per-request scope. Any
-        // scoped service (like UserSessionState) injected into a handler
-        // registered that way gets captured ONCE from whichever scope
-        // happened to build the pooled handler, and is then reused for
-        // every request across every user/circuit for up to
-        // HandlerLifetime (default 2 minutes) - i.e. effectively a
-        // different, permanently-empty UserSessionState than the one the
-        // rest of the app (Login page, MainLayout, etc.) actually uses.
-        // That's why the name showed correctly in the top bar (read
-        // directly from the *correctly*-scoped Session) while every API
-        // call still 401'd (Authorization header built from the
-        // *wrongly*-scoped one) - no amount of retrying or browser-storage
-        // rehydration inside that handler could ever fix it.
-        //
-        // ApiClient itself doesn't have this problem: AddHttpClient<T>()
-        // constructs the typed client class (this class) using the
-        // caller's own real scope, so UserSessionState/ITokenStorageService
-        // injected directly here are always the correct, live-for-this-
-        // circuit instances. Attaching the header here instead is the fix.
-        // ================================================================
         public ApiClient(HttpClient httpClient, UserSessionState session, ITokenStorageService tokenStorage)
         {
             Http = httpClient;
@@ -58,14 +32,19 @@ namespace LTSFrontend.Core.Http
             _tokenStorage = tokenStorage;
         }
 
-        public Task<T?> GetAsync<T>(string url, CancellationToken ct = default) =>
-            SendAsync<T>(new HttpRequestMessage(HttpMethod.Get, url), ct);
+        public Task<T?> GetAsync<T>(string url, CancellationToken ct = default)
+        {
+            return SendAsync<T>(new HttpRequestMessage(HttpMethod.Get, url), ct);
+        }
 
         public Task<T?> PostAsync<T>(string url, object? body = null, CancellationToken ct = default)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, url);
             if (body != null)
+            {
                 request.Content = JsonContent.Create(body, options: JsonOptions);
+            }
+
             return SendAsync<T>(request, ct);
         }
 
@@ -73,7 +52,10 @@ namespace LTSFrontend.Core.Http
         {
             var request = new HttpRequestMessage(HttpMethod.Put, url);
             if (body != null)
+            {
                 request.Content = JsonContent.Create(body, options: JsonOptions);
+            }
+
             return SendAsync<T>(request, ct);
         }
 
@@ -89,8 +71,10 @@ namespace LTSFrontend.Core.Http
             return SendAsync<T>(request, ct);
         }
 
-        public Task<T?> DeleteAsync<T>(string url, CancellationToken ct = default) =>
-            SendAsync<T>(new HttpRequestMessage(HttpMethod.Delete, url), ct);
+        public Task<T?> DeleteAsync<T>(string url, CancellationToken ct = default)
+        {
+            return SendAsync<T>(new HttpRequestMessage(HttpMethod.Delete, url), ct);
+        }
 
         private async Task EnsureAuthorizationHeaderAsync(HttpRequestMessage request)
         {
@@ -105,9 +89,7 @@ namespace LTSFrontend.Core.Http
                 var stored = await _tokenStorage.GetSessionAsync();
                 if (stored != null && stored.AccessTokenExpiry > DateTime.UtcNow)
                 {
-                    _session.Set(
-                        stored.UserID, stored.FullName, stored.Email, stored.Role,
-                        stored.AccessToken, stored.AccessTokenExpiry);
+                    _session.Set(stored.UserID, stored.FullName, stored.Email, stored.Role,stored.AccessToken, stored.AccessTokenExpiry);
                 }
             }
 
@@ -125,8 +107,7 @@ namespace LTSFrontend.Core.Http
             // once - proactive refresh avoids that whole class of bugs).
             // ================================================================
             bool hasKnownIdentity = _session.UserID != 0;
-            bool tokenMissingOrExpiring = string.IsNullOrWhiteSpace(_session.AccessToken) ||
-                !_session.AccessTokenExpiry.HasValue || _session.AccessTokenExpiry.Value <= DateTime.UtcNow.AddSeconds(30);
+            bool tokenMissingOrExpiring = string.IsNullOrWhiteSpace(_session.AccessToken) || !_session.AccessTokenExpiry.HasValue || _session.AccessTokenExpiry.Value <= DateTime.UtcNow.AddSeconds(30);
 
             if (hasKnownIdentity && tokenMissingOrExpiring)
             {
@@ -147,8 +128,7 @@ namespace LTSFrontend.Core.Http
                 // Someone else may have already refreshed while we were
                 // waiting for the lock - re-check before making another
                 // network call.
-                if (!string.IsNullOrWhiteSpace(_session.AccessToken) && _session.AccessTokenExpiry.HasValue &&
-                    _session.AccessTokenExpiry.Value > DateTime.UtcNow.AddSeconds(30))
+                if (!string.IsNullOrWhiteSpace(_session.AccessToken) && _session.AccessTokenExpiry.HasValue && _session.AccessTokenExpiry.Value > DateTime.UtcNow.AddSeconds(30))
                 {
                     return true;
                 }
@@ -180,9 +160,7 @@ namespace LTSFrontend.Core.Http
                 // (new tab, F5) started right after this also picks up the
                 // live token instead of the now-stale one that was
                 // originally saved at login.
-                await _tokenStorage.SaveSessionAsync(new StoredSession(
-                    _session.UserID, _session.FullName, _session.Email, _session.Role,
-                    _session.AccessToken!, _session.AccessTokenExpiry!.Value));
+                await _tokenStorage.SaveSessionAsync(new StoredSession(_session.UserID, _session.FullName, _session.Email, _session.Role,_session.AccessToken!, _session.AccessTokenExpiry!.Value));
 
                 return true;
             }
@@ -203,7 +181,6 @@ namespace LTSFrontend.Core.Http
         private async Task<T?> SendAsync<T>(HttpRequestMessage request, CancellationToken ct)
         {
             await EnsureAuthorizationHeaderAsync(request);
-
             HttpResponseMessage response;
             try
             {
@@ -211,9 +188,7 @@ namespace LTSFrontend.Core.Http
             }
             catch (HttpRequestException ex)
             {
-                throw new ApiException(
-                    "Backend se connect nahi ho saka. Ensure LTSBackend API is running on " +
-                    Http.BaseAddress, null, new() { ex.Message });
+                throw new ApiException("Backend se connect nahi ho saka. Ensure LTSBackend API is running on " + Http.BaseAddress, null, new() { ex.Message });
             }
 
             var raw = await response.Content.ReadAsStringAsync(ct);
@@ -262,7 +237,6 @@ namespace LTSFrontend.Core.Http
                         // keep the generic status-code fallback message.
                     }
                 }
-
                 throw new ApiException(message, (int)response.StatusCode, errors);
             }
 

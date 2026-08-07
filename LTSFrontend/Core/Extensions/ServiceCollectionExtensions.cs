@@ -26,8 +26,7 @@ namespace LTSFrontend.Core.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddLtsFrontendServices(
-            this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddLtsFrontendServices(this IServiceCollection services, IConfiguration configuration)
         {
             // Blazor auth plumbing
             services.AddAuthorizationCore();
@@ -37,8 +36,7 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<UserSessionState>();
             services.AddScoped<ITokenStorageService, TokenStorageService>();
             services.AddScoped<CustomAuthStateProvider>();
-            services.AddScoped<AuthenticationStateProvider>(
-                sp => sp.GetRequiredService<CustomAuthStateProvider>());
+            services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 
             // HttpClient -> LTSBackend
             // Registered through IHttpClientFactory so the underlying

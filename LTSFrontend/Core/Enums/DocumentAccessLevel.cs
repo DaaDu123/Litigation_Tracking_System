@@ -30,26 +30,35 @@ namespace LTSFrontend.Core.Enums
     public static class DocumentAccessLevelExtensions
     {
         /// <summary>True if this access level permits opening/previewing the document.</summary>
-        public static bool CanView(this DocumentAccessLevel level) =>
-            level is DocumentAccessLevel.ReadOnly or DocumentAccessLevel.ReadWrite or DocumentAccessLevel.FullAccess;
+        public static bool CanView(this DocumentAccessLevel level)
+        {
+            return level is DocumentAccessLevel.ReadOnly or DocumentAccessLevel.ReadWrite or DocumentAccessLevel.FullAccess;
+        }
 
         /// <summary>True if this access level permits downloading the document.</summary>
-        public static bool CanDownload(this DocumentAccessLevel level) =>
-            level is DocumentAccessLevel.ReadWrite or DocumentAccessLevel.FullAccess;
+        public static bool CanDownload(this DocumentAccessLevel level)
+        {
+            return level is DocumentAccessLevel.ReadWrite or DocumentAccessLevel.FullAccess;
+        }
 
         /// <summary>True if this access level permits uploading a new version.</summary>
-        public static bool CanUpload(this DocumentAccessLevel level) =>
-            level is DocumentAccessLevel.WriteOnly or DocumentAccessLevel.FullAccess;
+        public static bool CanUpload(this DocumentAccessLevel level)
+        {
+            return level is DocumentAccessLevel.WriteOnly or DocumentAccessLevel.FullAccess;
+        }
 
         /// <summary>Badge label used on Documents list/detail screens.</summary>
-        public static string ToDisplayText(this DocumentAccessLevel level) => level switch
+        public static string ToDisplayText(this DocumentAccessLevel level)
         {
-            DocumentAccessLevel.None => "No Access",
-            DocumentAccessLevel.WriteOnly => "Upload Only",
-            DocumentAccessLevel.ReadOnly => "View Only",
-            DocumentAccessLevel.ReadWrite => "View & Download",
-            DocumentAccessLevel.FullAccess => "Full Access",
-            _ => "Unknown"
-        };
+            return level switch
+            {
+                DocumentAccessLevel.None => "No Access",
+                DocumentAccessLevel.WriteOnly => "Upload Only",
+                DocumentAccessLevel.ReadOnly => "View Only",
+                DocumentAccessLevel.ReadWrite => "View & Download",
+                DocumentAccessLevel.FullAccess => "Full Access",
+                _ => "Unknown"
+            };
+        }
     }
 }

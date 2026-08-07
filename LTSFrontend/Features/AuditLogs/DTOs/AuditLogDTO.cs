@@ -1,6 +1,5 @@
 namespace LTSFrontend.Features.AuditLogs.DTOs
 {
-    /// <summary>Mirrors LTSBackend.Features.AuditLogs.DTOs.AuditLogDTO</summary>
     public class AuditLogDTO
     {
         public int LogID { get; set; }

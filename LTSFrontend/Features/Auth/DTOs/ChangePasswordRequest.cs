@@ -33,17 +33,12 @@ namespace LTSFrontend.Features.Auth.DTOs
         {
             if (!string.IsNullOrEmpty(NewPassword) && NewPassword != ConfirmNewPassword)
             {
-                yield return new ValidationResult(
-                    "New password and confirmation do not match.",
-                    new[] { nameof(ConfirmNewPassword) });
+                yield return new ValidationResult("New password and confirmation do not match.",new[] { nameof(ConfirmNewPassword) });
             }
 
-            if (!string.IsNullOrEmpty(OldPassword) && !string.IsNullOrEmpty(NewPassword) &&
-                OldPassword == NewPassword)
+            if (!string.IsNullOrEmpty(OldPassword) && !string.IsNullOrEmpty(NewPassword) &&OldPassword == NewPassword)
             {
-                yield return new ValidationResult(
-                    "New password must be different from your current password.",
-                    new[] { nameof(NewPassword) });
+                yield return new ValidationResult("New password must be different from your current password.",new[] { nameof(NewPassword) });
             }
         }
     }

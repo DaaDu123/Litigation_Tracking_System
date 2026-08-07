@@ -14,16 +14,9 @@ namespace LTSFrontend.Core.Auth
     /// - we swallow that here and simply behave as "nothing stored yet".
     /// Callers should read the session from OnAfterRenderAsync(firstRender).
     /// </summary>
-    public class TokenStorageService : ITokenStorageService
+    public class TokenStorageService(ProtectedLocalStorage _storage) : ITokenStorageService
     {
         private const string StorageKey = "lts_session";
-        private readonly ProtectedLocalStorage _storage;
-
-        public TokenStorageService(ProtectedLocalStorage storage)
-        {
-            _storage = storage;
-        }
-
         public async Task SaveSessionAsync(StoredSession session)
         {
             try
@@ -41,7 +34,14 @@ namespace LTSFrontend.Core.Auth
             try
             {
                 var result = await _storage.GetAsync<StoredSession>(StorageKey);
-                return result.Success ? result.Value : null;
+                if (result.Success)
+                {
+                    return result.Value;
+                }
+                else
+                {
+                    return null;
+                }
             }
             catch (InvalidOperationException)
             {

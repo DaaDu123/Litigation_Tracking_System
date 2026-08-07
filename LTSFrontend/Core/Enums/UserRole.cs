@@ -23,8 +23,13 @@
             ((int)UserRole.InternParalegal, "Intern / Paralegal")
         };
 
-        public static string NameOf(int roleId) =>
-            All.FirstOrDefault(r => r.Id == roleId).Name ?? "Unknown";
+        public static string NameOf(int roleId)
+        {
+            return All.FirstOrDefault(r =>
+            {
+                return r.Id == roleId;
+            }).Name ?? "Unknown";
+        }
 
         // Roles a Firm Admin is allowed to assign when creating/editing a
         // user - mirrors the backend fix in RoleHierarchy.CanAssignRole
@@ -34,6 +39,10 @@
         // reach the Create/Edit User pages, so this is the full set every
         // caller of this list needs.
         public static IReadOnlyList<(int Id, string Name)> AssignableByFirmAdmin { get; } =
-            All.Where(r => r.Id > (int)UserRole.FirmAdmin).ToList();
+            All.Where(r =>
+            {
+                return r.Id > (int)UserRole.FirmAdmin;
+            })
+            .ToList();
     }
 }

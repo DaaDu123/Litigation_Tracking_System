@@ -1,6 +1,5 @@
 namespace LTSFrontend.Features.AuditLogs.DTOs
 {
-    /// <summary>Mirrors LTSBackend.Features.AuditLogs.DTOs.PagedAuditLogResponseDTO</summary>
     public class PagedAuditLogResponseDTO
     {
         public int TotalRecords { get; set; }

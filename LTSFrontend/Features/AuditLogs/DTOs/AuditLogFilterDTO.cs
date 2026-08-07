@@ -1,6 +1,5 @@
 namespace LTSFrontend.Features.AuditLogs.DTOs
 {
-    /// <summary>Mirrors LTSBackend.Features.AuditLogs.DTOs.AuditLogFilterDTO</summary>
     public class AuditLogFilterDTO
     {
         public string? Search { get; set; }
