@@ -71,7 +71,7 @@
                 <table class="lts-table">
                     <thead>
                         <tr>
-                            <th>Case No.</th><th>Title</th><th>Court</th><th>Status</th><th>Priority</th><th>Next Steps</th><th></th>
+                            <th>Case No.</th><th>Title</th><th>Court</th><th>Category</th><th>Status</th><th>Priority</th><th>Next Steps</th><th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -81,6 +81,7 @@
                                 <td><div class="lts-skeleton lts-skeleton-text" style="width:70%;"></div></td>
                                 <td><div class="lts-skeleton lts-skeleton-text" style="width:80%;"></div></td>
                                 <td><div class="lts-skeleton lts-skeleton-text" style="width:60%;"></div></td>
+                                <td><div class="lts-skeleton lts-skeleton-text" style="width:55%;"></div></td>
                                 <td><div class="lts-skeleton lts-skeleton-text" style="width:50%;"></div></td>
                                 <td><div class="lts-skeleton lts-skeleton-text" style="width:40%;"></div></td>
                                 <td><div class="lts-skeleton lts-skeleton-text" style="width:55%;"></div></td>
@@ -139,6 +140,7 @@
                             <th>Case No.</th>
                             <th>Title</th>
                             <th>Court</th>
+                            <th>Category</th>
                             <th>Status</th>
                             <th>Priority</th>
                             <th>Stage</th>
@@ -155,6 +157,7 @@
                                 </td>
                                 <td>@c.CaseTitle</td>
                                 <td>@c.CourtName</td>
+                                <td>@c.CategoryName</td>
                                 <td><span class="lts-badge lts-badge-@StatusBadgeClass(c.StatusName)">@c.StatusName</span></td>
                                 <td><span class="lts-badge lts-badge-@PriorityBadgeClass(c.Priority)">@c.Priority</span></td>
                                 <td>@c.StageName</td>

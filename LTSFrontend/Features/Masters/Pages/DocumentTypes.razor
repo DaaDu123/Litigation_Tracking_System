@@ -9,6 +9,7 @@
 @using Microsoft.AspNetCore.Authorization
 @inject IDocumentTypeService DocumentTypeService
 @inject ToastService Toast
+@inject UserSessionState Session
 
 <PageTitle>Document Types - Master Data - LTS</PageTitle>
 
@@ -157,7 +158,15 @@
                         @foreach (var type in PagedTypes)
                         {
                             <tr @key="type.DocumentTypeID">
-                                <td class="lts-cell-primary">@type.TypeName</td>
+                                <td class="lts-cell-primary">
+                                    @type.TypeName
+                                    @if (type.IsGlobal)
+                                    {
+                                        <span class="lts-badge lts-badge-muted" style="margin-left:0.4rem;" title="Shared system-wide document type - managed by SuperAdmin only">
+                                            <i class="bi bi-globe2"></i> Global
+                                        </span>
+                                    }
+                                </td>
                                 <td class="lts-cell-muted">@(string.IsNullOrWhiteSpace(type.Description) ? "—" : type.Description)</td>
                                 <td><StatusBadge IsActive="type.IsActive" /></td>
                                 <td>
@@ -165,14 +174,21 @@
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick="() => OpenDetails(type)">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <PermissionGate Roles="FirmAdmin,SuperAdmin">
+                                        @if (CanManage(type))
+                                        {
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Edit" @onclick="() => OpenEdit(type)">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Delete" @onclick="() => HandleDeleteAsync(type)">
                                                 <i class="bi bi-trash text-danger"></i>
                                             </button>
-                                        </PermissionGate>
+                                        }
+                                        else if (type.IsGlobal)
+                                        {
+                                            <span class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" style="opacity:0.5;cursor:not-allowed;" title="Global document type - only SuperAdmin can edit or deactivate this.">
+                                                <i class="bi bi-lock"></i>
+                                            </span>
+                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -285,6 +301,9 @@
     }
 
     private void OpenCreate() => _formModal.OpenForCreate();
+
+    private bool CanManage(DocumentTypeDTO type) =>
+        !type.IsGlobal || string.Equals(Session.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
 
     private void OpenEdit(DocumentTypeDTO type) => _formModal.OpenForEdit(type);
 

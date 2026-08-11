@@ -9,6 +9,7 @@
 @using Microsoft.AspNetCore.Authorization
 @inject ICaseStatusService CaseStatusService
 @inject ToastService Toast
+@inject UserSessionState Session
 
 <PageTitle>Case Statuses - Master Data - LTS</PageTitle>
 
@@ -176,7 +177,15 @@
                         {
                             <tr @key="status.StatusID">
                                 <td class="lts-cell-muted">@status.SequenceNo</td>
-                                <td class="lts-cell-primary">@status.StatusName</td>
+                                <td class="lts-cell-primary">
+                                    @status.StatusName
+                                    @if (status.IsGlobal)
+                                    {
+                                        <span class="lts-badge lts-badge-muted" style="margin-left:0.4rem;" title="Shared system-wide status - managed by SuperAdmin only">
+                                            <i class="bi bi-globe2"></i> Global
+                                        </span>
+                                    }
+                                </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="lts-color-chip" style="background:@status.ColorCode;"></span>
@@ -199,14 +208,21 @@
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick="() => OpenDetails(status)">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <PermissionGate Roles="FirmAdmin,SuperAdmin">
+                                        @if (CanManage(status))
+                                        {
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Edit" @onclick="() => OpenEdit(status)">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Delete" @onclick="() => HandleDeleteAsync(status)">
                                                 <i class="bi bi-trash text-danger"></i>
                                             </button>
-                                        </PermissionGate>
+                                        }
+                                        else if (status.IsGlobal)
+                                        {
+                                            <span class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" style="opacity:0.5;cursor:not-allowed;" title="Global status - only SuperAdmin can edit or deactivate this.">
+                                                <i class="bi bi-lock"></i>
+                                            </span>
+                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -326,6 +342,9 @@
     }
 
     private void OpenCreate() => _formModal.OpenForCreate();
+
+    private bool CanManage(CaseStatusDTO status) =>
+        !status.IsGlobal || string.Equals(Session.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
 
     private void OpenEdit(CaseStatusDTO status) => _formModal.OpenForEdit(status);
 

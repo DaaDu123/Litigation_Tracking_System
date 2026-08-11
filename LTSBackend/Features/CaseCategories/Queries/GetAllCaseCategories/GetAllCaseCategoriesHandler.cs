@@ -32,7 +32,8 @@ public sealed class GetAllCaseCategoriesHandler(AppDbContext _context, ILogger<G
                 CategoryID = x.CategoryID,
                 CategoryName = x.CategoryName,
                 Description = x.Description,
-                IsActive = x.IsActive
+                IsActive = x.IsActive,
+                IsGlobal = x.FirmID == null
             })
             .ToListAsync(cancellationToken);
 

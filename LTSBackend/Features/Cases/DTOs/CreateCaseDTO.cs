@@ -14,11 +14,19 @@ public class CreateCaseDTO
 
     public string? CaseDescription { get; set; }
 
-    [Required(ErrorMessage = "Court is required")]
+    /// <summary>Set when the user picked an existing court from the list. Leave 0 if typing a new one via CourtName.</summary>
     public int CourtID { get; set; }
 
-    [Required(ErrorMessage = "Category is required")]
+    /// <summary>Set when the user typed a court name that isn't in the list yet - the server will create it.</summary>
+    [StringLength(150)]
+    public string? CourtName { get; set; }
+
+    /// <summary>Set when the user picked an existing category from the list. Leave 0 if typing a new one via CategoryName.</summary>
     public int CategoryID { get; set; }
+
+    /// <summary>Set when the user typed a category name that isn't in the list yet - the server will create it.</summary>
+    [StringLength(150)]
+    public string? CategoryName { get; set; }
 
     [Required(ErrorMessage = "Priority is required")]
     [RegularExpression("^(High|Medium|Low)$")]
@@ -45,8 +53,12 @@ public class CreateCaseDTO
 
     public string? FinancialImplication { get; set; }
 
-    [Required(ErrorMessage = "Department is required")]
+    /// <summary>Set when the user picked an existing department from the list. Leave 0/null if typing a new one via DepartmentName.</summary>
     public int ResponsibleDepartmentID { get; set; }
+
+    /// <summary>Set when the user typed a department name that isn't in the list yet - the server will create it.</summary>
+    [StringLength(100)]
+    public string? DepartmentName { get; set; }
 
     [Required(ErrorMessage = "Legal Officer is required")]
     public int CurrentLegalOfficerID { get; set; }

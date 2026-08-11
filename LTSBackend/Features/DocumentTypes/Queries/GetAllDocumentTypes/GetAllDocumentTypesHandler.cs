@@ -28,7 +28,8 @@ public sealed class GetAllDocumentTypesHandler(AppDbContext _context, ILogger<Ge
                 DocumentTypeID = x.DocumentTypeID,
                 TypeName = x.TypeName,
                 Description = x.Description,
-                IsActive = x.IsActive
+                IsActive = x.IsActive,
+                IsGlobal = x.FirmID == null
             })
             .ToListAsync(cancellationToken);
 

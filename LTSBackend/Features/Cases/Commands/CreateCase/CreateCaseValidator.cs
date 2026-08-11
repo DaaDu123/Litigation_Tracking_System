@@ -30,18 +30,20 @@ public class CreateCaseValidator : AbstractValidator<CreateCaseCommand>
             .Must(x => x == "High" || x == "Medium" || x == "Low")
             .WithMessage("Priority can only be High, Medium, or Low");
 
-        RuleFor(x => x.CourtID)
-            .GreaterThan(0)
-            .WithMessage("Valid Court is required");
+        RuleFor(x => x)
+            .Must(x => x.CourtID > 0 || !string.IsNullOrWhiteSpace(x.CourtName))
+            .WithMessage("Select a Court or type a new one")
+            .OverridePropertyName("CourtID");
 
-        RuleFor(x => x.CategoryID)
-            .GreaterThan(0)
-            .WithMessage("Valid Category is required");
+        RuleFor(x => x)
+            .Must(x => x.CategoryID > 0 || !string.IsNullOrWhiteSpace(x.CategoryName))
+            .WithMessage("Select a Category or type a new one")
+            .OverridePropertyName("CategoryID");
 
         RuleFor(x => x.ResponsibleDepartmentID)
             .GreaterThan(0)
             .WithMessage("A valid Department is required — not 0 or a negative ID")
-            .When(x => x.ResponsibleDepartmentID.HasValue);
+            .When(x => x.ResponsibleDepartmentID.HasValue && string.IsNullOrWhiteSpace(x.DepartmentName));
 
         RuleFor(x => x.CurrentLegalOfficerID)
             .GreaterThan(0)

@@ -23,7 +23,8 @@ public sealed class GetDocumentTypeByIdHandler(AppDbContext _context, ILogger<Ge
             DocumentTypeID = type.DocumentTypeID,
             TypeName = type.TypeName,
             Description = type.Description,
-            IsActive = type.IsActive
+            IsActive = type.IsActive,
+            IsGlobal = type.FirmID == null
         };
     }
 }

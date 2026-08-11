@@ -9,6 +9,7 @@
 @using Microsoft.AspNetCore.Authorization
 @inject ICourtService CourtService
 @inject ToastService Toast
+@inject UserSessionState Session
 
 <PageTitle>Courts - Master Data - LTS</PageTitle>
 
@@ -212,7 +213,15 @@
                         @foreach (var court in PagedCourts)
                         {
                             <tr @key="court.CourtID">
-                                <td class="lts-cell-primary">@court.CourtName</td>
+                                <td class="lts-cell-primary">
+                                    @court.CourtName
+                                    @if (court.IsGlobal)
+                                    {
+                                        <span class="lts-badge lts-badge-muted" style="margin-left:0.4rem;" title="Shared system-wide court - managed by SuperAdmin only">
+                                            <i class="bi bi-globe2"></i> Global
+                                        </span>
+                                    }
+                                </td>
                                 <td class="lts-cell-muted">@(court.CourtType ?? "—")</td>
                                 <td class="lts-cell-muted">@(court.Jurisdiction ?? "—")</td>
                                 <td><StatusBadge IsActive="court.IsActive" /></td>
@@ -222,14 +231,21 @@
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick="() => OpenDetails(court)">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <PermissionGate Roles="FirmAdmin,SuperAdmin">
+                                        @if (CanManage(court))
+                                        {
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Edit" @onclick="() => OpenEdit(court)">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Delete" @onclick="() => HandleDeleteAsync(court)">
                                                 <i class="bi bi-trash text-danger"></i>
                                             </button>
-                                        </PermissionGate>
+                                        }
+                                        else if (court.IsGlobal)
+                                        {
+                                            <span class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" style="opacity:0.5;cursor:not-allowed;" title="Global court - only SuperAdmin can edit or deactivate this.">
+                                                <i class="bi bi-lock"></i>
+                                            </span>
+                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -246,7 +262,15 @@
                 {
                     <div class="lts-entity-card" @key="court.CourtID">
                         <div class="lts-entity-card-header">
-                            <h3 class="lts-entity-card-title">@court.CourtName</h3>
+                            <h3 class="lts-entity-card-title">
+                                @court.CourtName
+                                @if (court.IsGlobal)
+                                {
+                                    <span class="lts-badge lts-badge-muted" style="margin-left:0.4rem;" title="Shared system-wide court - managed by SuperAdmin only">
+                                        <i class="bi bi-globe2"></i> Global
+                                    </span>
+                                }
+                            </h3>
                             <StatusBadge IsActive="court.IsActive" />
                         </div>
                         @if (!string.IsNullOrWhiteSpace(court.CourtType))
@@ -263,7 +287,8 @@
                             <button class="lts-btn lts-btn-ghost lts-btn-sm" @onclick="() => OpenDetails(court)">
                                 <i class="bi bi-eye"></i> View
                             </button>
-                            <PermissionGate Roles="FirmAdmin,SuperAdmin">
+                            @if (CanManage(court))
+                            {
                                 <div class="lts-row-actions">
                                     <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Edit" @onclick="() => OpenEdit(court)">
                                         <i class="bi bi-pencil"></i>
@@ -272,7 +297,13 @@
                                         <i class="bi bi-trash text-danger"></i>
                                     </button>
                                 </div>
-                            </PermissionGate>
+                            }
+                            else if (court.IsGlobal)
+                            {
+                                <span class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" style="opacity:0.5;cursor:not-allowed;" title="Global court - only SuperAdmin can edit or deactivate this.">
+                                    <i class="bi bi-lock"></i>
+                                </span>
+                            }
                         </div>
                     </div>
                 }
@@ -410,6 +441,9 @@
     }
 
     private void OpenCreate() => _formModal.OpenForCreate();
+
+    private bool CanManage(CourtDTO court) =>
+        !court.IsGlobal || string.Equals(Session.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
 
     private void OpenEdit(CourtDTO court) => _formModal.OpenForEdit(court);
 

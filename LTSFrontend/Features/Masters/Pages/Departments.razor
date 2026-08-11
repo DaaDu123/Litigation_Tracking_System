@@ -9,6 +9,7 @@
 @using Microsoft.AspNetCore.Authorization
 @inject IDepartmentService DepartmentService
 @inject ToastService Toast
+@inject UserSessionState Session
 
 <PageTitle>Departments - Master Data - LTS</PageTitle>
 
@@ -161,7 +162,15 @@
                         @foreach (var department in PagedDepartments)
                         {
                             <tr @key="department.DepartmentID">
-                                <td class="lts-cell-primary">@department.DepartmentName</td>
+                                <td class="lts-cell-primary">
+                                    @department.DepartmentName
+                                    @if (department.IsGlobal)
+                                    {
+                                        <span class="lts-badge lts-badge-muted" style="margin-left:0.4rem;" title="Shared system-wide department - managed by SuperAdmin only">
+                                            <i class="bi bi-globe2"></i> Global
+                                        </span>
+                                    }
+                                </td>
                                 <td class="lts-cell-muted">@(department.DepartmentCode ?? "—")</td>
                                 <td class="lts-cell-muted">@(string.IsNullOrWhiteSpace(department.Description) ? "—" : department.Description)</td>
                                 <td><StatusBadge IsActive="department.IsActive" /></td>
@@ -170,14 +179,21 @@
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick="() => OpenDetails(department)">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <PermissionGate Roles="FirmAdmin,SuperAdmin">
+                                        @if (CanManage(department))
+                                        {
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Edit" @onclick="() => OpenEdit(department)">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Delete" @onclick="() => HandleDeleteAsync(department)">
                                                 <i class="bi bi-trash text-danger"></i>
                                             </button>
-                                        </PermissionGate>
+                                        }
+                                        else if (department.IsGlobal)
+                                        {
+                                            <span class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" style="opacity:0.5;cursor:not-allowed;" title="Global department - only SuperAdmin can edit or deactivate this.">
+                                                <i class="bi bi-lock"></i>
+                                            </span>
+                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -295,6 +311,9 @@
     }
 
     private void OpenCreate() => _formModal.OpenForCreate();
+
+    private bool CanManage(DepartmentDTO department) =>
+        !department.IsGlobal || string.Equals(Session.Role, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
 
     private void OpenEdit(DepartmentDTO department) => _formModal.OpenForEdit(department);
 

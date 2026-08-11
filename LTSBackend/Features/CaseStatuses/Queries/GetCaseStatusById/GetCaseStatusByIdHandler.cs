@@ -25,7 +25,8 @@ public sealed class GetCaseStatusByIdHandler(AppDbContext _context, ILogger<GetC
             SequenceNo = status.SequenceNo,
             ColorCode = status.ColorCode,
             IsClosed = status.IsClosed,
-            IsActive = status.IsActive
+            IsActive = status.IsActive,
+            IsGlobal = status.FirmID == null
         };
     }
 }

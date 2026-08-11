@@ -96,7 +96,9 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
             dto.CaseTitle,
             dto.CaseDescription,
             dto.CourtID,
+            dto.CourtName,
             dto.CategoryID,
+            dto.CategoryName,
             dto.Priority,
             dto.SubjectMatter,
             dto.FilingDate,
@@ -107,6 +109,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
             dto.PotentialLiability,
             dto.FinancialImplication,
             dto.ResponsibleDepartmentID,
+            dto.DepartmentName,
             dto.CurrentLegalOfficerID);
 
         var caseID = await _mediator.Send(command);

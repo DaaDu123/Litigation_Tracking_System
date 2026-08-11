@@ -36,7 +36,8 @@ public sealed class GetAllCourtsHandler(AppDbContext _context, ILogger<GetAllCou
                 Jurisdiction = x.Jurisdiction,
                 Address = x.Address,
                 IsActive = x.IsActive,
-                CreatedDate = x.CreatedDate
+                CreatedDate = x.CreatedDate,
+                IsGlobal = x.FirmID == null
             })
             .ToListAsync(cancellationToken);
 

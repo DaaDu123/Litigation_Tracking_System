@@ -100,40 +100,58 @@
                 <div class="col-md-4">
                     <div class="lts-form-group">
                         <label class="lts-form-label">Court <span class="required">*</span></label>
-                        <InputSelect @bind-Value="_form.CourtID" class="lts-form-control" disabled="@_isSaving">
-                            <option value="0">Select court...</option>
+                        <input class="lts-form-control" list="courtOptions" placeholder="Type or select a court..."
+                               value="@_courtText" disabled="@_isSaving"
+                               @oninput="OnCourtInput" />
+                        <datalist id="courtOptions">
                             @foreach (var court in _courts)
                             {
-                                <option value="@court.CourtID">@court.CourtName</option>
+                                <option value="@court.CourtName" />
                             }
-                        </InputSelect>
-                        <ValidationMessage For="() => _form.CourtID" class="lts-form-error" />
+                        </datalist>
+                        <div class="lts-form-hint">Pick an existing court, or type a new name to add it.</div>
+                        @if (_showCourtError)
+                        {
+                            <div class="lts-form-error">Court is required</div>
+                        }
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="lts-form-group">
                         <label class="lts-form-label">Category <span class="required">*</span></label>
-                        <InputSelect @bind-Value="_form.CategoryID" class="lts-form-control" disabled="@_isSaving">
-                            <option value="0">Select category...</option>
+                        <input class="lts-form-control" list="categoryOptions" placeholder="Type or select a category..."
+                               value="@_categoryText" disabled="@_isSaving"
+                               @oninput="OnCategoryInput" />
+                        <datalist id="categoryOptions">
                             @foreach (var cat in _categories)
                             {
-                                <option value="@cat.CategoryID">@cat.CategoryName</option>
+                                <option value="@cat.CategoryName" />
                             }
-                        </InputSelect>
-                        <ValidationMessage For="() => _form.CategoryID" class="lts-form-error" />
+                        </datalist>
+                        <div class="lts-form-hint">Pick an existing category, or type a new name to add it.</div>
+                        @if (_showCategoryError)
+                        {
+                            <div class="lts-form-error">Category is required</div>
+                        }
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="lts-form-group">
                         <label class="lts-form-label">Responsible Department <span class="required">*</span></label>
-                        <InputSelect @bind-Value="_form.ResponsibleDepartmentID" class="lts-form-control" disabled="@_isSaving">
-                            <option value="0">Select department...</option>
+                        <input class="lts-form-control" list="departmentOptions" placeholder="Type or select a department..."
+                               value="@_departmentText" disabled="@_isSaving"
+                               @oninput="OnDepartmentInput" />
+                        <datalist id="departmentOptions">
                             @foreach (var dept in _departments)
                             {
-                                <option value="@dept.DepartmentID">@dept.DepartmentName</option>
+                                <option value="@dept.DepartmentName" />
                             }
-                        </InputSelect>
-                        <ValidationMessage For="() => _form.ResponsibleDepartmentID" class="lts-form-error" />
+                        </datalist>
+                        <div class="lts-form-hint">Pick an existing department, or type a new name to add it.</div>
+                        @if (_showDepartmentError)
+                        {
+                            <div class="lts-form-error">Department is required</div>
+                        }
                     </div>
                 </div>
             </div>
@@ -236,9 +254,47 @@
     private List<DepartmentDTO> _departments = new();
     private List<UserDTO> _legalOfficers = new();
 
+    private string _courtText = string.Empty;
+    private string _categoryText = string.Empty;
+    private string _departmentText = string.Empty;
+    private bool _showCourtError;
+    private bool _showCategoryError;
+    private bool _showDepartmentError;
+
     private bool _isLoadingLookups = true;
     private bool _isSaving;
     private string? _apiError;
+
+    // Type-or-select combo boxes: whatever the user types is matched
+    // (case-insensitively) against the loaded list. A match resolves to
+    // that record's ID; no match keeps ID at 0 and sends the typed text
+    // as *Name instead, so the backend creates it as a new record.
+    private void OnCourtInput(ChangeEventArgs e)
+    {
+        _courtText = e.Value?.ToString() ?? string.Empty;
+        var match = _courts.FirstOrDefault(c => string.Equals(c.CourtName, _courtText.Trim(), StringComparison.OrdinalIgnoreCase));
+        _form.CourtID = match?.CourtID ?? 0;
+        _form.CourtName = match == null ? _courtText.Trim() : null;
+        _showCourtError = false;
+    }
+
+    private void OnCategoryInput(ChangeEventArgs e)
+    {
+        _categoryText = e.Value?.ToString() ?? string.Empty;
+        var match = _categories.FirstOrDefault(c => string.Equals(c.CategoryName, _categoryText.Trim(), StringComparison.OrdinalIgnoreCase));
+        _form.CategoryID = match?.CategoryID ?? 0;
+        _form.CategoryName = match == null ? _categoryText.Trim() : null;
+        _showCategoryError = false;
+    }
+
+    private void OnDepartmentInput(ChangeEventArgs e)
+    {
+        _departmentText = e.Value?.ToString() ?? string.Empty;
+        var match = _departments.FirstOrDefault(d => string.Equals(d.DepartmentName, _departmentText.Trim(), StringComparison.OrdinalIgnoreCase));
+        _form.ResponsibleDepartmentID = match?.DepartmentID ?? 0;
+        _form.DepartmentName = match == null ? _departmentText.Trim() : null;
+        _showDepartmentError = false;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -267,6 +323,15 @@
 
     private async Task HandleSubmitAsync()
     {
+        _showCourtError = _form.CourtID <= 0 && string.IsNullOrWhiteSpace(_form.CourtName);
+        _showCategoryError = _form.CategoryID <= 0 && string.IsNullOrWhiteSpace(_form.CategoryName);
+        _showDepartmentError = _form.ResponsibleDepartmentID <= 0 && string.IsNullOrWhiteSpace(_form.DepartmentName);
+
+        if (_showCourtError || _showCategoryError || _showDepartmentError)
+        {
+            return;
+        }
+
         _isSaving = true;
         _apiError = null;
         try

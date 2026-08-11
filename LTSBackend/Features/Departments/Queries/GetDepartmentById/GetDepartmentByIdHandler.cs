@@ -25,7 +25,8 @@ public sealed class GetDepartmentByIdHandler(AppDbContext _context, ILogger<GetD
             DepartmentName = department.DepartmentName,
             DepartmentCode = department.DepartmentCode,
             Description = department.Description,
-            IsActive = department.IsActive
+            IsActive = department.IsActive,
+            IsGlobal = department.FirmID == null
         };
     }
 }

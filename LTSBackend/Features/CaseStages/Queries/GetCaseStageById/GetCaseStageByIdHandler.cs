@@ -23,7 +23,8 @@ public sealed class GetCaseStageByIdHandler(AppDbContext _context, ILogger<GetCa
             StageID = stage.StageID,
             StageName = stage.StageName,
             Description = stage.Description,
-            IsActive = stage.IsActive
+            IsActive = stage.IsActive,
+            IsGlobal = stage.FirmID == null
         };
     }
 }

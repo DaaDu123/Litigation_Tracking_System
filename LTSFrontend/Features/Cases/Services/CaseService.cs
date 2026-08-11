@@ -51,7 +51,9 @@ namespace LTSFrontend.Features.Cases.Services
                 CaseTitle = form.CaseTitle.Trim(),
                 CaseDescription = string.IsNullOrWhiteSpace(form.CaseDescription) ? null : form.CaseDescription.Trim(),
                 form.CourtID,
+                CourtName = string.IsNullOrWhiteSpace(form.CourtName) ? null : form.CourtName.Trim(),
                 form.CategoryID,
+                CategoryName = string.IsNullOrWhiteSpace(form.CategoryName) ? null : form.CategoryName.Trim(),
                 form.Priority,
                 SubjectMatter = form.SubjectMatter.Trim(),
                 FilingDate = form.FilingDate!.Value,
@@ -62,6 +64,7 @@ namespace LTSFrontend.Features.Cases.Services
                 form.PotentialLiability,
                 FinancialImplication = string.IsNullOrWhiteSpace(form.FinancialImplication) ? null : form.FinancialImplication.Trim(),
                 form.ResponsibleDepartmentID,
+                DepartmentName = string.IsNullOrWhiteSpace(form.DepartmentName) ? null : form.DepartmentName.Trim(),
                 form.CurrentLegalOfficerID
             });
 

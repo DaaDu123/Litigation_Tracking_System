@@ -30,7 +30,8 @@ public sealed class GetAllCaseStagesHandler(AppDbContext _context, ILogger<GetAl
                 StageID = x.StageID,
                 StageName = x.StageName,
                 Description = x.Description,
-                IsActive = x.IsActive
+                IsActive = x.IsActive,
+                IsGlobal = x.FirmID == null
             })
             .ToListAsync(cancellationToken);
 

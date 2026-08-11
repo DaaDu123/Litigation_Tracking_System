@@ -23,7 +23,8 @@ public sealed class GetCaseCategoryByIdHandler(AppDbContext _context, ILogger<Ge
             CategoryID = category.CategoryID,
             CategoryName = category.CategoryName,
             Description = category.Description,
-            IsActive = category.IsActive
+            IsActive = category.IsActive,
+            IsGlobal = category.FirmID == null
         };
     }
 }

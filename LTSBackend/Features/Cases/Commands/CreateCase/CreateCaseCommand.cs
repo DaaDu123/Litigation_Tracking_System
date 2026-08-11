@@ -7,7 +7,9 @@ public record CreateCaseCommand(
     string CaseTitle,
     string? CaseDescription,
     int CourtID,
+    string? CourtName,
     int CategoryID,
+    string? CategoryName,
     string Priority,
     string SubjectMatter,
     DateTime FilingDate,
@@ -18,5 +20,6 @@ public record CreateCaseCommand(
     decimal PotentialLiability,
     string? FinancialImplication,
     int? ResponsibleDepartmentID,
+    string? DepartmentName,
     int? CurrentLegalOfficerID
 ) : IRequest<long>;

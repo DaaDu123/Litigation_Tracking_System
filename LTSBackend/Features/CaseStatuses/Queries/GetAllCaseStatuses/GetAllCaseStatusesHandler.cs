@@ -30,7 +30,8 @@ public sealed class GetAllCaseStatusesHandler(AppDbContext _context, ILogger<Get
                 SequenceNo = x.SequenceNo,
                 ColorCode = x.ColorCode,
                 IsClosed = x.IsClosed,
-                IsActive = x.IsActive
+                IsActive = x.IsActive,
+                IsGlobal = x.FirmID == null
             })
             .ToListAsync(cancellationToken);
 

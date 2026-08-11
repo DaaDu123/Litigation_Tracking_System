@@ -24,7 +24,8 @@ public sealed class GetAllDepartmentsHandler(AppDbContext _context, ILogger<GetA
                 DepartmentName = x.DepartmentName,
                 DepartmentCode = x.DepartmentCode,
                 Description = x.Description,
-                IsActive = x.IsActive
+                IsActive = x.IsActive,
+                IsGlobal = x.FirmID == null
             })
             .ToListAsync(cancellationToken);
         _logger.LogInformation("Retrieved {Count} departments", departments.Count);

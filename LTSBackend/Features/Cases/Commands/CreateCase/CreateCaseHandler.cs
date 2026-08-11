@@ -43,43 +43,19 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             });
         }
 
-        var court = await _context.Courts
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.CourtID == request.CourtID && x.IsActive, cancellationToken);
-
-        if (court == null)
-        {
-            _logger.LogWarning("Court not found or is inactive: {CourtID}", request.CourtID);
-            throw new NotFoundException($"Court ID {request.CourtID} not found or is inactive");
-        }
+        // Court: use the picked ID, or resolve/create by the typed name
+        // (type-or-select combo box on the Create Case form).
+        int resolvedCourtId = await GetOrCreateCourtIdAsync(request.CourtID, request.CourtName, firmId, cancellationToken);
 
         // ================================================
-        // 3. Category exist check
+        // 3. Category: use the picked ID, or resolve/create by the typed name
         // ================================================
-        var category = await _context.CaseCategories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.CategoryID == request.CategoryID, cancellationToken);
-
-        if (category == null)
-        {
-            _logger.LogWarning("Category not found: {CategoryID}", request.CategoryID);
-            throw new NotFoundException($"Category ID {request.CategoryID} not found");
-        }
+        int resolvedCategoryId = await GetOrCreateCategoryIdAsync(request.CategoryID, request.CategoryName, firmId, cancellationToken);
 
         // ================================================
-  // ================================================
-        if (request.ResponsibleDepartmentID.HasValue)
-        {
-            var department = await _context.Departments
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.DepartmentID == request.ResponsibleDepartmentID.Value && x.IsActive,cancellationToken);
-
-            if (department == null)
-            {
-                _logger.LogWarning("Department not found ya inactive: {DepartmentID}", request.ResponsibleDepartmentID);
-                throw new NotFoundException($"Department ID {request.ResponsibleDepartmentID} not found or is inactive");
-            }
-        }
+        // 4. Department: same type-or-select pattern (optional field)
+        // ================================================
+        int? resolvedDepartmentId = await GetOrCreateDepartmentIdAsync(request.ResponsibleDepartmentID, request.DepartmentName, firmId, cancellationToken);
 
         // ================================================
         // 5. Legal Officer check — ONLY if a value was provided
@@ -143,8 +119,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             CaseNumber = request.CaseNumber,
             CaseTitle = request.CaseTitle,
             CaseDescription = request.CaseDescription,
-            CourtID = request.CourtID,
-            CategoryID = request.CategoryID,
+            CourtID = resolvedCourtId,
+            CategoryID = resolvedCategoryId,
             StatusID = defaultStatus.StatusID,
             StageID = defaultStage.StageID,
             Priority = request.Priority,
@@ -156,7 +132,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             ClaimedAmount = request.ClaimedAmount,
             PotentialLiability = request.PotentialLiability,
             FinancialImplication = request.FinancialImplication,
-            ResponsibleDepartmentID = request.ResponsibleDepartmentID,
+            ResponsibleDepartmentID = resolvedDepartmentId,
             CurrentLegalOfficerID = request.CurrentLegalOfficerID,
             CreatedBy = currentUserId,
             CreatedDate = DateTime.UtcNow,
@@ -246,5 +222,129 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         return new string(Enumerable.Range(0, length)
             .Select(_ => chars[Random.Shared.Next(chars.Length)])
             .ToArray());
+    }
+
+    // ================================================
+    // Type-or-select helpers for Court / Category / Department.
+    // The Create Case form lets the user either pick an existing
+    // option or type a brand-new one. If an ID was picked we validate
+    // it exists (as before). If a name was typed instead, we reuse a
+    // matching existing record (case-insensitive) if one exists for
+    // this firm/global scope, otherwise we create a new firm-owned
+    // record on the fly so it's available for every future case too.
+    // ================================================
+
+    private async Task<int> GetOrCreateCourtIdAsync(int courtId, string? courtName, int firmId, CancellationToken cancellationToken)
+    {
+        if (courtId > 0)
+        {
+            var court = await _context.Courts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.CourtID == courtId && x.IsActive, cancellationToken);
+
+            if (court == null)
+            {
+                _logger.LogWarning("Court not found or is inactive: {CourtID}", courtId);
+                throw new NotFoundException($"Court ID {courtId} not found or is inactive");
+            }
+            return court.CourtID;
+        }
+
+        var name = courtName!.Trim();
+        var existing = await _context.Courts
+            .FirstOrDefaultAsync(x => x.IsActive && x.CourtName.ToLower() == name.ToLower(), cancellationToken);
+        if (existing != null)
+        {
+            return existing.CourtID;
+        }
+
+        _logger.LogInformation("Creating new Court on the fly from Case creation: {CourtName}", name);
+        var newCourt = new Models.Masters.Court
+        {
+            FirmID = firmId,
+            CourtName = name,
+            IsActive = true,
+            CreatedDate = DateTime.UtcNow
+        };
+        _context.Courts.Add(newCourt);
+        await _context.SaveChangesAsync(cancellationToken);
+        return newCourt.CourtID;
+    }
+
+    private async Task<int> GetOrCreateCategoryIdAsync(int categoryId, string? categoryName, int firmId, CancellationToken cancellationToken)
+    {
+        if (categoryId > 0)
+        {
+            var category = await _context.CaseCategories
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.CategoryID == categoryId, cancellationToken);
+
+            if (category == null)
+            {
+                _logger.LogWarning("Category not found: {CategoryID}", categoryId);
+                throw new NotFoundException($"Category ID {categoryId} not found");
+            }
+            return category.CategoryID;
+        }
+
+        var name = categoryName!.Trim();
+        var existing = await _context.CaseCategories
+            .FirstOrDefaultAsync(x => x.IsActive && x.CategoryName.ToLower() == name.ToLower(), cancellationToken);
+        if (existing != null)
+        {
+            return existing.CategoryID;
+        }
+
+        _logger.LogInformation("Creating new Case Category on the fly from Case creation: {CategoryName}", name);
+        var newCategory = new Models.Masters.CaseCategory
+        {
+            FirmID = firmId,
+            CategoryName = name,
+            IsActive = true
+        };
+        _context.CaseCategories.Add(newCategory);
+        await _context.SaveChangesAsync(cancellationToken);
+        return newCategory.CategoryID;
+    }
+
+    private async Task<int?> GetOrCreateDepartmentIdAsync(int? departmentId, string? departmentName, int firmId, CancellationToken cancellationToken)
+    {
+        if (departmentId.HasValue && departmentId.Value > 0)
+        {
+            var department = await _context.Departments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.DepartmentID == departmentId.Value && x.IsActive, cancellationToken);
+
+            if (department == null)
+            {
+                _logger.LogWarning("Department not found ya inactive: {DepartmentID}", departmentId);
+                throw new NotFoundException($"Department ID {departmentId} not found or is inactive");
+            }
+            return department.DepartmentID;
+        }
+
+        if (string.IsNullOrWhiteSpace(departmentName))
+        {
+            return null;
+        }
+
+        var name = departmentName.Trim();
+        var existing = await _context.Departments
+            .FirstOrDefaultAsync(x => x.IsActive && x.DepartmentName.ToLower() == name.ToLower(), cancellationToken);
+        if (existing != null)
+        {
+            return existing.DepartmentID;
+        }
+
+        _logger.LogInformation("Creating new Department on the fly from Case creation: {DepartmentName}", name);
+        var newDepartment = new Models.Masters.Department
+        {
+            FirmID = firmId,
+            DepartmentName = name,
+            IsActive = true
+        };
+        _context.Departments.Add(newDepartment);
+        await _context.SaveChangesAsync(cancellationToken);
+        return newDepartment.DepartmentID;
     }
 }
