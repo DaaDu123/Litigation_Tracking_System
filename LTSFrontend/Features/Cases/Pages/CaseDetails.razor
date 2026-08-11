@@ -66,6 +66,9 @@ else
                 <button class="lts-btn lts-btn-outline" @onclick="OpenStatusModal">
                     <i class="bi bi-arrow-repeat"></i> Update Status
                 </button>
+                <button class="lts-btn lts-btn-outline" @onclick="OpenStageModal">
+                    <i class="bi bi-signpost-split"></i> Update Stage
+                </button>
                 <button class="lts-btn lts-btn-outline" @onclick='() => Nav.NavigateTo($"/cases/{CaseId}/edit")'>
                     <i class="bi bi-pencil"></i> Edit
                 </button>
@@ -234,6 +237,7 @@ else
 }
 
 <UpdateCaseStatus @ref="_statusModal" OnUpdated="HandleStatusUpdatedAsync" />
+<UpdateCaseStage @ref="_stageModal" OnUpdated="HandleStageUpdatedAsync" />
 <ConfirmDialog @ref="_confirmDialog" />
 
 @code {
@@ -245,6 +249,7 @@ else
     private string _activeTab = "overview";
 
     private UpdateCaseStatus _statusModal = default!;
+    private UpdateCaseStage _stageModal = default!;
     private ConfirmDialog _confirmDialog = default!;
 
     protected override async Task OnParametersSetAsync()
@@ -285,6 +290,18 @@ else
     {
         await LoadAsync();
         Toast.Success("Status updated", "The case status has been changed.");
+    }
+
+    private void OpenStageModal()
+    {
+        if (_case == null) return;
+        _stageModal.Open(_case.CaseID, _case.StageName);
+    }
+
+    private async Task HandleStageUpdatedAsync()
+    {
+        await LoadAsync();
+        Toast.Success("Stage updated", "The case stage has been changed.");
     }
 
     private async Task HandleDeleteAsync()

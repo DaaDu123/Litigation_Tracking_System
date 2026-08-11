@@ -82,5 +82,14 @@ namespace LTSFrontend.Features.Cases.Services
         {
             return _api.PutAsync<bool>(ApiEndpoints.Cases.Status(id), new { NewStatusID = newStatusID, Remarks = remarks });
         }
+
+        public Task<bool> UpdateStageAsync(long id, int newStageID)
+        {
+            return _api.PutAsync<bool>(ApiEndpoints.Cases.ById(id), new UpdateCaseDTO
+            {
+                CaseID = id,
+                StageID = newStageID
+            });
+        }
     }
 }
