@@ -8,6 +8,7 @@ using LTSBackend.Features.LoginHistory.GetAllLoginHistory;
 using LTSBackend.Features.LoginHistory.GetMyLoginHistory;
 using LTSBackend.Features.LoginHistory.Queries.GetAllLoginHistory;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -15,13 +16,11 @@ namespace LTSBackend.Features.LoginHistory.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[HasPermission("ViewLoginHistory")]
+[Authorize]
 public class LoginHistoryController(IMediator mediator) : ControllerBase
-{
-    // Returns a paged, filterable list of login history for the caller's own
-    // firm (SuperAdmin sees every firm) - see GetAllLoginHistoryHandler for
-    // the tenant-isolation note.
+{    
     [HttpGet]
+    [HasPermission("ViewLoginHistory")]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? search,
         [FromQuery] DateTime? fromDate,
@@ -34,15 +33,9 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<PagedResult<LoginHistoryDTO>>.SuccessResponse(result, "Login history fetched successfully."));
     }
 
-    // Returns only the caller's own login history - UserID is taken from
-    // their own JWT claim, never from client input, so there is no IDOR risk here.
     [HttpGet("my")]
     public async Task<IActionResult> MyHistory()
     {
-        // FIX: previously used `User.FindFirstValue(ClaimTypes.NameIdentifier)!`
-        // which suppresses the null warning but throws an unhandled
-        // ArgumentNullException at runtime (500 error) if the claim is
-        // ever missing. Now handled gracefully with a proper 401.
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(userIdClaim, out var userId))
         {
@@ -54,9 +47,6 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<MyLoginHistoryDTO>>.SuccessResponse(result, "My login history fetched successfully."));
     }
 
-    // Deletes a single login history record. Requires DeleteLoginHistory,
-    // which is intentionally not granted to Firm Admin by default - see
-    // PermissionEnum.cs for why.
     [HttpDelete("{id:int}")]
     [HasPermission("DeleteLoginHistory")]
     public async Task<IActionResult> Delete(int id)
