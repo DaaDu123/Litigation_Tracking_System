@@ -1,6 +1,5 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
-using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Models.Security;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
@@ -8,11 +7,10 @@ using LTSBackend.Services.Jwt;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using CookieHelper = LTSBackend.Features.Auth.Helpers.CookieHelper;
 
 namespace LTSBackend.Features.Auth.Login;
 
-public class LoginHandler(AppDbContext _context, IPasswordService _passwordService, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<LoginHandler> _logger) : IRequestHandler<LoginCommand, LoginResponseDTO>
+public class LoginHandler(AppDbContext _context, IPasswordService _passwordService, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, ILogger<LoginHandler> _logger) : IRequestHandler<LoginCommand, LoginResponseDTO>
 {
     private const int MaxFailedAttempts = 5;
 
@@ -154,8 +152,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         // ================================================
         // 12. Set refresh token in HTTP cookie
         // ================================================
-        _cookieHelper.SetRefreshToken(_httpContextAccessor.HttpContext!.Response, refreshToken);
-
+        _jwtService.SetRefreshTokenCookie(_httpContextAccessor.HttpContext!.Response, refreshToken);
         _logger.LogInformation("User {UserId} logged in successfully", user.UserID);
 
         return new LoginResponseDTO

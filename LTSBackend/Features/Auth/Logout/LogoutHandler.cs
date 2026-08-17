@@ -1,6 +1,5 @@
 ﻿using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
-using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Auth.Logout;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.Jwt;
@@ -10,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Auth.Logout;
 
-public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, IAuditService _auditService, IJwtService _jwtService, ILogger<LogoutHandler> _logger) : IRequestHandler<LogoutCommand, bool>
+public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpContextAccessor, IAuditService _auditService, IJwtService _jwtService, ILogger<LogoutHandler> _logger) : IRequestHandler<LogoutCommand, bool>
 {
     public async Task<bool> Handle(
         LogoutCommand request,
@@ -88,8 +87,7 @@ public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpCont
         // ================================================
         // 7. Delete refresh token cookie
         // ================================================
-        _cookieHelper.RemoveRefreshToken(
-            _httpContextAccessor.HttpContext!.Response);
+        _jwtService.RemoveRefreshTokenCookie(_httpContextAccessor.HttpContext!.Response);
 
         _logger.LogInformation("User {UserId} logged out successfully", token.UserID);
 

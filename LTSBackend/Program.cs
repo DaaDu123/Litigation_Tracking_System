@@ -2,7 +2,6 @@ using FluentValidation;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Comman.Behaviors;
 using LTSBackend.Data;
-using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Authorization;
 using LTSBackend.Services;
 using LTSBackend.Services.Audit;
@@ -156,7 +155,6 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 // Authentication & Security Services
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<CookieHelper>();
 
 // Email & File Services
 builder.Services.AddScoped<IEmailService, EmailService>();

@@ -3,11 +3,12 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using LTSBackend.Models.Security;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 
 namespace LTSBackend.Services.Jwt;
 
-public class JwtService(IConfiguration _configuration) : IJwtService
+public class JwtService(IConfiguration _configuration, ILogger<JwtService> _logger) : IJwtService
 {
     // Issues a short-lived signed access token carrying identity, tenant (FirmID),
     // role and security-stamp claims used by every downstream authorization check.
@@ -103,5 +104,44 @@ public class JwtService(IConfiguration _configuration) : IJwtService
         var bytes = Encoding.UTF8.GetBytes(rawToken);
         var hashBytes = SHA256.HashData(bytes);
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
+    // Sets the HttpOnly refresh-token cookie on the response, using the same
+    // JwtSettings configuration values (UseSecureCookies, RefreshTokenDays)
+    // already read by GetRefreshTokenExpiry() above.
+    public void SetRefreshTokenCookie(HttpResponse response, string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            _logger.LogWarning("Attempted to set null or empty refresh token");
+            return;
+        }
+
+        bool useSecureCookies = _configuration.GetValue<bool>("JwtSettings:UseSecureCookies", true);
+        int refreshTokenDays = _configuration.GetValue<int>("JwtSettings:RefreshTokenDays", 7);
+
+        response.Cookies.Append("refreshToken",refreshToken,new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = useSecureCookies,
+                SameSite = SameSiteMode.Strict,
+                IsEssential = true,
+                Expires = DateTime.UtcNow.AddDays(refreshTokenDays)
+            });
+
+        _logger.LogDebug("Refresh token cookie set with {Days} days expiry", refreshTokenDays);
+    }
+
+    // Removes the refresh-token cookie from the response (used on logout).
+    public void RemoveRefreshTokenCookie(HttpResponse response)
+    {
+        bool useSecureCookies = _configuration.GetValue<bool>("JwtSettings:UseSecureCookies", true);
+        response.Cookies.Delete("refreshToken",new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = useSecureCookies,
+                SameSite = SameSiteMode.Strict
+            });
+
+        _logger.LogDebug("Refresh token cookie removed");
     }
 }

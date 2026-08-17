@@ -1,4 +1,5 @@
 ﻿using LTSBackend.Models.Security;
+using Microsoft.AspNetCore.Http;
 namespace LTSBackend.Services.Jwt;
 
 public interface IJwtService
@@ -10,4 +11,6 @@ public interface IJwtService
 
     DateTime GetAccessTokenExpiry();
     DateTime GetRefreshTokenExpiry();
+    void SetRefreshTokenCookie(HttpResponse response, string refreshToken);
+    void RemoveRefreshTokenCookie(HttpResponse response);
 }

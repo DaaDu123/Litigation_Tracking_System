@@ -1,7 +1,6 @@
 ﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
-using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Auth.VerifyOtp;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.Jwt;
@@ -12,7 +11,7 @@ using RefreshTokenEntity = LTSBackend.Models.Security.RefreshToken;
 
 namespace LTSBackend.Features.Auth.VerifyOtp;
 
-public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, CookieHelper _cookieHelper, ILogger<VerifyOtpHandler> _logger) : IRequestHandler<VerifyOtpCommand, VerifyOtpResponseDTO>
+public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, ILogger<VerifyOtpHandler> _logger) : IRequestHandler<VerifyOtpCommand, VerifyOtpResponseDTO>
 {
 
     public async Task<VerifyOtpResponseDTO> Handle(VerifyOtpCommand request,CancellationToken cancellationToken)
@@ -91,15 +90,10 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
 
         // ================================================
         // 8. Set refresh token cookie
-        //    FIX: previously the refresh token was generated and saved
-        //    to the DB but never actually sent to the client (no cookie,
-        //    not in the response body) — the user would verify their
-        //    email, get an access token, but have no way to refresh
-        //    their session once it expired.
         // ================================================
         if (_httpContextAccessor.HttpContext != null)
         {
-            _cookieHelper.SetRefreshToken(_httpContextAccessor.HttpContext.Response, refreshToken);
+            _jwtService.SetRefreshTokenCookie(_httpContextAccessor.HttpContext.Response, refreshToken);
         }
 
         _logger.LogInformation("OTP verified successfully for user: {UserId}", user.UserID);

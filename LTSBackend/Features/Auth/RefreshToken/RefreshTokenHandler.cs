@@ -1,6 +1,5 @@
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
-using LTSBackend.Features.Auth.Helpers;
 using LTSBackend.Features.Auth.RefreshToken;
 using LTSBackend.Services.Audit;
 using LTSBackend.Services.Jwt;
@@ -10,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Auth.RefreshToken;
 
-public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService, IHttpContextAccessor _httpContextAccessor, IAuditService _auditService, CookieHelper _cookieHelper, ILogger<RefreshTokenHandler> _logger) : IRequestHandler<RefreshTokenCommand, RefreshTokenResponseDTO>
+public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService, IHttpContextAccessor _httpContextAccessor, IAuditService _auditService, ILogger<RefreshTokenHandler> _logger) : IRequestHandler<RefreshTokenCommand, RefreshTokenResponseDTO>
 {
     public async Task<RefreshTokenResponseDTO> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
@@ -166,9 +165,7 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
         // ================================================
         // 10. Update refresh token cookie (raw value — never the hash)
         // ================================================
-        _cookieHelper.SetRefreshToken(
-            _httpContextAccessor.HttpContext!.Response,
-            newRefreshToken);
+        _jwtService.SetRefreshTokenCookie(_httpContextAccessor.HttpContext!.Response,newRefreshToken);
 
         _logger.LogInformation("Token refreshed successfully for user: {UserId}", user.UserID);
 
