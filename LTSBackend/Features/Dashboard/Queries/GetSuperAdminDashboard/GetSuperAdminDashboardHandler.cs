@@ -1,22 +1,17 @@
 ﻿using LTSBackend.Comman.Enum;
 using LTSBackend.Data;
-using LTSBackend.Features.Dashboard.DTO.cs;
 using LTSBackend.Features.Dashboard.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Dashboard.Queries.GetSuperAdminDashboard;
 
-public class GetSuperAdminDashboardHandler(AppDbContext _context, ILogger<GetSuperAdminDashboardHandler> _logger)
-    : IRequestHandler<GetSuperAdminDashboardQuery, SuperAdminDashboardDTO>
+public class GetSuperAdminDashboardHandler(AppDbContext _context, ILogger<GetSuperAdminDashboardHandler> _logger) : IRequestHandler<GetSuperAdminDashboardQuery, SuperAdminDashboardDTO>
 {
     public async Task<SuperAdminDashboardDTO> Handle(GetSuperAdminDashboardQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching SuperAdmin dashboard statistics");
 
-        // Firms query filter already excludes soft-deleted rows and (for a
-        // SuperAdmin caller) applies no firm restriction - see AppDbContext
-        // BypassTenantFilter.
         var dto = new SuperAdminDashboardDTO
         {
             TotalFirms = await _context.Firms.CountAsync(cancellationToken),
@@ -43,9 +38,7 @@ public class GetSuperAdminDashboardHandler(AppDbContext _context, ILogger<GetSup
                 .ToListAsync(cancellationToken)
         };
 
-        _logger.LogInformation(
-            "SuperAdmin dashboard fetched: {TotalFirms} firms, {ActiveFirms} active, {TotalFirmAdmins} firm admins",
-            dto.TotalFirms, dto.ActiveFirms, dto.TotalFirmAdmins);
+        _logger.LogInformation("SuperAdmin dashboard fetched: {TotalFirms} firms, {ActiveFirms} active, {TotalFirmAdmins} firm admins",dto.TotalFirms, dto.ActiveFirms, dto.TotalFirmAdmins);
 
         return dto;
     }

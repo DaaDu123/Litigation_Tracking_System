@@ -72,7 +72,6 @@ public class NotificationEmailDispatcherService(IServiceScopeFactory scopeFactor
         }
 
         await context.SaveChangesAsync(ct);
-
         logger.LogInformation("Notification email dispatch: {Sent} sent, {Skipped} skipped (inactive/no email)", sent, skipped);
     }
 }

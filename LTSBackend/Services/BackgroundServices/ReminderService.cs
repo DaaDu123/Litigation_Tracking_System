@@ -50,16 +50,14 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
 
         if (deadlineTypeId == null || hearingTypeId == null)
         {
-            logger.LogError("NotificationType seed rows missing ({DeadlineType}/{HearingType}) — skipping reminder sweep",
-                DeadlineAlertType, HearingReminderType);
+            logger.LogError("NotificationType seed rows missing ({DeadlineType}/{HearingType}) — skipping reminder sweep",DeadlineAlertType, HearingReminderType);
             return;
         }
 
         // ================================================
         // DEADLINE REMINDERS
         // ================================================
-        var dueDeadlines = await context.Deadlines
-                 .Where(d => !d.Completed && d.DueDate.AddDays(-d.ReminderDays) <= today && d.DueDate >= today).ToListAsync(ct);
+        var dueDeadlines = await context.Deadlines.Where(d => !d.Completed && d.DueDate.AddDays(-d.ReminderDays) <= today && d.DueDate >= today).ToListAsync(ct);
 
         foreach (var deadline in dueDeadlines)
         {
@@ -96,9 +94,7 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
         // ================================================
         // HEARING REMINDERS (next 2 days)
         // ================================================
-        var upcomingHearings = await context.Hearings
-            .Where(h => h.HearingDate.Date >= today && h.HearingDate.Date <= today.AddDays(2))
-            .ToListAsync(ct);
+        var upcomingHearings = await context.Hearings.Where(h => h.HearingDate.Date >= today && h.HearingDate.Date <= today.AddDays(2)).ToListAsync(ct);
 
         foreach (var hearing in upcomingHearings)
         {
@@ -133,8 +129,6 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
         }
 
         await context.SaveChangesAsync(ct);
-
-        logger.LogInformation("Reminder sweep complete: {Deadlines} deadlines, {Hearings} hearings checked",
-            dueDeadlines.Count, upcomingHearings.Count);
+        logger.LogInformation("Reminder sweep complete: {Deadlines} deadlines, {Hearings} hearings checked",dueDeadlines.Count, upcomingHearings.Count);
     }
 }

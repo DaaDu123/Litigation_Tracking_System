@@ -5,27 +5,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Services.DocumentPermissions;
 
-/// <summary>
-/// Implementation of document permission service.
-/// Handles Moharrir blind upload (write-only) and elevated access modes,
-/// and enforces multi-tenant isolation on every check.
-/// </summary>
 public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPermissionService> _logger) : IDocumentPermissionService
 {
-    // Central gate for all document operations (View/Download/Upload). Runs the
-    // full authorization chain: user exists & is active -> firm not
-    // blocked/deleted -> tenant match -> role-specific rule -> (for
-    // lawyers/interns/Moharrir) case-assignment check.
     public async Task<bool> CanUserAccessDocumentAsync(int userId, long documentId, string action, CancellationToken cancellationToken = default)
     {
         try
         {
             // ================================================
             // 1. Load the user with role + firm status.
-            //    IgnoreQueryFilters(): this service is the enforcement point
-            //    itself, so it must see the raw record in order to reject
-            //    inactive/blocked accounts explicitly below rather than have
-            //    them silently vanish behind a query filter.
             // ================================================
             var user = await _context.Users
                 .IgnoreQueryFilters()
@@ -57,11 +44,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
             var role = user.GetRole();
             // ================================================
-            // 3. Super Admin has NO document access. Documents are
-            //    firm-internal case material, entirely out of scope for the
-            //    platform owner (see the Roles SRS: SuperAdmin does not
-            //    view/upload/delete any document - that's FirmAdmin's job).
-            //    Deny explicitly rather than falling through.
+            // 3. Super Admin has NO document access.
             // ================================================
             if (role == UserRole.SuperAdmin)
             {
@@ -93,14 +76,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                     return false;
                 }
 
-                // ================================================
-                // DRAFT WORKFLOW (SRS - Intern/Paralegal): a draft document
-                // is visible only to its own uploader and to Partner/
-                // FirmAdmin (who are the only ones who can approve it).
-                // Every other role - including AssociateLawyer/Moharrir who
-                // would otherwise be assigned to the same case - is denied
-                // View/Download until the document is approved.
-                // ================================================
+         
                 bool canSeeDrafts = role == UserRole.FirmAdmin || role == UserRole.Partner;
                 if (docInfo.IsDraft && docInfo.UploadedBy != userId && !canSeeDrafts && action is "View" or "Download")
                 {
@@ -160,21 +136,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
         }
     }
 
-    // ================================================================
-    // BUG FIX (broken core feature): the pre-upload check previously called
-    // CanUserAccessDocumentAsync(userId, documentId: 0, "Upload", ...). But
-    // at upload time no Document row exists yet, so that method's internal
-    // "is this user assigned to the document's case" lookup - which joins
-    // THROUGH the Documents table - could never find anything for
-    // documentId 0, no matter who was asking. Net effect: AssociateLawyer
-    // could never successfully upload a document (always denied), and
-    // InternParalegal was denied even earlier since "Upload" wasn't in that
-    // role's allowed-action list at all - despite the SRS explicitly
-    // requiring "Intern: Upload draft documents" and the controller-level
-    // [Authorize] already admitting both roles to this endpoint. This
-    // method checks case assignment directly by CaseID (no Document join
-    // needed) so the intended business rule actually takes effect.
-    // ================================================================
+
     public async Task<bool> CanUserUploadToCaseAsync(int userId, long caseId, CancellationToken cancellationToken = default)
     {
         try
@@ -254,10 +216,6 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
         }
     }
 
-    // Confirms an active (non-ended) CaseAssignment linking this user to the
-    // case that owns the given document. CaseAssignments has no IsActive
-    // column - an assignment is treated as active when EndDate is null or
-    // still in the future.
     private async Task<bool> IsUserAssignedToDocumentCaseAsync(int userId, long documentId, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
@@ -354,9 +312,6 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
         return false;
     }
 
-    // Checks whether a Moharrir's role carries the "ViewDocumentsIfPermitted"
-    // permission, which marks them as elevated (view/download allowed) rather
-    // than restricted to blind upload.
     public async Task<bool> HasMohallirElevatedAccessAsync(int userId, CancellationToken cancellationToken = default)
     {
         try
@@ -380,8 +335,6 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
         }
     }
 
-    // Convenience negation of HasMohallirElevatedAccessAsync, restricted to
-    // users who actually hold the Moharrir role (returns false for anyone else).
     public async Task<bool> IsMohallirRestrictedAsync(int userId, CancellationToken cancellationToken = default)
     {
         try
@@ -403,10 +356,6 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
         }
     }
 
-    // Maps a user's role to a coarse-grained document access level, used by
-    // the frontend to decide which UI affordances (preview/download buttons
-    // etc.) to render - the backend re-checks every actual operation via
-    // CanUserAccessDocumentAsync regardless of what this returns.
     public async Task<DocumentAccessLevel> GetUserDocumentAccessLevelAsync(int userId, CancellationToken cancellationToken = default)
     {
         try
@@ -482,8 +431,6 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
         }
     }
 
-    // Creates or updates a user-specific document permission grant, which
-    // overrides any role-level grant for that same document.
     public async Task GrantUserDocumentPermissionAsync(long documentId, int userId, bool canView, bool canDownload, bool canUpload, CancellationToken cancellationToken = default)
     {
         try

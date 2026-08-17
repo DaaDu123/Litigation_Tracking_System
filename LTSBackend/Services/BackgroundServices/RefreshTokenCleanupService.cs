@@ -3,19 +3,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Services.BackgroundServices;
 
-public class RefreshTokenCleanupService(
-    IServiceScopeFactory scopeFactory,
-    ILogger<RefreshTokenCleanupService> logger)
-    : BackgroundService
+public class RefreshTokenCleanupService(IServiceScopeFactory scopeFactory,ILogger<RefreshTokenCleanupService> logger) : BackgroundService
 {
     private static readonly TimeSpan CleanupInterval = TimeSpan.FromHours(1);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation(
-            "RefreshTokenCleanupService started. Will run every {Hours} hours.",
-            CleanupInterval.TotalHours);
-
+        logger.LogInformation("RefreshTokenCleanupService started. Will run every {Hours} hours.",CleanupInterval.TotalHours);
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -29,7 +22,6 @@ public class RefreshTokenCleanupService(
 
             await Task.Delay(CleanupInterval, stoppingToken);
         }
-
         logger.LogInformation("RefreshTokenCleanupService stopped.");
     }
 
@@ -39,10 +31,7 @@ public class RefreshTokenCleanupService(
 
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var expiredTokens = await context.RefreshTokens
-            .Where(x => x.IsRevoked || x.ExpiryDate <= DateTime.UtcNow)
-            .ToListAsync(stoppingToken);
-
+        var expiredTokens = await context.RefreshTokens.Where(x => x.IsRevoked || x.ExpiryDate <= DateTime.UtcNow).ToListAsync(stoppingToken);
         if (expiredTokens.Count == 0)
             return;
 
@@ -50,8 +39,6 @@ public class RefreshTokenCleanupService(
 
         await context.SaveChangesAsync(stoppingToken);
 
-        logger.LogInformation(
-            "Cleaned up {Count} expired/revoked refresh tokens",
-            expiredTokens.Count);
+        logger.LogInformation("Cleaned up {Count} expired/revoked refresh tokens",expiredTokens.Count);
     }
 }

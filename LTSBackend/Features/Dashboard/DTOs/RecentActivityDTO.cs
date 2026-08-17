@@ -1,4 +1,4 @@
-﻿namespace LTSBackend.Features.Dashboard.DTO.cs
+﻿namespace LTSBackend.Features.Dashboard.DTOs
 {
     public class RecentActivityDTO
     {
