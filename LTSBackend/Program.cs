@@ -11,7 +11,6 @@ using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.DocumentPermissions;
 using LTSBackend.Services.Email;
 using LTSBackend.Services.Jwt;
-using LTSBackend.Services.LoginHistory;
 using LTSBackend.Services.Permissions;
 using LTSBackend.Services.ProfileService;
 using MediatR;
@@ -100,17 +99,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
 
-        // ================================================================
-        // Runs on EVERY authenticated request, after the token's signature
-        // and expiry have already passed validation. This is what actually
-        // enforces the SRS's "Active user status" step of the RBAC chain
-        // and the security-stamp / session-revocation requirements: a JWT
-        // can be perfectly valid and unexpired and STILL be rejected here
-        // if the account was deactivated/blocked, the firm was
-        // suspended/deleted, or the stamp no longer matches (password was
-        // changed, or an admin forced logout) since the token was issued.
-        // ================================================================
-        options.Events = new JwtBearerEvents
+       options.Events = new JwtBearerEvents
         {
             OnTokenValidated = async context =>
             {
@@ -123,12 +112,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
                 var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
 
-                // IgnoreQueryFilters(): at this exact point HttpContext.User is
-                // not yet the authenticated principal (that assignment happens
-                // only once this event succeeds), so the tenant-scoping global
-                // filter cannot resolve a FirmID yet - look the user up
-                // directly and enforce every rule explicitly instead.
-                var record = await dbContext.Users
+               var record = await dbContext.Users
                     .IgnoreQueryFilters()
                     .AsNoTracking()
                     .Where(u => u.UserID == userId)
@@ -186,7 +170,6 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 // User & Permission Services
-builder.Services.AddScoped<ILoginHistoryService, LoginHistoryService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 // Authorization Handler
@@ -260,19 +243,6 @@ builder.Services.AddAuthorization(options =>
 #endregion
 
 #region Rate Limiting Configuration
-// SRS "API Security" explicitly calls for rate limiting; there was none in
-// the pipeline previously, leaving login, OTP, and password-reset endpoints
-// open to unlimited brute-force attempts regardless of the FailedLoginAttempts
-// lockout counter on the User entity. Three policies are registered:
-//  - Global limiter: a generous per-IP limit applied to every request.
-//  - "auth-critical": a strict per-IP limit for endpoints that gate a
-//    brute-forceable secret (login password, 6-digit OTP) - login,
-//    verify-otp, refresh-token, reset-password.
-//  - "auth-moderate": a slightly looser per-IP limit for endpoints that are
-//    still abuse-prone (email-bombing/enumeration) but not directly
-//    brute-forceable - register, resend-otp, forgot-password.
-// AuthController applies these via [EnableRateLimiting("auth-critical")] /
-// [EnableRateLimiting("auth-moderate")] on each endpoint.
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -287,19 +257,6 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             }));
 
-    // ================================================================
-    // BUG FIX (CRITICAL): AuthController applies [EnableRateLimiting(...)]
-    // with two policy names - "auth-critical" (login, verify-otp,
-    // refresh-token, reset-password - endpoints that gate a brute-forceable
-    // secret: password or a 6-digit OTP) and "auth-moderate" (register,
-    // resend-otp, forgot-password - lower brute-force risk but still an
-    // email-bombing/enumeration vector). Only a single policy named "auth"
-    // was ever registered here, so every one of those seven endpoints would
-    // throw "no IRateLimiterPolicy registered with the name ..." the moment
-    // it was hit, taking down login/registration/password-reset entirely.
-    // Both names the controller actually asks for are registered below;
-    // "auth-critical" is intentionally the stricter of the two.
-    // ================================================================
     options.AddPolicy("auth-critical", httpContext =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
