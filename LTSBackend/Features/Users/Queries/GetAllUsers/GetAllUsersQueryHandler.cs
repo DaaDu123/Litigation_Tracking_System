@@ -12,9 +12,9 @@ public class GetAllUsersQueryHandler(AppDbContext _context,ICurrentUserService _
         GetAllUsersQuery request,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Fetching all active users");
+        _logger.LogInformation("Fetching all users (active and deactivated - permanently deleted users are excluded)");
 
-        var query = _context.Users.AsNoTracking().Where(x => x.IsActive && !x.IsDeleted);
+       var query = _context.Users.AsNoTracking().Where(x => !x.IsDeleted);
 
         // Multi-tenancy: firm-scoped. SuperAdmin cannot reach this endpoint at all
         // (route-level [Authorize] excludes it - user directory is FirmAdmin's job).

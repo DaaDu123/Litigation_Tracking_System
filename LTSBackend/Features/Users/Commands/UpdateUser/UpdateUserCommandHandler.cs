@@ -69,12 +69,6 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         // ================================================
         // 2c. Multi-tenancy: can only edit users in your own firm
         // (SuperAdmin, whose FirmID is null, bypasses this check)
-        //
-        // NOTE: moved above the email-uniqueness check (previously step 2)
-        // so an unauthorized cross-firm request fails fast on an
-        // authorization check rather than running an unrelated DB query
-        // first. Not a fix for an actual leak — the write was already
-        // correctly blocked either way, this is ordering hygiene only.
         // ================================================
         if (actingUser!.FirmID != null && user.FirmID != actingUser.FirmID)
         {
@@ -84,12 +78,8 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
 
         // ================================================
         // 3. Check if new email is unique
-        //    Email is globally unique across all firms by design (see the
-        //    unique index on Users.Email in AppDbContext) — login doesn't
-        //    ask which firm first, so this check is intentionally NOT
-        //    firm-scoped.
         // ================================================
-        bool emailExists = await _context.Users.AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID, cancellationToken);
+        bool emailExists = await _context.Users.AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID && !x.IsDeleted, cancellationToken);
 
         if (emailExists)
         {

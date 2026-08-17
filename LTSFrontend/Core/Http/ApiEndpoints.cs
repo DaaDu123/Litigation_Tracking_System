@@ -28,6 +28,8 @@
             public const string Base_ = Root;
             public const string MyProfile = Root + "/profile/me";
             public static string ById(int id) => $"{Root}/{id}";
+            public static string Activate(int id) => $"{Root}/{id}/activate";
+            public static string PermanentDelete(int id) => $"{Root}/{id}/permanent";
         }
 
         public static class Roles

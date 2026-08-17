@@ -11,13 +11,12 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
 {
     public async Task<bool> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Deactivating user: {UserId}", request.UserID);
+        _logger.LogInformation("Deactivating user (reversible): {UserId}", request.UserID);
 
         // ================================================
         // 1. Find user
         // ================================================
-        var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
         {
@@ -65,18 +64,16 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
         }
 
         // ================================================
-        // 3. Perform soft delete
+        // 3. Perform DEACTIVATION only (reversible)
         // ================================================
         user.IsActive = false;
-        user.IsDeleted = true;
         user.UpdatedAt = DateTime.UtcNow;
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
 
         // ================================================
         // 4. Revoke all active refresh tokens
         // ================================================
-        var activeTokens = await _context.RefreshTokens
-            .Where(x => x.UserID == request.UserID && !x.IsRevoked)
-            .ToListAsync(cancellationToken);
+        var activeTokens = await _context.RefreshTokens.Where(x => x.UserID == request.UserID && !x.IsRevoked).ToListAsync(cancellationToken);
 
         foreach (var token in activeTokens)
         {

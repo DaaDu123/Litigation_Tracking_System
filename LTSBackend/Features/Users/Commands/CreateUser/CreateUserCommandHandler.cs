@@ -20,9 +20,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         // ================================================
         // 1. Check whether the email already exists
         // ================================================
-        bool emailExists = await _context.Users
-            .AsNoTracking()
-            .AnyAsync(x => x.Email == request.Email, cancellationToken);
+        bool emailExists = await _context.Users.AsNoTracking().AnyAsync(x => x.Email == request.Email && !x.IsDeleted, cancellationToken);
 
         if (emailExists)
         {
@@ -45,9 +43,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             throw new ValidationException([$"Invalid role. Role ID {request.RoleID} does not exist"]);
         }
 
-        bool roleExists = await _context.Roles
-            .AsNoTracking()
-            .AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
+        bool roleExists = await _context.Roles.AsNoTracking().AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
 
         if (!roleExists)
         {
@@ -82,9 +78,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         // ================================================
         // 3. Get role details
         // ================================================
-        var role = await _context.Roles
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.RoleID == request.RoleID, cancellationToken);
+        var role = await _context.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.RoleID == request.RoleID, cancellationToken);
 
         _logger.LogInformation("Role fetched: {RoleName}", role?.RoleName);
 
@@ -93,9 +87,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         // ================================================
         if (!string.IsNullOrEmpty(request.Department))
         {
-            bool deptExists = await _context.Departments
-                .AsNoTracking()
-                .AnyAsync(x => x.DepartmentName == request.Department, cancellationToken);
+            bool deptExists = await _context.Departments.AsNoTracking().AnyAsync(x => x.DepartmentName == request.Department, cancellationToken);
 
             if (!deptExists)
             {

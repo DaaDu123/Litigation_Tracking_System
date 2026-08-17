@@ -37,7 +37,22 @@
                             @onclick="() => OnEdit.InvokeAsync(user)">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Deactivate"
+                    @if (user.IsActive)
+                    {
+                        <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Deactivate (reversible - blocks sign-in, keeps the account)"
+                                disabled="@(user.UserID == CurrentUserId)"
+                                @onclick="() => OnDeactivate.InvokeAsync(user)">
+                            <i class="bi bi-slash-circle text-warning"></i>
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Activate (restore sign-in access)"
+                                @onclick="() => OnActivate.InvokeAsync(user)">
+                            <i class="bi bi-check-circle text-success"></i>
+                        </button>
+                    }
+                    <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Delete permanently (cannot be undone)"
                             disabled="@(user.UserID == CurrentUserId)"
                             @onclick="() => OnDelete.InvokeAsync(user)">
                         <i class="bi bi-trash text-danger"></i>
@@ -64,5 +79,13 @@
     [Parameter] public bool HasActiveFilters { get; set; }
 
     [Parameter] public EventCallback<UserDTO> OnEdit { get; set; }
+
+    /// <summary>Reversible: sets IsActive = false. User keeps showing in the list and can be turned back on.</summary>
+    [Parameter] public EventCallback<UserDTO> OnDeactivate { get; set; }
+
+    /// <summary>Reverses Deactivate: sets IsActive = true again.</summary>
+    [Parameter] public EventCallback<UserDTO> OnActivate { get; set; }
+
+    /// <summary>Permanent, irreversible removal. Frees up the user's email for reuse.</summary>
     [Parameter] public EventCallback<UserDTO> OnDelete { get; set; }
 }

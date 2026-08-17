@@ -2286,7 +2286,8 @@ namespace LTSBackend.Migrations
                     b.HasKey("UserID");
 
                     b.HasIndex("Email")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.HasIndex("FirmID");
 

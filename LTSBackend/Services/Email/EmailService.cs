@@ -30,6 +30,17 @@ public class EmailService(IConfiguration _configuration, ILogger<EmailService> _
         _logger.LogInformation("Password reset link email sent successfully to {Email}", toEmail);
     }
 
+    public async Task SendNotificationEmailAsync(string toEmail, string fullName, string subject, string message)
+    {
+        var textBody = $"Dear {fullName},\r\n\r\n" +
+                        $"{message}\r\n\r\n" +
+                        $"You can also view this notification by signing in to LTS.\r\n\r\n" +
+                        $"Regards,\r\nLTS System";
+
+        await SendAsync(toEmail, fullName, $"LTS - {subject}", textBody);
+        _logger.LogInformation("Notification email sent successfully to {Email}", toEmail);
+    }
+
     private async Task SendAsync(string toEmail, string toName, string subject, string textBody)
     {
         try

@@ -11,5 +11,7 @@ namespace LTSFrontend.Features.Users.Services
         Task<int> CreateAsync(CreateUserDTO dto, IBrowserFile? profileImage = null);
         Task<bool> UpdateAsync(CreateUserDTO dto, IBrowserFile? profileImage = null);
         Task<bool> DeleteAsync(int id);
+        Task<bool> ActivateAsync(int id);
+        Task<bool> PermanentDeleteAsync(int id);
     }
 }

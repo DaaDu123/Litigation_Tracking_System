@@ -164,6 +164,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 #endregion
 builder.Services.AddHostedService<ReminderService>();
+builder.Services.AddHostedService<LTSBackend.Services.BackgroundServices.NotificationEmailDispatcherService>();
 #region Service Registration
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -190,26 +191,6 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 // Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
-
-// Dynamic permission-policy provider: PermissionPolicyProvider existed in
-// the codebase but was never registered here, so it was dead code and any
-// [HasPermission("X")] attribute for a permission NOT already hardcoded in
-// AddAuthorization(...) below would throw "policy not found" at request
-// time. Registering it lets [HasPermission("AnyPermissionName")] resolve
-// dynamically for every permission, without needing a matching hardcoded
-// policy for each one.
-//
-// BUG FIX (broke app startup + `dotnet ef migrations add`):
-// PermissionPolicyProvider's constructor takes a DefaultAuthorizationPolicyProvider
-// (the concrete framework class) as its fallback. Registering only the
-// IAuthorizationPolicyProvider *interface* below replaces the framework's
-// own registration entirely, so nothing in the container could construct
-// DefaultAuthorizationPolicyProvider - DI validation failed with "Unable
-// to resolve service for type '...DefaultAuthorizationPolicyProvider'" on
-// every host build, including `dotnet ef migrations add` (which builds
-// the app host to read configuration/connection strings). Registering the
-// concrete class explicitly fixes this - it only needs
-// IOptions<AuthorizationOptions>, which AddAuthorization already provides.
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.DefaultAuthorizationPolicyProvider>();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 #endregion

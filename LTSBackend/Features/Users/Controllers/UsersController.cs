@@ -1,6 +1,8 @@
 ﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Features.Users.Commands.ActivateUser;
 using LTSBackend.Features.Users.Commands.CreateUser;
 using LTSBackend.Features.Users.Commands.DeleteUser;
+using LTSBackend.Features.Users.Commands.PermanentDeleteUser;
 using LTSBackend.Features.Users.Commands.UpdateUser;
 using LTSBackend.Features.Users.DTOs;
 using LTSBackend.Features.Users.Queries.GetAllUsers;
@@ -20,11 +22,6 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
 {
     // =====================================================
     // CREATE USER — FirmAdmin + SuperAdmin
-    // FIX: previously only the "FirmAdmin" string was checked, SuperAdmin
-    // was not included in this check (JWT carries a single role claim,
-    // no bypass possible), so SuperAdmin was hitting 403.
-    // Per SRS 2.3 "System Admin: Full control of
-    // users and roles", switched to FirmAdminAndAbove.
     // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
@@ -93,13 +90,13 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // DELETE USER (Soft Delete) — FirmAdmin only
+    // DELETE USER (Deactivate — reversible) — FirmAdmin only
     // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)
     {
-        _logger.LogInformation("Delete user request: {UserID}", id);
+        _logger.LogInformation("Deactivate user request: {UserID}", id);
 
         var actingUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(actingUserIdClaim, out var actingUserId))
@@ -108,6 +105,42 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
         var result = await _mediator.Send(new DeleteUserCommand(id) { ActingUserID = actingUserId });
 
         return Ok(ApiResponse<bool>.SuccessResponse(result, "User successfully deactivated"));
+    }
+
+    // =====================================================
+    // ACTIVATE USER (reverses Deactivate) — FirmAdmin only
+    // =====================================================
+    [HttpPut("{id}/activate")]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    public async Task<IActionResult> Activate(int id)
+    {
+        _logger.LogInformation("Activate user request: {UserID}", id);
+
+        var actingUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(actingUserIdClaim, out var actingUserId))
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid identity."));
+
+        var result = await _mediator.Send(new ActivateUserCommand(id) { ActingUserID = actingUserId });
+
+        return Ok(ApiResponse<bool>.SuccessResponse(result, "User successfully activated"));
+    }
+
+    // =====================================================
+    // PERMANENT DELETE — FirmAdmin only
+    // =====================================================
+    [HttpDelete("{id}/permanent")]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    public async Task<IActionResult> PermanentDelete(int id)
+    {
+        _logger.LogInformation("Permanent delete user request: {UserID}", id);
+
+        var actingUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(actingUserIdClaim, out var actingUserId))
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid identity."));
+
+        var result = await _mediator.Send(new PermanentDeleteUserCommand(id) { ActingUserID = actingUserId });
+
+        return Ok(ApiResponse<bool>.SuccessResponse(result, "User permanently deleted"));
     }
 
     // =====================================================

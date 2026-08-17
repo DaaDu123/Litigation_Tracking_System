@@ -62,7 +62,7 @@
         <UserTable Users="PagedUsers" IsLoading="_isLoading" HasError="_hasError" ErrorMessage="_errorMessage"
                    OnRetry="LoadAsync" CanManage="CanManageUsers" CurrentUserId="Session.UserID"
                    HasActiveFilters="!string.IsNullOrWhiteSpace(_searchTerm)"
-                   OnEdit="OpenEditAsync" OnDelete="HandleDeleteAsync" />
+                   OnEdit="OpenEditAsync" OnDeactivate="HandleDeactivateAsync" OnActivate="HandleActivateAsync" OnDelete="HandlePermanentDeleteAsync" />
 
         @if (!_isLoading && !_hasError && FilteredUsers.Count > 0)
         {
@@ -144,14 +144,14 @@
             wasEdit ? "The user's details have been saved." : "The new user can now sign in with their password.");
     }
 
-    private async Task HandleDeleteAsync(UserDTO user)
+    private async Task HandleDeactivateAsync(UserDTO user)
     {
         if (user.UserID == Session.UserID)
             return;
 
         var confirmed = await _confirmDialog.ShowAsync(
             $"Deactivate \"{user.FullName}\"?",
-            "They will no longer be able to sign in. This can be reversed by editing the user later.",
+            "They will no longer be able to sign in. This is reversible — you can reactivate them anytime from this same list.",
             "Deactivate", "danger");
 
         if (!confirmed) return;
@@ -160,7 +160,7 @@
         {
             await UserService.DeleteAsync(user.UserID);
             await LoadAsync();
-            Toast.Success("User deactivated", $"\"{user.FullName}\" can no longer sign in.");
+            Toast.Success("User deactivated", $"\"{user.FullName}\" can no longer sign in, but their account is still here.");
         }
         catch (ApiException ex)
         {
@@ -169,6 +169,52 @@
         catch (Exception)
         {
             Toast.Error("Couldn't deactivate user", "Please try again.");
+        }
+    }
+
+    private async Task HandleActivateAsync(UserDTO user)
+    {
+        try
+        {
+            await UserService.ActivateAsync(user.UserID);
+            await LoadAsync();
+            Toast.Success("User activated", $"\"{user.FullName}\" can sign in again.");
+        }
+        catch (ApiException ex)
+        {
+            Toast.Error("Couldn't activate user", ex.GetFullMessage());
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't activate user", "Please try again.");
+        }
+    }
+
+    private async Task HandlePermanentDeleteAsync(UserDTO user)
+    {
+        if (user.UserID == Session.UserID)
+            return;
+
+        var confirmed = await _confirmDialog.ShowAsync(
+            $"Permanently delete \"{user.FullName}\"?",
+            "This cannot be undone. They will disappear from this list forever, and their email will become free to use again for a new user.",
+            "Delete permanently", "danger");
+
+        if (!confirmed) return;
+
+        try
+        {
+            await UserService.PermanentDeleteAsync(user.UserID);
+            await LoadAsync();
+            Toast.Success("User deleted", $"\"{user.FullName}\" has been permanently removed.");
+        }
+        catch (ApiException ex)
+        {
+            Toast.Error("Couldn't delete user", ex.GetFullMessage());
+        }
+        catch (Exception)
+        {
+            Toast.Error("Couldn't delete user", "Please try again.");
         }
     }
 }

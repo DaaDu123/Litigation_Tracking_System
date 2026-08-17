@@ -49,6 +49,16 @@ namespace LTSFrontend.Features.Users.Services
             return await _api.DeleteAsync<bool>(ApiEndpoints.Users.ById(id));
         }
 
+        public async Task<bool> ActivateAsync(int id)
+        {
+            return await _api.PutAsync<bool>(ApiEndpoints.Users.Activate(id), null);
+        }
+
+        public async Task<bool> PermanentDeleteAsync(int id)
+        {
+            return await _api.DeleteAsync<bool>(ApiEndpoints.Users.PermanentDelete(id));
+        }
+
         private static async Task<MultipartFormDataContent> BuildFormAsync(
             CreateUserDTO dto, IBrowserFile? profileImage, bool includePassword)
         {

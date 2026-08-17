@@ -136,7 +136,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Email).IsRequired();
             entity.Property(e => e.FullName).IsRequired();
             entity.Property(e => e.PasswordHash).IsRequired();
-            entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasIndex(e => e.Email).IsUnique().HasFilter("[IsDeleted] = 0");
             entity.HasOne(e => e.Firm).WithMany(f => f.Users).HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(e => e.FirmID);
             entity.HasMany(e => e.RefreshTokens).WithOne(r => r.User).OnDelete(DeleteBehavior.Cascade);
