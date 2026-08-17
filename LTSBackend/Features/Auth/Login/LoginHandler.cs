@@ -16,15 +16,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
 {
     private const int MaxFailedAttempts = 5;
 
-    // SECURITY: precomputed once per process — this is never a real user's
-    // password hash, it exists purely so the "user not found" branch below
-    // can run a BCrypt verify of comparable cost to the "user found, wrong
-    // password" branch. Without this, the not-found branch returned almost
-    // instantly while the found-but-wrong-password branch took BCrypt's
-    // (intentionally slow) verify time, letting an attacker enumerate
-    // valid emails purely by measuring response time.
-    private static readonly string DummyPasswordHash =
-        BCrypt.Net.BCrypt.HashPassword("dummy-password-for-timing-normalization");
+    private static readonly string DummyPasswordHash = BCrypt.Net.BCrypt.HashPassword("dummy-password-for-timing-normalization");
 
     public async Task<LoginResponseDTO> Handle(LoginCommand request, CancellationToken cancellationToken)
     {

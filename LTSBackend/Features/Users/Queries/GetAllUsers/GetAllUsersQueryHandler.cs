@@ -14,7 +14,7 @@ public class GetAllUsersQueryHandler(AppDbContext _context,ICurrentUserService _
     {
         _logger.LogInformation("Fetching all users (active and deactivated - permanently deleted users are excluded)");
 
-       var query = _context.Users.AsNoTracking().Where(x => !x.IsDeleted);
+        var query = _context.Users.AsNoTracking().Where(x => !x.IsDeleted);
 
         // Multi-tenancy: firm-scoped. SuperAdmin cannot reach this endpoint at all
         // (route-level [Authorize] excludes it - user directory is FirmAdmin's job).

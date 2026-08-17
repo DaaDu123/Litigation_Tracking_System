@@ -3,9 +3,11 @@ using LTSBackend.Features.Users.Commands.ActivateUser;
 using LTSBackend.Features.Users.Commands.CreateUser;
 using LTSBackend.Features.Users.Commands.DeleteUser;
 using LTSBackend.Features.Users.Commands.PermanentDeleteUser;
+using LTSBackend.Features.Users.Commands.ReleaseUserEmail;
 using LTSBackend.Features.Users.Commands.UpdateUser;
 using LTSBackend.Features.Users.DTOs;
 using LTSBackend.Features.Users.Queries.GetAllUsers;
+using LTSBackend.Features.Users.Queries.GetDeletedUsers;
 using LTSBackend.Features.Users.Queries.GetUserById;
 using LTSBackend.Models.Security;
 using MediatR;
@@ -141,6 +143,47 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
         var result = await _mediator.Send(new PermanentDeleteUserCommand(id) { ActingUserID = actingUserId });
 
         return Ok(ApiResponse<bool>.SuccessResponse(result, "User permanently deleted"));
+    }
+
+    // =====================================================
+    // GET DELETED USERS (email-reuse candidates) — SuperAdmin only
+    // NEW: part of the Reuse/Soft-Delete/Email-Ownership fix. Lists every
+    // soft-deleted user across every firm so a SuperAdmin can find the
+    // record to release when a different firm needs to reclaim that email.
+    // =====================================================
+    [HttpGet("deleted")]
+    [Authorize(Roles = RoleNames.SuperAdminOnly)]
+    public async Task<IActionResult> GetDeleted()
+    {
+        _logger.LogInformation("Get deleted users request");
+
+        var users = await _mediator.Send(new GetDeletedUsersQuery());
+
+        return Ok(ApiResponse<List<DeletedUserDTO>>.SuccessResponse(users, "Deleted users successfully fetched"));
+    }
+
+    // =====================================================
+    // RELEASE EMAIL FOR REASSIGNMENT — SuperAdmin only
+    // NEW: part of the Reuse/Soft-Delete/Email-Ownership fix. A deleted
+    // user's email is reserved for their original firm by default (see
+    // CreateUserCommandHandler); this explicitly releases it so ANY firm
+    // can reuse that record's email going forward. Deliberately a
+    // platform-level decision, not something the original FirmAdmin can
+    // do unilaterally.
+    // =====================================================
+    [HttpPut("{id}/release")]
+    [Authorize(Roles = RoleNames.SuperAdminOnly)]
+    public async Task<IActionResult> Release(int id)
+    {
+        _logger.LogInformation("Release user email request: {UserID}", id);
+
+        var actingUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(actingUserIdClaim, out var actingUserId))
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid identity."));
+
+        var result = await _mediator.Send(new ReleaseUserEmailCommand(id) { ActingUserID = actingUserId });
+
+        return Ok(ApiResponse<bool>.SuccessResponse(result, "Email released for reassignment"));
     }
 
     // =====================================================

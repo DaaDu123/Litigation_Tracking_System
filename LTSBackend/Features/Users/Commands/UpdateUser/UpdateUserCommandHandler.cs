@@ -79,7 +79,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         // ================================================
         // 3. Check if new email is unique
         // ================================================
-        bool emailExists = await _context.Users.AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID && !x.IsDeleted, cancellationToken);
+        bool emailExists = await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID && !x.IsDeleted, cancellationToken);
 
         if (emailExists)
         {
