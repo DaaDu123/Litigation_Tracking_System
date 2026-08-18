@@ -2,7 +2,7 @@
    Not a routed page - opened imperatively from CaseDetails.razor via @ref:
      <UpdateCaseStatus @ref="_statusModal" OnUpdated="HandleStatusUpdatedAsync" />
      ...
-     _statusModal.Open(caseId, currentStatusName); *@
+     _statusModal.Open(caseId, currentStatusName, currentStatusId); *@
 @using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.Cases.Services
 @using LTSFrontend.Features.Masters.DTOs
@@ -47,12 +47,22 @@
                         <option value="0">Select new status...</option>
                         @foreach (var status in _statuses)
                         {
-                            <option value="@status.StatusID">@status.StatusName</option>
+                            <option value="@status.StatusID" disabled="@(status.StatusID == _currentStatusId)">
+                                @status.StatusName@(status.StatusID == _currentStatusId ? " (current)" : "")
+                            </option>
                         }
                     </select>
                     @if (_showValidation && _newStatusId <= 0)
                     {
                         <div class="lts-form-error">Please select a status.</div>
+                    }
+                    @if (_newStatusId == _currentStatusId && _currentStatusId > 0)
+                    {
+                        <div class="lts-form-error">
+                            <i class="bi bi-info-circle"></i>
+                            This is already the case's current status — pick a different one to record a change.
+                            Just want to log a note without changing status? Use <strong>Notes</strong> on the case details page instead.
+                        </div>
                     }
                 </div>
 
@@ -66,7 +76,7 @@
 
         <div class="lts-modal-footer">
             <button type="button" class="lts-btn lts-btn-ghost" @onclick="CloseIfNotSaving" disabled="@_isSaving">Cancel</button>
-            <button type="button" class="lts-btn lts-btn-primary" @onclick="HandleSubmitAsync" disabled="@(_isSaving || _isLoadingStatuses)">
+            <button type="button" class="lts-btn lts-btn-primary" @onclick="HandleSubmitAsync" disabled="@(_isSaving || _isLoadingStatuses || (_newStatusId == _currentStatusId && _currentStatusId > 0))">
                 @if (_isSaving)
                 {
                     <span class="lts-spinner lts-spinner-sm"></span>
@@ -93,15 +103,17 @@
 
     private long _caseId;
     private string _currentStatusName = string.Empty;
+    private int _currentStatusId;
     private int _newStatusId;
     private string? _remarks;
 
     private List<CaseStatusDTO> _statuses = new();
 
-    public async void Open(long caseId, string currentStatusName)
+    public async void Open(long caseId, string currentStatusName, int currentStatusId)
     {
         _caseId = caseId;
         _currentStatusName = currentStatusName;
+        _currentStatusId = currentStatusId;
         _newStatusId = 0;
         _remarks = null;
         _apiError = null;
@@ -141,6 +153,13 @@
         if (_newStatusId <= 0)
         {
             _showValidation = true;
+            return;
+        }
+
+        if (_newStatusId == _currentStatusId)
+        {
+            // Guarded against in the UI (disabled option + disabled submit
+            // button), but double-checked here in case of a stale render.
             return;
         }
 

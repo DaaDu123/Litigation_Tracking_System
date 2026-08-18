@@ -283,7 +283,7 @@ else
     private void OpenStatusModal()
     {
         if (_case == null) return;
-        _statusModal.Open(_case.CaseID, _case.StatusName);
+        _statusModal.Open(_case.CaseID, _case.StatusName, _case.StatusID);
     }
 
     private async Task HandleStatusUpdatedAsync()
