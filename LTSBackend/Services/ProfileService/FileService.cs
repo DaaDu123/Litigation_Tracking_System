@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Services.VirusScan;
 using Microsoft.Extensions.Configuration;
 
@@ -6,9 +6,6 @@ namespace LTSBackend.Services.ProfileService;
 
 public class FileService(IWebHostEnvironment _environment, IVirusScanService _virusScanService, IConfiguration _configuration, ILogger<FileService> _logger) : IFileService
 {
-    // ============================================================
-    // SECURITY (SRS "File Upload Security")
-   // ============================================================
     private static readonly HashSet<string> BlockedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".exe", ".dll", ".msi", ".bat", ".cmd", ".sh", ".ps1", ".psm1",
@@ -17,24 +14,28 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         ".html", ".htm", ".svg", ".swf", ".scr", ".com", ".cpl", ".apk"
     };
 
+    // Saves a file to the public wwwroot/uploads folder (used for profile pictures).
     public Task<string> SaveFileAsync(IFormFile file, string folderName)
     {
         string publicRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
         return SaveFileInternalAsync(file, folderName, publicRoot, isPublic: true);
     }
 
+    // Deletes a previously saved public file, if it exists.
     public void DeleteFile(string? relativePath)
     {
         string publicRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
         DeleteFileInternal(relativePath, publicRoot, isPublic: true);
     }
 
+    // Saves a file outside wwwroot so it can never be served directly, e.g. case documents.
     public Task<string> SaveSecureFileAsync(IFormFile file, string folderName)
     {
         string secureRoot = Path.Combine(_environment.ContentRootPath, "SecureStorage");
         return SaveFileInternalAsync(file, folderName, secureRoot, isPublic: false);
     }
 
+    // Reads a secure file's bytes back after resolving/validating its path.
     public async Task<byte[]> ReadSecureFileAsync(string relativePath)
     {
         string fullPath = ResolveSecurePath(relativePath);
@@ -48,6 +49,7 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         return await File.ReadAllBytesAsync(fullPath);
     }
 
+    // Checks whether a secure file exists on disk without reading it.
     public bool SecureFileExists(string relativePath)
     {
         try
@@ -60,6 +62,7 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         }
     }
 
+    // Deletes a secure file, if present, and logs but swallows disk errors.
     public void DeleteSecureFile(string? relativePath)
     {
         if (string.IsNullOrEmpty(relativePath))
@@ -79,12 +82,12 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         }
         catch (IOException ex)
         {
-            // Log but don't throw — file cleanup is best-effort
             _logger.LogWarning(ex, "Failed to delete secure file: {FilePath}", relativePath);
         }
     }
 
-  private async Task<string> SaveFileInternalAsync(IFormFile file, string folderName, string root, bool isPublic)
+    // Validates extension, runs the virus scan, then writes the file to disk under a new GUID name.
+    private async Task<string> SaveFileInternalAsync(IFormFile file, string folderName, string root, bool isPublic)
     {
         if (file == null || file.Length == 0)
         {
@@ -108,16 +111,10 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
             {
                 if (scanResult.ThreatName != null)
                 {
-                    // A real detection - always reject, no config can override this.
                     _logger.LogWarning("Upload rejected - malware detected: {FileName} ({Threat})", file.FileName, scanResult.ThreatName);
                     throw new ValidationException([$"This file was rejected because it appears to contain malware ({scanResult.ThreatName}). Please scan it locally and try a clean copy."]);
                 }
 
-                // Scanner itself failed to run (unreachable, timed out, etc).
-                // VirusScan:FailClosed decides the behavior - defaults to
-                // true (reject) because silently accepting unscanned files
-                // defeats the entire point of this feature. Only flip to
-                // false as a deliberate, temporary escape hatch.
                 bool failClosed = _configuration.GetValue("VirusScan:FailClosed", true);
                 if (failClosed)
                 {
@@ -151,10 +148,6 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
 
             _logger.LogInformation("File saved successfully: {FileName} (secure={IsSecure})", uniqueFileName, !isPublic);
 
-            // Public files are returned as a web-relative URL path
-            // ("/uploads/{folder}/{name}"); secure files are returned as a
-            // storage-relative path ("{folder}/{name}") with no leading
-            // slash, since it is never meant to be used as a URL.
             return isPublic ? $"/uploads/{folderName}/{uniqueFileName}" : $"{folderName}/{uniqueFileName}";
         }
         catch (Exception ex)
@@ -164,6 +157,7 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         }
     }
 
+    // Deletes a public file from disk if present, swallowing IO errors.
     private void DeleteFileInternal(string? relativePath, string root, bool isPublic)
     {
         if (string.IsNullOrEmpty(relativePath))
@@ -183,18 +177,11 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         }
         catch (IOException ex)
         {
-            // Log but don't throw — file cleanup is best-effort
             _logger.LogWarning(ex, "Failed to delete file: {FilePath}", relativePath);
         }
     }
 
-    // Resolves a stored secure-relative path (e.g. "case_documents/{guid}.pdf")
-    // to an absolute path under SecureStorage, and defensively rejects
-    // anything that would resolve outside that root (defense-in-depth: the
-    // value normally only ever comes from our own SaveSecureFileAsync via
-    // Document.FilePath in the database, never directly from user input, but
-    // this guard costs nothing and closes off any future/indirect path-
-    // traversal vector).
+    // Resolves a stored relative path to an absolute path and rejects anything outside SecureStorage.
     private string ResolveSecurePath(string relativePath)
     {
         string secureRoot = Path.Combine(_environment.ContentRootPath, "SecureStorage");

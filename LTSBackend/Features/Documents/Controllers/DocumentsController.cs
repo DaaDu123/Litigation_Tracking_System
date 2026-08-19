@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Authorization;
 using LTSBackend.Features.Documents.Commands.ApproveDocument;
@@ -21,21 +21,7 @@ namespace LTSBackend.Features.Documents.Controllers;
 [Authorize]
 public class DocumentsController(IMediator _mediator, ILogger<DocumentsController> _logger) : ControllerBase
 {
-    // =====================================================
-    // UPLOAD DOCUMENT
-    // =====================================================
-    /// <summary>
-    /// Upload document to a case
-    /// 
-    /// MOHARRIR BLIND UPLOAD FEATURE:
-    /// - Restricted Moharrir: Can upload but CANNOT view/download after upload
-    /// - Elevated Moharrir: Can upload AND view/download
-    /// 
-    /// Role-based: Partner, Associate, Moharrir, InternParalegal can upload
-    /// FIX: Per the SRS (User Mgt Roles Matrix), Admin (FirmAdmin/
-    /// SuperAdmin) can also upload documents — this was previously
-    /// missing from the list.
-    /// </summary>
+    // Uploads a file to a case; Moharrir "blind upload" and Intern draft rules are applied downstream.
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     [Authorize(Roles = RoleNames.CanViewDocuments + "," + RoleNames.InternParalegal + "," + RoleNames.FirmAdminAndAbove)]
@@ -47,39 +33,27 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             request.DocumentTypeID,
             request.File?.FileName);
 
-        // ================================================
-        // Validate file
-        // ================================================
         if (request.File == null || request.File.Length == 0)
         {
             return BadRequest(ApiResponse<bool>.FailureResponse("File is required"));
         }
 
-        if (request.File.Length > 50 * 1024 * 1024) // 50MB max
+        if (request.File.Length > 50 * 1024 * 1024)
         {
             return BadRequest(ApiResponse<bool>.FailureResponse("File size cannot exceed 50MB"));
         }
 
-        // ================================================
-        // Get current user ID
-        // ================================================
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(userIdClaim, out var userId))
         {
             return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
         }
 
-        // ================================================
-        // Create upload command
-        // ================================================
         var command = new UploadDocumentCommand(request.CaseID, request.DocumentTypeID, request.DocumentName, request.File, request.Remarks)
         {
             UserID = userId
         };
 
-        // ================================================
-        // Execute upload
-        // ================================================
         try
         {
             var result = await _mediator.Send(command);
@@ -124,15 +98,7 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
         }
     }
 
-    // =====================================================
-    // GET CASE DOCUMENTS (LIST)
-    // =====================================================
-    /// <summary>
-    /// List all latest-version documents attached to a case, filtered to
-    /// only what the requesting user is permitted to view (a restricted-mode
-    /// Moharrir's own blind uploads are correctly excluded here too).
-    /// SRS Reference: Case_SRS Section 4 "Document Management" - "Centralized document repository"
-    /// </summary>
+    // Lists the latest-version documents on a case that the current user is allowed to view.
     [HttpGet("case/{caseId}")]
     public async Task<IActionResult> GetCaseDocuments(long caseId)
     {
@@ -146,40 +112,23 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
         return Ok(ApiResponse<List<DocumentDetailDTO>>.SuccessResponse(result, "Case documents fetched"));
     }
 
-    // =====================================================
-    // DOWNLOAD DOCUMENT
-    // =====================================================
-    /// <summary>
-    /// Download document
-    /// 
-    /// MOHARRIR RESTRICTED FEATURE:
-    /// Moharrir restricted mode: CANNOT download
-    /// Elevated Moharrir: Can download
-    /// Other roles: Can download based on permissions
-    /// </summary>
+    // Downloads a document's file bytes if the current user has download permission.
     [HttpGet("download/{documentId}")]
     public async Task<IActionResult> DownloadDocument(long documentId)
     {
         _logger.LogInformation("Download document request - ID: {DocumentId}", documentId);
 
-        // ================================================
-        // Get current user ID
-        // ================================================
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(userIdClaim, out var userId))
         {
             return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
         }
 
-        // ================================================
-        // Execute download
-        // ================================================
         try
         {
             var command = new DownloadDocumentCommand(documentId) { UserID = userId };
             var downloadData = await _mediator.Send(command);
 
-            // Return file for download
             return File(downloadData.FileBytes, downloadData.ContentType, downloadData.FileName);
         }
         catch (UnauthorizedException ex)
@@ -199,34 +148,18 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
         }
     }
 
-    // =====================================================
-    // GET DOCUMENT DETAILS
-    // =====================================================
-    /// <summary>
-    /// Get document metadata
-    /// 
-    /// MOHARRIR RESTRICTED FEATURE:
-    /// Moharrir restricted mode: CANNOT view
-    /// Elevated Moharrir: Can view
-    /// Other roles: Can view based on permissions
-    /// </summary>
+    // Returns a document's metadata if the current user has view permission.
     [HttpGet("{documentId}")]
     public async Task<IActionResult> GetDocument(long documentId)
     {
         _logger.LogInformation("Get document request - ID: {DocumentId}", documentId);
 
-        // ================================================
-        // Get current user ID
-        // ================================================
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(userIdClaim, out var userId))
         {
             return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
         }
 
-        // ================================================
-        // Execute query
-        // ================================================
         try
         {
             var query = new GetDocumentQuery(documentId) { UserID = userId };
@@ -256,16 +189,7 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
         }
     }
 
-    // =====================================================
-    // APPROVE DOCUMENT (Draft Workflow)
-    // =====================================================
-    /// <summary>
-    /// Approves a draft document uploaded by an Intern/Paralegal.
-    /// SRS: "All uploaded work remains in Draft until approved by
-    /// Partner or Firm Admin." Role-restricted to Partner/FirmAdmin;
-    /// tenant isolation and "must still be a draft" are enforced in the
-    /// handler.
-    /// </summary>
+    // Publishes a pending draft document (Partner/FirmAdmin only).
     [HttpPost("{documentId}/approve")]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
     public async Task<IActionResult> ApproveDocument(long documentId)
@@ -302,34 +226,19 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
         }
     }
 
-    // =====================================================
-    // DELETE DOCUMENT
-    // =====================================================
-    /// <summary>
-    /// Delete document (hard delete)
-    /// Role-based: Partner and FirmAdmin only
-    /// 
-    /// Also deletes associated file from disk
-    /// and removes all document permissions
-    /// </summary>
+    // Hard-deletes a document, its file, and its permissions (Partner/FirmAdmin only).
     [HttpDelete("{documentId}")]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
     public async Task<IActionResult> DeleteDocument(long documentId)
     {
         _logger.LogInformation("Delete document request - ID: {DocumentId}", documentId);
 
-        // ================================================
-        // Get current user ID
-        // ================================================
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!int.TryParse(userIdClaim, out var userId))
         {
             return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid user identity"));
         }
 
-        // ================================================
-        // Execute delete
-        // ================================================
         try
         {
             var command = new DeleteDocumentCommand(documentId) { UserID = userId };

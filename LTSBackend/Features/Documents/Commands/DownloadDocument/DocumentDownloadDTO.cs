@@ -1,4 +1,4 @@
-﻿namespace LTSBackend.Features.Documents.Commands.DownloadDocument
+namespace LTSBackend.Features.Documents.Commands.DownloadDocument
 {
     public class DocumentDownloadDTO
     {

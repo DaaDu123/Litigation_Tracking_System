@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.DocumentPermissions;
 using LTSBackend.Services.ProfileService;
@@ -10,13 +10,11 @@ namespace LTSBackend.Features.Documents.Commands.DownloadDocument;
 public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionService _permissionService, IFileService _fileService,
     ILogger<DownloadDocumentHandler> _logger) : IRequestHandler<DownloadDocumentCommand, DocumentDownloadDTO>
 {
+    // Checks download permission, reads the file from secure storage, and returns it.
     public async Task<DocumentDownloadDTO> Handle(DownloadDocumentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Document download request - ID: {DocumentId}, User: {UserId}",request.DocumentID,request.UserID);
 
-        // ================================================
-        // 1. Check download permission
-        // ================================================
         bool canDownload = await _permissionService.CanUserAccessDocumentAsync(request.UserID, request.DocumentID, "Download", cancellationToken);
 
         if (!canDownload)
@@ -26,9 +24,6 @@ public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionS
                 "If you are a restricted Moharrir, contact your administrator to grant access.");
         }
 
-        // ================================================
-        // 2. Fetch document
-        // ================================================
         var document = await _context.Documents.AsNoTracking().FirstOrDefaultAsync(x => x.DocumentID == request.DocumentID, cancellationToken);
 
         if (document == null)
@@ -37,21 +32,6 @@ public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionS
             throw new NotFoundException($"Document {request.DocumentID} not found");
         }
 
-        // ================================================
-        // 3. Check if file exists on disk
-        //    SECURITY FIX: documents are now stored via
-        //    IFileService.SaveSecureFileAsync, outside wwwroot (see
-        //    UploadDocumentHandler) - reading was still pointed at
-        //    wwwroot here, which (a) would have broken every download
-        //    once uploads moved to secure storage, and (b) was itself
-        //    the other half of the vulnerability: reading straight from
-        //    wwwroot only works at all because wwwroot is publicly
-        //    servable by app.UseStaticFiles() with no authentication, so
-        //    the exact same bytes returned by THIS permission-checked
-        //    endpoint were also downloadable directly, bypassing every
-        //    check above. IFileService.ReadSecureFileAsync resolves the
-        //    path safely and throws FileNotFoundException if missing.
-        // ================================================
         byte[] fileBytes;
         try
         {
@@ -71,9 +51,6 @@ public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionS
             throw new InvalidOperationException("Failed to read document file");
         }
 
-        // ================================================
-        // 5. Return download DTO
-        // ================================================
         var downloadDto = new DocumentDownloadDTO
         {
             DocumentID = document.DocumentID,
@@ -86,6 +63,8 @@ public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionS
         _logger.LogInformation("Document download prepared: {DocumentId}, FileName: {FileName}", request.DocumentID, document.FileName);
         return downloadDto;
     }
+
+    // Maps a file extension to its HTTP content type for the download response.
     private static string GetContentType(string fileName)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();

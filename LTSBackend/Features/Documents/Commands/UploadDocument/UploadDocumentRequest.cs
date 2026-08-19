@@ -1,4 +1,4 @@
-﻿namespace LTSBackend.Features.Documents.Commands.UploadDocument
+namespace LTSBackend.Features.Documents.Commands.UploadDocument
 {
     public class UploadDocumentRequest
     {

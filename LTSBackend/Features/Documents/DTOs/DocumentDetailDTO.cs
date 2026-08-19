@@ -1,4 +1,4 @@
-﻿namespace LTSBackend.Features.Documents.DTOs
+namespace LTSBackend.Features.Documents.DTOs
 {
     public class DocumentDetailDTO
     {
@@ -14,15 +14,13 @@
         public string UploadedBy { get; set; } = string.Empty;
         public DateTime UploadedDate { get; set; }
         public string Remarks { get; set; } = string.Empty;
-
-        // Draft workflow (SRS - Intern/Paralegal): true until a Partner/
-        // FirmAdmin approves the document via POST /api/documents/{id}/approve.
         public bool IsDraft { get; set; }
         public string? ApprovedByName { get; set; }
         public DateTime? ApprovedDate { get; set; }
 
         public string FormattedFileSize => FormatFileSize(FileSize);
 
+        // Converts a raw byte count into a human-readable size string (KB/MB/GB).
         private static string FormatFileSize(long bytes)
         {
             return bytes switch

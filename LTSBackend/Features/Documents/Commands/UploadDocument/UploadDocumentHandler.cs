@@ -11,19 +11,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Documents.Commands.UploadDocument;
 
-/// <summary>
-/// Upload document handler with Moharrir blind upload (write-only) feature
-/// </summary>
 public class UploadDocumentHandler(AppDbContext _context, IFileService _fileService, IDocumentPermissionService _permissionService, IAuditService _auditService,
     ICurrentUserService _currentUser, IHttpContextAccessor _httpContextAccessor, ILogger<UploadDocumentHandler> _logger) : IRequestHandler<UploadDocumentCommand, UploadDocumentResult>
 {
+    // Validates the request, saves the file to secure storage, and records the document (with Moharrir blind-upload and Intern draft rules).
     public async Task<UploadDocumentResult> Handle(UploadDocumentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Document upload started for case {CaseId} by user {UserId}", request.CaseID, request.UserID);
 
-        // ================================================
-        // 1. Get current user
-        // ================================================
         var user = await _context.Users.AsNoTracking().Include(x => x.Role).FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
@@ -32,9 +27,6 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
             throw new NotFoundException($"User {request.UserID} not found");
         }
 
-        // ================================================
-        // 2. Check upload permission
-        // ================================================
         bool canUpload = await _permissionService.CanUserUploadToCaseAsync(request.UserID, request.CaseID, cancellationToken);
         if (!canUpload)
         {
@@ -42,11 +34,6 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
             throw new UnauthorizedException("You don't have permission to upload documents to this case");
         }
 
-        // ================================================
-        // 3. Verify case exists AND belongs to the user's own firm
-        //    FIX: previously any user could upload a "document" onto
-        //    another firm's case just by knowing the CaseID.
-        // ================================================
         var caseRecord = await _context.Cases.AsNoTracking().FirstOrDefaultAsync(x => x.CaseID == request.CaseID, cancellationToken);
 
         if (caseRecord == null || (caseRecord.FirmID != _currentUser.FirmID))
@@ -55,9 +42,6 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
             throw new NotFoundException($"Case {request.CaseID} not found");
         }
 
-        // ================================================
-        // 4. Verify document type exists
-        // ================================================
         var documentType = await _context.DocumentTypes.AsNoTracking().FirstOrDefaultAsync(x => x.DocumentTypeID == request.DocumentTypeID, cancellationToken);
 
         if (documentType == null)
@@ -66,19 +50,6 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
             throw new NotFoundException($"Document type {request.DocumentTypeID} not found");
         }
 
-        // ================================================
-        // 5. Save file to disk
-        //    SECURITY FIX: case documents are confidential, tenant-owned
-        //    content and must NEVER be reachable by a raw static URL - use
-        //    SaveSecureFileAsync (stores outside wwwroot, so
-        //    app.UseStaticFiles() can never serve it) instead of
-        //    SaveFileAsync (public wwwroot/uploads, previously let anyone
-        //    who learned the GUID filename download the document with zero
-        //    authentication, bypassing tenant/RBAC/blind-Moharrir checks
-        //    entirely). The only way to read these bytes back is now
-        //    IFileService.ReadSecureFileAsync, which every caller in this
-        //    codebase gates behind CanUserAccessDocumentAsync first.
-        // ================================================
         string filePath;
         try
         {
@@ -95,14 +66,6 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
             throw new InvalidOperationException("Failed to save document file");
         }
 
-        // ================================================
-        // 6. Create document record
-        // ================================================
-        // ================================================
-        // DRAFT WORKFLOW (SRS - Intern/Paralegal): "All uploaded work
-        // remains in Draft until approved by Partner or Firm Admin."
-        // Every other role's upload is published immediately.
-        // ================================================
         bool isInternUpload = user.GetRole() == UserRole.InternParalegal;
 
         var document = new Document
@@ -126,18 +89,11 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
 
         _logger.LogInformation("Document created with ID {DocumentId} for case {CaseId}", document.DocumentID, request.CaseID);
 
-        // ================================================
-        // 7. CRITICAL: Handle Moharrir blind upload feature
-        //    If the Moharrir is in restricted mode, create NO DocumentPermission entry
-        //    "Blind upload" = write-only, can't view/download after upload
-        // ================================================
         bool isMohallirRestricted = await _permissionService.IsMohallirRestrictedAsync(request.UserID, cancellationToken);
         if (isMohallirRestricted)
         {
             _logger.LogInformation("Moharrir {UserId} blind upload: Document {DocumentId} - no view/download permissions granted",
                 request.UserID, document.DocumentID);
-
-            // IMPORTANT: No DocumentPermission entry = write-only
         }
         else
         {
@@ -149,7 +105,7 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
                 {
                     UserRole.Partner => true,
                     UserRole.AssociateLawyer => true,
-                    UserRole.Moharrir => true, // Elevated only
+                    UserRole.Moharrir => true,
                     UserRole.InternParalegal => false,
                     _ => false
                 };
@@ -161,9 +117,6 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
             }
         }
 
-        // ================================================
-        // 8. Create audit log
-        // ================================================
         var auditLog = _auditService.Create(request.UserID, $"Document Upload: {document.DocumentName} to Case {request.CaseID}" + (isInternUpload ? " (Draft - pending approval)" : ""));
 
         _context.AuditLogs.Add(auditLog);

@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.Documents.DTOs;
@@ -10,6 +10,7 @@ namespace LTSBackend.Features.Documents.Queries.GetDocument;
 
 public class GetDocumentHandler(AppDbContext _context, IDocumentPermissionService _permissionService, ILogger<GetDocumentHandler> _logger) : IRequestHandler<GetDocumentQuery, DocumentDetailDTO?>
 {
+    // Checks view permission and returns a single document's metadata.
     public async Task<DocumentDetailDTO?> Handle(GetDocumentQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Get document request - ID: {DocumentId}, User: {UserId}", request.DocumentID, request.UserID);

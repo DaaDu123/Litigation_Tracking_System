@@ -4,21 +4,16 @@ using Microsoft.Extensions.Configuration;
 
 namespace LTSBackend.Services.VirusScan;
 
-// ================================================================
-// SECURITY
-// ================================================================
 public class ClamAvVirusScanService(IConfiguration _configuration, ILogger<ClamAvVirusScanService> _logger) : IVirusScanService
 {
     private const int ChunkSize = 8192;
 
+    // Streams the file to a clamd daemon over TCP and returns whether it is clean.
     public async Task<VirusScanResult> ScanAsync(Stream fileStream, string originalFileName, CancellationToken cancellationToken = default)
     {
         bool enabled = _configuration.GetValue("VirusScan:Enabled", true);
         if (!enabled)
         {
-            // Explicit opt-out (e.g. local dev without clamd installed).
-            // Logged loudly on every call so this is never silently the
-            // case in a production environment by accident.
             _logger.LogWarning("Virus scanning is DISABLED (VirusScan:Enabled=false) - upload of {FileName} was NOT scanned", originalFileName);
             return VirusScanResult.Clean();
         }
@@ -39,7 +34,6 @@ public class ClamAvVirusScanService(IConfiguration _configuration, ILogger<ClamA
 
             using var networkStream = client.GetStream();
 
-            // "zINSTREAM\0" - begin a streamed scan session.
             byte[] command = Encoding.ASCII.GetBytes("zINSTREAM\0");
             await networkStream.WriteAsync(command, linkedCts.Token);
 
@@ -52,9 +46,6 @@ public class ClamAvVirusScanService(IConfiguration _configuration, ILogger<ClamA
             int bytesRead;
             while ((bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, ChunkSize), linkedCts.Token)) > 0)
             {
-                // Each chunk is prefixed with its length as a 4-byte
-                // big-endian (network byte order) integer - this is the
-                // clamd INSTREAM wire format, not negotiable.
                 byte[] lengthPrefix = BitConverter.GetBytes(bytesRead);
                 if (BitConverter.IsLittleEndian)
                 {
@@ -65,7 +56,6 @@ public class ClamAvVirusScanService(IConfiguration _configuration, ILogger<ClamA
                 await networkStream.WriteAsync(buffer.AsMemory(0, bytesRead), linkedCts.Token);
             }
 
-            // Zero-length chunk signals end of stream.
             byte[] terminator = new byte[4];
             await networkStream.WriteAsync(terminator, linkedCts.Token);
 
@@ -82,7 +72,6 @@ public class ClamAvVirusScanService(IConfiguration _configuration, ILogger<ClamA
 
             if (response.Contains("FOUND", StringComparison.Ordinal))
             {
-                // Format: "stream: <ThreatName> FOUND"
                 string threatName = response.Replace("stream:", "").Replace("FOUND", "").Trim();
                 _logger.LogWarning("MALWARE DETECTED in upload {FileName}: {ThreatName}", originalFileName, threatName);
                 return VirusScanResult.Infected(threatName);
@@ -94,7 +83,6 @@ public class ClamAvVirusScanService(IConfiguration _configuration, ILogger<ClamA
                 return VirusScanResult.ScanFailed(response);
             }
 
-            // "stream: OK"
             return VirusScanResult.Clean();
         }
         catch (OperationCanceledException)
