@@ -35,9 +35,9 @@ public static class RoleNames
     public const string PartnerAndAbove = Partner + "," + FirmAdmin;
 
     /// <summary>
-    /// All lawyers - Partner, Associate, Moharrir with permissions
-    /// </summary>
-    public const string AllLawyers = Partner + "," + AssociateLawyer + "," + Moharrir;
+    /// All lawyers - FirmAdmin, Partner, Associate, Moharrir with permissions.
+   /// </summary>
+    public const string AllLawyers = FirmAdmin + "," + Partner + "," + AssociateLawyer + "," + Moharrir;
 
     /// <summary>
     /// All staff except Super Admin

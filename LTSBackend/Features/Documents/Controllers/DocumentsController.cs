@@ -112,6 +112,11 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             _logger.LogWarning(ex, "Upload failed - resource not found");
             return NotFound(ApiResponse<bool>.FailureResponse(ex.Message));
         }
+        catch (ValidationException ex)
+        {
+            _logger.LogWarning(ex, "Upload validation failed for user {UserId}", userId);
+            return BadRequest(ApiResponse<bool>.FailureResponse(string.Join(" ", ex.Errors)));
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Document upload failed");
