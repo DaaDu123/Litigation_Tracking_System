@@ -34,6 +34,7 @@ public class GetAllUsersQueryHandler(AppDbContext _context,ICurrentUserService _
                 RoleID = x.RoleID,
                 RoleName = x.Role != null ? x.Role.RoleName : null,
                 IsActive = x.IsActive,
+                IsLockedOut = x.LockoutEndUtc != null && x.LockoutEndUtc > DateTime.UtcNow,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             })

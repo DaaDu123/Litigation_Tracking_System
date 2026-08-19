@@ -1,21 +1,14 @@
-﻿namespace LTSBackend.Services.ProfileService;
+﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Services.VirusScan;
+using Microsoft.Extensions.Configuration;
 
-public class FileService(IWebHostEnvironment _environment, ILogger<FileService> _logger) : IFileService
+namespace LTSBackend.Services.ProfileService;
+
+public class FileService(IWebHostEnvironment _environment, IVirusScanService _virusScanService, IConfiguration _configuration, ILogger<FileService> _logger) : IFileService
 {
     // ============================================================
-    // SECURITY (SRS "File Upload Security"): extensions that must never be
-    // accepted for ANY upload, public or secure - executable/script types
-    // that could enable remote code execution or stored-XSS if ever served,
-    // downloaded and run, or opened by a browser that sniffs content type
-    // rather than trusting a spoofed extension. This is deliberately
-    // enforced here, at the storage layer, as defense-in-depth: the
-    // per-command FluentValidation validators (e.g.
-    // UploadDocumentValidator) are the primary allow-list gate for case
-    // documents, but this blocklist also protects call sites that have NO
-    // validator of their own today (e.g. profile picture upload via
-    // CreateUserCommand/UpdateUserCommand), so a future/forgotten caller
-    // can't accidentally accept a dangerous file type.
-    // ============================================================
+    // SECURITY (SRS "File Upload Security")
+   // ============================================================
     private static readonly HashSet<string> BlockedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".exe", ".dll", ".msi", ".bat", ".cmd", ".sh", ".ps1", ".psm1",
@@ -36,25 +29,6 @@ public class FileService(IWebHostEnvironment _environment, ILogger<FileService> 
         DeleteFileInternal(relativePath, publicRoot, isPublic: true);
     }
 
-    // ================================================================
-    // SECURITY FIX (CRITICAL - SRS "Document Security" / "Restricted
-    // Moharrirs must never receive document content through any
-    // endpoint"): case documents were previously saved via SaveFileAsync
-    // into wwwroot/uploads/case_documents, which app.UseStaticFiles()
-    // (Program.cs) serves to ANYONE with no authentication at all -
-    // completely bypassing tenant isolation, RBAC, and the Moharrir
-    // blind-upload restriction the rest of this codebase carefully
-    // enforces. Anyone who ever saw, logged, or leaked the GUID filename
-    // (browser history, proxy/access logs, a backup, a Referer header)
-    // could download the file directly forever, with zero authorization
-    // check. SaveSecureFileAsync stores under
-    // {ContentRootPath}/SecureStorage/{folderName} instead - a directory
-    // app.UseStaticFiles() can never reach regardless of middleware
-    // ordering or future configuration changes - so the ONLY way to read
-    // the bytes back is via ReadSecureFileAsync, which every caller in
-    // this codebase gates behind an explicit permission check
-    // (IDocumentPermissionService.CanUserAccessDocumentAsync) first.
-    // ================================================================
     public Task<string> SaveSecureFileAsync(IFormFile file, string folderName)
     {
         string secureRoot = Path.Combine(_environment.ContentRootPath, "SecureStorage");
@@ -110,15 +84,7 @@ public class FileService(IWebHostEnvironment _environment, ILogger<FileService> 
         }
     }
 
-    // ================================================================
-    // Shared save logic for both the public (wwwroot) and secure
-    // (SecureStorage) stores. The random GUID filename (not the original
-    // client filename) is what actually prevents path traversal on save -
-    // Path.GetExtension only ever returns the suffix after the last '.',
-    // so even a malicious original name like "../../evil.jpg" safely
-    // yields just ".jpg" here and can never break out of uploadsFolder.
-    // ================================================================
-    private async Task<string> SaveFileInternalAsync(IFormFile file, string folderName, string root, bool isPublic)
+  private async Task<string> SaveFileInternalAsync(IFormFile file, string folderName, string root, bool isPublic)
     {
         if (file == null || file.Length == 0)
         {
@@ -132,6 +98,35 @@ public class FileService(IWebHostEnvironment _environment, ILogger<FileService> 
         {
             _logger.LogWarning("Rejected upload with disallowed extension: {Extension} (original name: {FileName})", ext, file.FileName);
             throw new InvalidOperationException($"File type '{ext}' is not permitted for upload.");
+        }
+
+        using (var scanStream = file.OpenReadStream())
+        {
+            var scanResult = await _virusScanService.ScanAsync(scanStream, file.FileName);
+
+            if (!scanResult.IsClean)
+            {
+                if (scanResult.ThreatName != null)
+                {
+                    // A real detection - always reject, no config can override this.
+                    _logger.LogWarning("Upload rejected - malware detected: {FileName} ({Threat})", file.FileName, scanResult.ThreatName);
+                    throw new ValidationException([$"This file was rejected because it appears to contain malware ({scanResult.ThreatName}). Please scan it locally and try a clean copy."]);
+                }
+
+                // Scanner itself failed to run (unreachable, timed out, etc).
+                // VirusScan:FailClosed decides the behavior - defaults to
+                // true (reject) because silently accepting unscanned files
+                // defeats the entire point of this feature. Only flip to
+                // false as a deliberate, temporary escape hatch.
+                bool failClosed = _configuration.GetValue("VirusScan:FailClosed", true);
+                if (failClosed)
+                {
+                    _logger.LogError("Upload rejected - virus scan could not be completed for {FileName}: {Error}", file.FileName, scanResult.Error);
+                    throw new ValidationException(["File upload is temporarily unavailable (virus scanner unreachable). Please try again shortly or contact your administrator."]);
+                }
+
+                _logger.LogWarning("Proceeding with upload of {FileName} DESPITE a failed virus scan - VirusScan:FailClosed=false. Error: {Error}", file.FileName, scanResult.Error);
+            }
         }
 
         string uploadsFolder = isPublic

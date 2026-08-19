@@ -36,6 +36,7 @@ public class User
     public bool IsReleasedForReuse { get; set; } = false;
     public DateTime? LastLogin { get; set; }
     public int FailedLoginAttempts { get; set; } = 0;          // Added: tracks consecutive failed logins for lockout
+   public DateTime? LockoutEndUtc { get; set; }
     public DateTime? PasswordChangedDate { get; set; }          // Added (was in SQL, missing in model)
     [Required, MaxLength(64)]
     public string SecurityStamp { get; set; } = Guid.NewGuid().ToString("N");

@@ -9,6 +9,16 @@ appsettings.*.Local.json
 secrets.json
 *.pfx
 
+## User-uploaded content — NEVER commit real client/user data to source
+## control. Case documents are legal client data (compliance-sensitive);
+## profile pictures are real people's personal images. Both belong in
+## actual storage (disk backup / object storage), not git history, which
+## is permanent, often shared with contractors/CI, and never meant to be
+## a place to keep PII or confidential documents.
+wwwroot/uploads/
+SecureStorage/
+!SecureStorage/.gitkeep
+
 ## IDE
 .vs/
 .vscode/

@@ -92,16 +92,16 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         // ================================================
         if (request.ProfileImage != null)
         {
-            // Delete old image if exists
-            if (!string.IsNullOrEmpty(user.ProfileImage))
-            {
-                _fileService.DeleteFile(user.ProfileImage);
-                _logger.LogInformation("Old profile image deleted for user: {UserId}", request.UserID);
-            }
-
-            // Upload new image
+            string? oldImagePath = user.ProfileImage;
             user.ProfileImage = await _fileService.SaveFileAsync(request.ProfileImage, "profile_pictures");
             _logger.LogInformation("New profile image saved for user: {UserId}", request.UserID);
+
+            // Only now, having succeeded, remove the old file.
+            if (!string.IsNullOrEmpty(oldImagePath))
+            {
+                _fileService.DeleteFile(oldImagePath);
+                _logger.LogInformation("Old profile image deleted for user: {UserId}", request.UserID);
+            }
         }
 
         // ================================================

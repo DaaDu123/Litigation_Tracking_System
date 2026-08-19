@@ -10,9 +10,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Auth.Login;
 
-public class LoginHandler(AppDbContext _context, IPasswordService _passwordService, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, ILogger<LoginHandler> _logger) : IRequestHandler<LoginCommand, LoginResponseDTO>
+public class LoginHandler(AppDbContext _context, IPasswordService _passwordService, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, IConfiguration _configuration, ILogger<LoginHandler> _logger) : IRequestHandler<LoginCommand, LoginResponseDTO>
 {
-    private const int MaxFailedAttempts = 5;
+    // ================================================================
+    // RATE LIMITING / ACCOUNT LOCKOUT (configurable via AccountLockout in
+    // appsettings.json; defaults below apply only if config is missing).
+    // ================================================================
+    private int MaxFailedAttempts => _configuration.GetValue("AccountLockout:MaxFailedAttempts", 5);
+    private int LockoutDurationHours => _configuration.GetValue("AccountLockout:LockoutDurationHours", 12);
 
     private static readonly string DummyPasswordHash = BCrypt.Net.BCrypt.HashPassword("dummy-password-for-timing-normalization");
 
@@ -38,7 +43,30 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         }
 
         // ================================================
-        // 2. Verify password (+ track failed attempts / auto-lock)
+        // 2. Check lockout status BEFORE spending time on a password
+        // verify - if still locked, fail fast with a clear remaining-time
+        // message. If the lockout window has already passed, clear it and
+        // give the user a fresh set of attempts.
+        // ================================================
+        if (user.LockoutEndUtc.HasValue)
+        {
+            if (user.LockoutEndUtc.Value > DateTime.UtcNow)
+            {
+                var remaining = user.LockoutEndUtc.Value - DateTime.UtcNow;
+                _logger.LogWarning("Login blocked: user {UserId} is locked out for {Minutes} more minute(s)", user.UserID, Math.Ceiling(remaining.TotalMinutes));
+                throw new UnauthorizedException(
+                    $"Too many failed login attempts. Please try again in {FormatRemaining(remaining)}.");
+            }
+
+            // Lockout window has passed - clear it and reset the counter
+            // so this attempt (and the next MaxFailedAttempts-1 after it,
+            // if wrong) are evaluated fresh.
+            user.LockoutEndUtc = null;
+            user.FailedLoginAttempts = 0;
+        }
+
+        // ================================================
+        // 3. Verify password (+ track failed attempts / auto-lock)
         // ================================================
         bool passwordValid = _passwordService.VerifyPassword(request.Password, user.PasswordHash);
         if (!passwordValid)
@@ -46,8 +74,12 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
             user.FailedLoginAttempts += 1;
             if (user.FailedLoginAttempts >= MaxFailedAttempts)
             {
-                user.IsActive = false;
-                _logger.LogWarning("User {UserId} locked out after {Count} failed attempts", user.UserID, user.FailedLoginAttempts);
+                user.LockoutEndUtc = DateTime.UtcNow.AddHours(LockoutDurationHours);
+                user.FailedLoginAttempts = 0; // next window starts clean once LockoutEndUtc passes
+                _logger.LogWarning("User {UserId} locked out for {Hours}h after {Count} failed attempts", user.UserID, LockoutDurationHours, MaxFailedAttempts);
+                await _context.SaveChangesAsync(cancellationToken);
+                throw new UnauthorizedException(
+                    $"Too many failed login attempts. Please try again in {LockoutDurationHours} hours.");
             }
             await _context.SaveChangesAsync(cancellationToken);
             _logger.LogWarning("Login failed: Invalid password for user: {UserId}", user.UserID);
@@ -55,7 +87,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         }
 
         // ================================================
-        // 3. Check if account is deleted
+        // 4. Check if account is deleted
         // ================================================
         if (user.IsDeleted)
         {
@@ -64,16 +96,21 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         }
 
         // ================================================
-        // 4. Check if account is active
+        // 5. Check if account is active
+        //    IsActive here means one thing only now: "email not yet
+        //    verified" (see RegisterHandler/VerifyOtpHandler). Failed-
+        //    login lockout is handled entirely via LockoutEndUtc above and
+        //    never touches this field anymore, so this message is now
+        //    accurate every time it's shown.
         // ================================================
         if (!user.IsActive)
         {
-            _logger.LogWarning("Login failed: Account is inactive for user: {UserId}", user.UserID);
-            throw new ValidationException(["Please verify your email address before logging in, or contact your administrator if your account was locked."]);
+            _logger.LogWarning("Login failed: Account is inactive (email not verified) for user: {UserId}", user.UserID);
+            throw new ValidationException(["Please verify your email address before logging in."]);
         }
 
         // ================================================
-        // 4b. Check if the user's firm workspace is still usable
+        // 5b. Check if the user's firm workspace is still usable
         // (multi-tenancy: a blocked/removed firm locks out every
         // user under it, regardless of their own account status)
         // ================================================
@@ -92,25 +129,26 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         }
 
         // ================================================
-        // 5. Reset failed attempts + update last login time
+        // 6. Reset failed attempts + lockout state + update last login time
         // ================================================
         user.FailedLoginAttempts = 0;
+        user.LockoutEndUtc = null;
         user.LastLogin = DateTime.UtcNow;
 
         // ================================================
-        // 6. Generate access token
+        // 7. Generate access token
         // ================================================
         var accessToken = _jwtService.GenerateToken(user);
         var accessTokenExpiry = _jwtService.GetAccessTokenExpiry();
 
         // ================================================
-        // 7. Generate refresh token
+        // 8. Generate refresh token
         // ================================================
         var refreshToken = _jwtService.GenerateRefreshToken();
         var refreshTokenExpiry = _jwtService.GetRefreshTokenExpiry();
 
         // ================================================
-        // 8. Save refresh token to database
+        // 9. Save refresh token to database
         //    SECURITY: only the SHA-256 hash is persisted — never the raw
         //    token. The raw value is only ever sent to the client, in the
         //    HttpOnly cookie set below.
@@ -124,7 +162,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         });
 
         // ================================================
-        // 9. Record login in LoginHistory
+        // 10. Record login in LoginHistory
         // ================================================
         var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
         var userAgent = _httpContextAccessor.HttpContext?.Request.Headers.UserAgent.ToString();
@@ -140,17 +178,17 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         });
 
         // ================================================
-        // 10. Create audit log
+        // 11. Create audit log
         // ================================================
         _context.AuditLogs.Add(_auditService.Create(user.UserID, "User Login"));
 
         // ================================================
-        // 11. Save all changes
+        // 12. Save all changes
         // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
         // ================================================
-        // 12. Set refresh token in HTTP cookie
+        // 13. Set refresh token in HTTP cookie
         // ================================================
         _jwtService.SetRefreshTokenCookie(_httpContextAccessor.HttpContext!.Response, refreshToken);
         _logger.LogInformation("User {UserId} logged in successfully", user.UserID);
@@ -163,5 +201,18 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
             AccessToken = accessToken,
             AccessTokenExpiry = accessTokenExpiry
         };
+    }
+
+    /// <summary>Human-friendly "try again in ..." text for the lockout message.</summary>
+    private static string FormatRemaining(TimeSpan remaining)
+    {
+        if (remaining.TotalHours >= 1)
+        {
+            int hours = (int)Math.Ceiling(remaining.TotalHours);
+            return $"{hours} hour{(hours == 1 ? "" : "s")}";
+        }
+
+        int minutes = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
+        return $"{minutes} minute{(minutes == 1 ? "" : "s")}";
     }
 }

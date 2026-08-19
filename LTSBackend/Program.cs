@@ -24,6 +24,7 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using LTSBackend.Services.VirusScan;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -159,6 +160,8 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 // Email & File Services
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IFileService, FileService>();
+
+builder.Services.AddScoped<IVirusScanService, ClamAvVirusScanService>();
 
 // ✅ NEW - Document Permission Service (FOR MOHARRIR BLIND UPLOAD)
 builder.Services.AddScoped<IDocumentPermissionService, DocumentPermissionService>();

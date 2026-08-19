@@ -49,6 +49,7 @@ public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDTO
                 RoleID = x.RoleID,
                 RoleName = x.Role != null ? x.Role.RoleName : null,
                 IsActive = x.IsActive,
+                IsLockedOut = x.LockoutEndUtc != null && x.LockoutEndUtc > DateTime.UtcNow,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             })

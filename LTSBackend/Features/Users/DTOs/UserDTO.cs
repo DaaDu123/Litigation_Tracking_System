@@ -20,6 +20,8 @@ public class UserDTO
 
     public bool IsActive { get; set; }
 
+    public bool IsLockedOut { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

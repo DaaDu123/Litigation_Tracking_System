@@ -156,6 +156,10 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
                 profileImagePath = await _fileService.SaveFileAsync(request.ProfileImage, "profile_pictures");
                 _logger.LogInformation("Profile image uploaded for: {Email}", request.Email);
             }
+            catch (ValidationException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to upload profile image for: {Email}", request.Email);
