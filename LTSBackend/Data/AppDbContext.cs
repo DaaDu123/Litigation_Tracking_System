@@ -71,6 +71,7 @@ public class AppDbContext : DbContext
     // ================================================================
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Firm> Firms { get; set; } = null!;
+    public DbSet<FirmAdminRequest> FirmAdminRequests { get; set; } = null!;
     public DbSet<Role> Roles { get; set; } = null!;
     public DbSet<Permission> Permissions { get; set; } = null!;
     public DbSet<NotificationType> NotificationTypes { get; set; } = null!;
@@ -161,6 +162,24 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.FirmCode).IsUnique();
             entity.Property(e => e.MigrationStatus).IsRequired().HasMaxLength(30).HasDefaultValue("None");
             entity.Property(e => e.MigrationNotes).HasMaxLength(500);
+        });
+
+        // ================================================================
+        // ✅ FIRM ADMIN REQUEST ENTITY CONFIGURATION
+        // (public "request to become a Firm Admin" -> SuperAdmin approval)
+        // ================================================================
+        modelBuilder.Entity<FirmAdminRequest>(entity =>
+        {
+            entity.HasKey(e => e.RequestID);
+            entity.Property(e => e.FirmName).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.FirmCode).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.AdminFullName).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.AdminEmail).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.AdminPasswordHash).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Pending");
+            entity.HasIndex(e => e.FirmCode);
+            entity.HasIndex(e => e.AdminEmail);
+            entity.HasIndex(e => e.Status);
         });
 
         // ================================================================
@@ -1036,6 +1055,16 @@ public class AppDbContext : DbContext
                 NotificationTypeID = 5,
                 TypeName = "CaseStatusChanged",
                 Description = "Notification when case status changes",
+                IsEmail = true,
+                IsSMS = false,
+                IsInApp = true,
+                IsActive = true
+            },
+            new NotificationType
+            {
+                NotificationTypeID = 6,
+                TypeName = "FirmAdminRequest",
+                Description = "Sent to every Super Admin when someone requests to become a Firm Admin",
                 IsEmail = true,
                 IsSMS = false,
                 IsInApp = true,

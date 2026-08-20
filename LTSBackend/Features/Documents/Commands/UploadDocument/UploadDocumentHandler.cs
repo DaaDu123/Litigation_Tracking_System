@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LTSBackend.Features.Documents.Commands.UploadDocument;
 
 public class UploadDocumentHandler(AppDbContext _context, IFileService _fileService, IDocumentPermissionService _permissionService, IAuditService _auditService,
-    ICurrentUserService _currentUser, IHttpContextAccessor _httpContextAccessor, ILogger<UploadDocumentHandler> _logger) : IRequestHandler<UploadDocumentCommand, UploadDocumentResult>
+    ICurrentUserService _currentUser, ILogger<UploadDocumentHandler> _logger) : IRequestHandler<UploadDocumentCommand, UploadDocumentResult>
 {
     // Validates the request, saves the file to secure storage, and records the document (with Moharrir blind-upload and Intern draft rules).
     public async Task<UploadDocumentResult> Handle(UploadDocumentCommand request, CancellationToken cancellationToken)

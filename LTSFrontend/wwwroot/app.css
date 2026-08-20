@@ -209,6 +209,21 @@ h1:focus {
     font-weight: 600;
 }
 
+.auth-section-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--lts-text-muted);
+    margin: 1.5rem 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--lts-border, #e5e7eb);
+}
+
+.auth-section-title:first-of-type {
+    margin-top: 0.5rem;
+}
+
 .password-toggle-wrap {
     position: relative;
 }

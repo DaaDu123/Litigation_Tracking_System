@@ -180,6 +180,16 @@
             public static string Export(int id) => $"{Root}/{id}/export";
         }
 
+        public static class FirmAdminRequests
+        {
+            private const string Root = Base + "/firmadminrequests";
+            public const string Base_ = Root;
+            public static string WithStatus(string? status) =>
+                string.IsNullOrWhiteSpace(status) ? Root : $"{Root}?status={status}";
+            public static string Approve(int id) => $"{Root}/{id}/approve";
+            public static string Reject(int id) => $"{Root}/{id}/reject";
+        }
+
         public static class Permissions
         {
             private const string Root = Base + "/permissions";

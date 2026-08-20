@@ -10,6 +10,7 @@ using LTSFrontend.Features.Cases.Services;
 using LTSFrontend.Features.Deadlines.Services;
 using LTSFrontend.Features.Documents.Services;
 using LTSFrontend.Features.Firms.Services;
+using LTSFrontend.Features.FirmAdminRequests.Services;
 using LTSFrontend.Features.Hearings.Services;
 using LTSFrontend.Features.LoginHistory.Services;
 using LTSFrontend.Features.Milestones.Services;
@@ -39,19 +40,6 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<CustomAuthStateProvider>();
             services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 
-            // HttpClient -> LTSBackend
-            // Registered through IHttpClientFactory so the underlying
-            // SocketsHttpHandler (and its TCP/TLS connections) is pooled
-            // and reused across requests/circuits instead of a brand new
-            // handler + connection being created every time.
-            //
-            // NOTE: the Bearer token is attached inside ApiClient itself,
-            // NOT via AddHttpMessageHandler<T>() - a scoped service (like
-            // UserSessionState) injected into a handler registered that
-            // way gets resolved from IHttpClientFactory's own internal,
-            // pooled scope instead of the current circuit's scope, which
-            // silently breaks per-user auth. See ApiClient's constructor
-            // comment for the full explanation.
             services.AddHttpClient<ApiClient>((sp, client) =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
@@ -101,6 +89,7 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<IAuditLogService, AuditLogService>();
             services.AddScoped<ILoginHistoryService, LoginHistoryService>();
             services.AddScoped<IFirmService, FirmService>();
+            services.AddScoped<IFirmAdminRequestService, FirmAdminRequestService>();
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IProfileService, ProfileService>();

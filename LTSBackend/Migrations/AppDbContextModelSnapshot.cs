@@ -1504,6 +1504,16 @@ namespace LTSBackend.Migrations
                             IsInApp = true,
                             IsSMS = false,
                             TypeName = "CaseStatusChanged"
+                        },
+                        new
+                        {
+                            NotificationTypeID = 6,
+                            Description = "Sent to every Super Admin when someone requests to become a Firm Admin",
+                            IsActive = true,
+                            IsEmail = true,
+                            IsInApp = true,
+                            IsSMS = false,
+                            TypeName = "FirmAdminRequest"
                         });
                 });
 
@@ -2445,6 +2455,88 @@ namespace LTSBackend.Migrations
                     b.HasIndex("Email", "OtpCode");
 
                     b.ToTable("UserOtps");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.FirmAdminRequest", b =>
+                {
+                    b.Property<int>("RequestID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestID"));
+
+                    b.Property<string>("AdminEmail")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("AdminFullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("AdminPasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("AdminPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("CreatedFirmID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FirmCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("FirmName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("ReviewedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.HasKey("RequestID");
+
+                    b.HasIndex("AdminEmail");
+
+                    b.HasIndex("FirmCode");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("FirmAdminRequests");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Audit.AuditLog", b =>

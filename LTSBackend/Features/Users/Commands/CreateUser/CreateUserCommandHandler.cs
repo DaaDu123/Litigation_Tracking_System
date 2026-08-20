@@ -4,14 +4,13 @@ using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Models.Security;
 using LTSBackend.Services;
-using LTSBackend.Services.Audit;
 using LTSBackend.Services.ProfileService;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Users.Commands.CreateUser;
 
-public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _passwordService, IFileService _fileService, IAuditService _auditService, ILogger<CreateUserCommandHandler> _logger) : IRequestHandler<CreateUserCommand, int>
+public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _passwordService, IFileService _fileService, ILogger<CreateUserCommandHandler> _logger) : IRequestHandler<CreateUserCommand, int>
 {
     public async Task<int> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
@@ -48,9 +47,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         // 1. Check whether the email already exists, and whether a
         // soft-deleted row for it can be reused.
        // ================================================
-        var existingUser = await _context.Users
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+        var existingUser = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         bool isReuse = false;
 
@@ -72,13 +69,8 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
 
             if (!sameFirm && !existingUser.IsReleasedForReuse)
             {
-                _logger.LogWarning(
-                    "User creation failed: Email {Email} is a deleted record owned by firm {OwnerFirmId}, not released, requested by firm {RequestingFirmId}",
-                    request.Email, existingUser.FirmID, actingUser.FirmID);
-                throw new ValidationException([
-                    $"Email '{request.Email}' already exists and is reserved by another firm's deleted user record. " +
-                    "It must be released for reassignment before it can be reused here."
-                ]);
+                _logger.LogWarning("User creation failed: Email {Email} is a deleted record owned by firm {OwnerFirmId}, not released, requested by firm {RequestingFirmId}",request.Email, existingUser.FirmID, actingUser.FirmID);
+                throw new ValidationException([$"Email '{request.Email}' already exists and is reserved by another firm's deleted user record. " + "It must be released for reassignment before it can be reused here."]);
             }
 
             // Either the same firm reclaiming its own deleted user, or a
@@ -185,22 +177,15 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             // row is invisible to normal tracked queries while
             // IsDeleted == true.
             // ================================================
-            var userToRestore = await _context.Users
-                .IgnoreQueryFilters()
-                .FirstAsync(x => x.Email == request.Email, cancellationToken);
+            var userToRestore = await _context.Users.IgnoreQueryFilters().FirstAsync(x => x.Email == request.Email, cancellationToken);
 
-            _logger.LogInformation(
-                "Reusing soft-deleted user record {UserID} (previously firm {PreviousFirmId}) for email {Email}, new firm {NewFirmId}",
-                userToRestore.UserID, userToRestore.FirmID, request.Email, actingUser.FirmID);
+            _logger.LogInformation("Reusing soft-deleted user record {UserID} (previously firm {PreviousFirmId}) for email {Email}, new firm {NewFirmId}",userToRestore.UserID, userToRestore.FirmID, request.Email, actingUser.FirmID);
 
             userToRestore.FullName = request.FullName;
             userToRestore.PasswordHash = passwordHash;
             userToRestore.Phone = request.Phone;
             userToRestore.Department = request.Department;
             userToRestore.Designation = null;
-            // Only overwrite the old profile image if a new one was
-            // actually uploaded; otherwise keep it null'd out like a
-            // fresh account rather than leaking the previous owner's photo.
             userToRestore.ProfileImage = profileImagePath;
             userToRestore.RoleID = request.RoleID.Value;
             userToRestore.FirmID = actingUser.FirmID;
@@ -275,8 +260,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             resultUserId = newUser.UserID;
         }
 
-        _logger.LogInformation("User {Action} successfully with ID: {UserID} and Role: {RoleName}",
-            isReuse ? "restored/reused" : "created", resultUserId, role?.RoleName);
+        _logger.LogInformation("User {Action} successfully with ID: {UserID} and Role: {RoleName}", isReuse ? "restored/reused" : "created", resultUserId, role?.RoleName);
 
         // No manual audit log here — the AuditBehavior pipeline already handles this.
 
