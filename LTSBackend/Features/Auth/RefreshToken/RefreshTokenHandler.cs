@@ -18,8 +18,7 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
         // ================================================
         // 1. Read refresh token from cookie
         // ================================================
-        var refreshToken = _httpContextAccessor.HttpContext?
-            .Request.Cookies["refreshToken"];
+        var refreshToken = _httpContextAccessor.HttpContext?.Request.Cookies["refreshToken"];
 
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
@@ -38,9 +37,7 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
         var storedToken = await _context.RefreshTokens
             .Include(x => x.User)
             .ThenInclude(x => x.Role)
-            .FirstOrDefaultAsync(
-                x => x.Token == tokenHash,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.Token == tokenHash,cancellationToken);
 
         if (storedToken == null)
         {
@@ -53,23 +50,7 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
         // ================================================
         if (storedToken.IsRevoked)
         {
-            // ================================================
-            // SECURITY FIX (token theft / reuse detection): every refresh
-            // token is single-use — Section 5 below revokes it the moment
-            // it's rotated. If a *revoked* token is presented again, that
-            // means either (a) the legitimate client retried a stale
-            // request, or (b) an attacker is replaying a token they stole
-            // (e.g. from a leaked DB backup or intercepted request) after
-            // the real user already rotated past it. We can't tell those
-            // apart, so we treat it as theft: revoke every other active
-            // refresh token for this user, forcing a full re-login on all
-            // devices, and record a security audit entry. Previously this
-            // just returned "revoked" with no further action, leaving a
-            // stolen-but-already-used token's replay silently ignored.
-            // ================================================
-            var otherActiveTokens = await _context.RefreshTokens
-                .Where(x => x.UserID == storedToken.UserID && !x.IsRevoked)
-                .ToListAsync(cancellationToken);
+            var otherActiveTokens = await _context.RefreshTokens.Where(x => x.UserID == storedToken.UserID && !x.IsRevoked).ToListAsync(cancellationToken);
 
             if (otherActiveTokens.Count > 0)
             {
@@ -78,21 +59,14 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
                     t.IsRevoked = true;
                 }
 
-                _context.AuditLogs.Add(_auditService.Create(
-                    storedToken.UserID,
-                    "SECURITY ALERT: Revoked refresh token reuse detected — all active sessions revoked"));
+                _context.AuditLogs.Add(_auditService.Create(storedToken.UserID,"SECURITY ALERT: Revoked refresh token reuse detected — all active sessions revoked"));
 
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
-            _logger.LogWarning(
-                "Token refresh failed: Reuse of a revoked token detected for user {UserId}. " +
-                "All {Count} active session(s) for this user have been revoked.",
-                storedToken.UserID,
-                otherActiveTokens.Count);
+            _logger.LogWarning("Token refresh failed: Reuse of a revoked token detected for user {UserId}. " + "All {Count} active session(s) for this user have been revoked.",storedToken.UserID,otherActiveTokens.Count);
 
-            throw new UnauthorizedException(
-                "This session is no longer valid. For your security, all sessions have been logged out — please log in again.");
+            throw new UnauthorizedException("This session is no longer valid. For your security, all sessions have been logged out — please log in again.");
         }
 
         if (storedToken.ExpiryDate <= DateTime.UtcNow)
@@ -154,8 +128,7 @@ public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService,
         // ================================================
         // 8. Create audit log
         // ================================================
-        _context.AuditLogs.Add(
-            _auditService.Create(user.UserID, "Token Refreshed"));
+        _context.AuditLogs.Add(_auditService.Create(user.UserID, "Token Refreshed"));
 
         // ================================================
         // 9. Save all changes
