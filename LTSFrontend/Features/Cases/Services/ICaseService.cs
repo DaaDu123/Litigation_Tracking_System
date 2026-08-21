@@ -13,5 +13,6 @@ namespace LTSFrontend.Features.Cases.Services
         Task<bool> DeleteAsync(long id);
         Task<bool> UpdateStatusAsync(long id, int newStatusID, string? remarks);
         Task<bool> UpdateStageAsync(long id, int newStageID);
+        Task<List<CaseStatusHistoryDTO>> GetStatusHistoryAsync(long id);
     }
 }

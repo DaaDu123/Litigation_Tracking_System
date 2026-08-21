@@ -91,5 +91,11 @@ namespace LTSFrontend.Features.Cases.Services
                 StageID = newStageID
             });
         }
+
+        public async Task<List<CaseStatusHistoryDTO>> GetStatusHistoryAsync(long id)
+        {
+            var result = await _api.GetAsync<List<CaseStatusHistoryDTO>>(ApiEndpoints.Cases.StatusHistory(id));
+            return result ?? new List<CaseStatusHistoryDTO>();
+        }
     }
 }

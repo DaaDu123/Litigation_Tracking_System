@@ -1,11 +1,15 @@
 @* Read-only, chronological "story so far" for a case - merges Milestones,
-   Hearings, and Notes (the three sources that already carry a date + who
-   did it) into a single feed, newest first. Used as the "Timeline" tab on
-   CaseDetails.razor, alongside the dedicated Milestones/Hearings/Notes tabs
-   that let you actually manage each of those individually. *@
+   Hearings, Notes, and Status Changes (the sources that already carry a
+   date + who did it) into a single feed, newest first. Used as the
+   "Timeline" tab on CaseDetails.razor, alongside the dedicated
+   Milestones/Hearings/Notes tabs that let you actually manage each of
+   those individually. Status changes have no dedicated tab of their own
+   (FR-05: "maintain case status history") - this feed is the only place
+   they're visible in the UI. *@
 @using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.CaseNotes.DTOs
 @using LTSFrontend.Features.CaseNotes.Services
+@using LTSFrontend.Features.Cases.Services
 @using LTSFrontend.Features.Hearings.DTOs
 @using LTSFrontend.Features.Hearings.Services
 @using LTSFrontend.Features.Milestones.DTOs
@@ -13,6 +17,7 @@
 @inject IMilestoneService MilestoneService
 @inject IHearingService HearingService
 @inject ICaseNoteService CaseNoteService
+@inject ICaseService CaseService
 
 <div class="d-flex align-items-center justify-content-between mb-3">
     <h6 class="fw-semibold mb-0">Case Timeline</h6>
@@ -87,13 +92,14 @@ else
         _errorMessage = null;
         try
         {
-            // Fire all three off in parallel - independent reads, no reason
+            // Fire all four off in parallel - independent reads, no reason
             // to wait on them one at a time.
             var milestonesTask = MilestoneService.GetByCaseAsync(CaseId);
             var hearingsTask = HearingService.GetByCaseAsync(CaseId, pageNumber: 1, pageSize: 100);
             var notesTask = CaseNoteService.GetByCaseAsync(CaseId);
+            var statusHistoryTask = CaseService.GetStatusHistoryAsync(CaseId);
 
-            await Task.WhenAll(milestonesTask, hearingsTask, notesTask);
+            await Task.WhenAll(milestonesTask, hearingsTask, notesTask, statusHistoryTask);
 
             var entries = new List<TimelineEntry>();
 
@@ -136,6 +142,22 @@ else
                     Title: n.Notes.Length > 120 ? n.Notes[..120] + "..." : n.Notes,
                     Detail: null,
                     By: n.UserName));
+            }
+
+            foreach (var s in statusHistoryTask.Result)
+            {
+                var title = s.OldStatusName is null
+                    ? $"Status set to {s.NewStatusName}"
+                    : $"Status changed: {s.OldStatusName} → {s.NewStatusName}";
+
+                entries.Add(new TimelineEntry(
+                    Date: s.ChangedDate,
+                    Kind: "Status",
+                    Icon: "bi-arrow-repeat",
+                    Accent: "#dc2626",
+                    Title: title,
+                    Detail: string.IsNullOrWhiteSpace(s.Remarks) ? null : s.Remarks,
+                    By: s.ChangedByName));
             }
 
             _entries = entries.OrderByDescending(e => e.Date).ToList();

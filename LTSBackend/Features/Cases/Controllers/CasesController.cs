@@ -7,6 +7,7 @@ using LTSBackend.Features.Cases.Commands.UpdateCaseStatus;
 using LTSBackend.Features.Cases.DTOs;
 using LTSBackend.Features.Cases.Queries.GetAllCases;
 using LTSBackend.Features.Cases.Queries.GetCaseById;
+using LTSBackend.Features.Cases.Queries.GetCaseStatusHistory;
 using LTSBackend.Models.Security;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -208,5 +209,27 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
         var result = await _mediator.Send(command);
 
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Case status successfully updated"));
+    }
+
+    // =====================================================
+    // GET CASE STATUS HISTORY
+    // =====================================================
+    /// <summary>
+    /// Read side of FR-05 ("System shall maintain case status history").
+    /// Every status change is already recorded by CreateCaseHandler /
+    /// UpdateCaseStatusHandler; this is the first endpoint that lets the
+    /// UI read that timeline back. Same visibility rule as GetById -
+    /// enforced in the handler, not just here.
+    /// </summary>
+    [HttpGet("{id}/status-history")]
+    [Authorize(Roles = RoleNames.AllFirmUsersAndSuperAdmin)]
+    public async Task<IActionResult> GetStatusHistory(long id)
+    {
+        _logger.LogInformation("Get case status history: {CaseID}", id);
+
+        var query = new GetCaseStatusHistoryQuery(id);
+        var result = await _mediator.Send(query);
+
+        return Ok(ApiResponse<List<CaseStatusHistoryDTO>>.SuccessResponse(result, "Case status history successfully fetched"));
     }
 }

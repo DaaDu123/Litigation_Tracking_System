@@ -90,6 +90,7 @@
             public const string Base_ = Root;
             public static string ById(long id) => $"{Root}/{id}";
             public static string Status(long id) => $"{Root}/{id}/status";
+            public static string StatusHistory(long id) => $"{Root}/{id}/status-history";
         }
 
         public static class CaseAssignments
