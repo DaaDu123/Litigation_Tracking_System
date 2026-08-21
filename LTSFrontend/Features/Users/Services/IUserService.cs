@@ -13,5 +13,11 @@ namespace LTSFrontend.Features.Users.Services
         Task<bool> DeleteAsync(int id);
         Task<bool> ActivateAsync(int id);
         Task<bool> PermanentDeleteAsync(int id);
+
+        // SuperAdmin-only: email-reuse reservation management (see
+        // CreateUserCommandHandler for why a deleted user's email is
+        // reserved to their original firm until explicitly released).
+        Task<List<DeletedUserDTO>> GetDeletedAsync();
+        Task<bool> ReleaseAsync(int id);
     }
 }

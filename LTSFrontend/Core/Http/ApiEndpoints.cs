@@ -30,6 +30,8 @@
             public static string ById(int id) => $"{Root}/{id}";
             public static string Activate(int id) => $"{Root}/{id}/activate";
             public static string PermanentDelete(int id) => $"{Root}/{id}/permanent";
+            public const string Deleted = Root + "/deleted";
+            public static string Release(int id) => $"{Root}/{id}/release";
         }
 
         public static class Roles

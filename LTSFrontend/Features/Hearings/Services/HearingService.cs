@@ -61,6 +61,36 @@ namespace LTSFrontend.Features.Hearings.Services
         public Task<bool> DeleteAsync(long id) =>
             _api.DeleteAsync<bool>(ApiEndpoints.Hearings.ById(id));
 
+        public async Task<List<HearingAttendanceDTO>> GetAttendanceAsync(long hearingId)
+        {
+            var result = await _api.GetAsync<List<HearingAttendanceDTO>>(ApiEndpoints.Hearings.Attendance(hearingId));
+            return result ?? new List<HearingAttendanceDTO>();
+        }
+
+        public Task<long> RecordAttendanceAsync(AttendanceFormDTO form) =>
+            _api.PostAsync<long>(ApiEndpoints.Hearings.Attendance(form.HearingId), new
+            {
+                HearingId = form.HearingId,
+                UserId = form.UserId,
+                IsPresent = form.IsPresent,
+                AttendanceRole = Norm(form.AttendanceRole),
+                Remarks = Norm(form.Remarks)
+            });
+
+        public Task<bool> UpdateAttendanceAsync(AttendanceFormDTO form) =>
+            _api.PutAsync<bool>(ApiEndpoints.Hearings.AttendanceById(form.HearingId, form.AttendanceId), new
+            {
+                AttendanceId = form.AttendanceId,
+                IsPresent = form.IsPresent,
+                AttendanceRole = Norm(form.AttendanceRole),
+                ArrivalTime = form.ArrivalTime,
+                DepartureTime = form.DepartureTime,
+                Remarks = Norm(form.Remarks)
+            });
+
+        public Task<bool> DeleteAttendanceAsync(long hearingId, long attendanceId) =>
+            _api.DeleteAsync<bool>(ApiEndpoints.Hearings.AttendanceById(hearingId, attendanceId));
+
         private static string? Norm(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
     }
 }

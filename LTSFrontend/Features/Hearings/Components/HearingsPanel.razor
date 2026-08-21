@@ -62,6 +62,9 @@ else
                                     <i class="bi bi-pencil"></i>
                                 </button>
                             </PermissionGate>
+                            <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="() => OpenAttendance(h)" title="Attendance">
+                                <i class="bi bi-people"></i>
+                            </button>
                             <PermissionGate Roles="Partner,FirmAdmin,SuperAdmin">
                                 <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="() => HandleDeleteAsync(h)" title="Delete">
                                     <i class="bi bi-trash"></i>
@@ -76,6 +79,7 @@ else
 }
 
 <HearingModal @ref="_hearingModal" OnSaved="HandleSavedAsync" />
+<HearingAttendanceModal @ref="_attendanceModal" />
 <ConfirmDialog @ref="_confirmDialog" />
 
 @code {
@@ -85,6 +89,7 @@ else
     private bool _isLoading = true;
 
     private HearingModal _hearingModal = default!;
+    private HearingAttendanceModal _attendanceModal = default!;
     private ConfirmDialog _confirmDialog = default!;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
@@ -109,6 +114,7 @@ else
 
     private void OpenCreate() => _hearingModal.OpenForCreate(CaseId);
     private void OpenEdit(HearingDTO h) => _hearingModal.OpenForEdit(h);
+    private Task OpenAttendance(HearingDTO h) => _attendanceModal.OpenAsync(h.HearingId, h.HearingDate);
 
     private async Task HandleSavedAsync()
     {

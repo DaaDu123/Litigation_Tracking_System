@@ -59,6 +59,17 @@ namespace LTSFrontend.Features.Users.Services
             return await _api.DeleteAsync<bool>(ApiEndpoints.Users.PermanentDelete(id));
         }
 
+        public async Task<List<DeletedUserDTO>> GetDeletedAsync()
+        {
+            var result = await _api.GetAsync<List<DeletedUserDTO>>(ApiEndpoints.Users.Deleted);
+            return result ?? new List<DeletedUserDTO>();
+        }
+
+        public async Task<bool> ReleaseAsync(int id)
+        {
+            return await _api.PutAsync<bool>(ApiEndpoints.Users.Release(id), null);
+        }
+
         private static async Task<MultipartFormDataContent> BuildFormAsync(
             CreateUserDTO dto, IBrowserFile? profileImage, bool includePassword)
         {

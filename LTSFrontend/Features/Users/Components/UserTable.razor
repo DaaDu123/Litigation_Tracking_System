@@ -25,7 +25,9 @@
         }
     </HeaderContent>
     <RowTemplate Context="user">
-        <td class="lts-cell-primary">@user.FullName</td>
+        <td class="lts-cell-primary">
+            <a href="/users/details/@user.UserID">@user.FullName</a>
+        </td>
         <td class="lts-cell-muted">@user.Email</td>
         <td>@(user.RoleName ?? "-")</td>
         <td><StatusBadge IsActive="user.IsActive" /></td>
