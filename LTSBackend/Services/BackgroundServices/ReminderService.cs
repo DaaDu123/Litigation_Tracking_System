@@ -1,4 +1,4 @@
-﻿using LTSBackend.Data;
+using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Models.Security;
 using Microsoft.EntityFrameworkCore;
@@ -35,9 +35,7 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var today = DateTime.UtcNow.Date;
 
-        // ================================================
         // Resolve NotificationType IDs (seeded rows)
-        // ================================================
         var deadlineTypeId = await context.NotificationTypes
             .Where(t => t.TypeName == DeadlineAlertType)
             .Select(t => (int?)t.NotificationTypeID)
@@ -54,9 +52,7 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
             return;
         }
 
-        // ================================================
         // DEADLINE REMINDERS
-        // ================================================
         var dueDeadlines = await context.Deadlines.Where(d => !d.Completed && d.DueDate.AddDays(-d.ReminderDays) <= today && d.DueDate >= today).ToListAsync(ct);
 
         foreach (var deadline in dueDeadlines)
@@ -91,9 +87,7 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
             }
         }
 
-        // ================================================
         // HEARING REMINDERS (next 2 days)
-        // ================================================
         var upcomingHearings = await context.Hearings.Where(h => h.HearingDate.Date >= today && h.HearingDate.Date <= today.AddDays(2)).ToListAsync(ct);
 
         foreach (var hearing in upcomingHearings)

@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.Users.Commands.DeleteUser;
@@ -13,9 +13,7 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
     {
         _logger.LogInformation("Deactivating user (reversible): {UserId}", request.UserID);
 
-        // ================================================
         // 1. Find user
-        // ================================================
         var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
@@ -24,26 +22,20 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
             throw new NotFoundException("User not found.");
         }
 
-        // ================================================
         // 2. Check if already deleted
-        // ================================================
         if (user.IsDeleted)
         {
             _logger.LogWarning("Delete failed: User already deleted: {UserId}", request.UserID);
             throw new ValidationException(["User account is already deleted."]);
         }
-        // ================================================
         // 2b. Self-protection
-        // ================================================
         if (user.UserID == request.ActingUserID)
         {
             _logger.LogWarning("User {UserId} attempted to deactivate their own account", request.ActingUserID);
             throw new ValidationException(["You cannot deactivate your own account."]);
         }
-        // ================================================
         // 2c. Hierarchy check — can only deactivate users
         // whose role is below the acting user's own role
-        // ================================================
         var actingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserID == request.ActingUserID, cancellationToken);
         var targetRole = user.GetRole();
         var actingRole = actingUser?.GetRole();
@@ -53,26 +45,20 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
             throw new ValidationException(["You are not authorized to deactivate this user."]);
         }
 
-        // ================================================
         // 2d. Multi-tenancy: can only deactivate users in your own
         // firm (SuperAdmin, FirmID == null, bypasses this check)
-        // ================================================
         if (actingUser!.FirmID != null && user.FirmID != actingUser.FirmID)
         {
             _logger.LogWarning("User {ActingUserId} attempted to deactivate a user from a different firm: {TargetUserId}", request.ActingUserID, request.UserID);
             throw new ValidationException(["You can only deactivate users within your own firm."]);
         }
 
-        // ================================================
         // 3. Perform DEACTIVATION only (reversible)
-        // ================================================
         user.IsActive = false;
         user.UpdatedAt = DateTime.UtcNow;
         user.SecurityStamp = Guid.NewGuid().ToString("N");
 
-        // ================================================
         // 4. Revoke all active refresh tokens
-        // ================================================
         var activeTokens = await _context.RefreshTokens.Where(x => x.UserID == request.UserID && !x.IsRevoked).ToListAsync(cancellationToken);
 
         foreach (var token in activeTokens)
@@ -82,9 +68,7 @@ public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserC
 
         _logger.LogInformation("Revoked {Count} active tokens for user: {UserId}", activeTokens.Count, request.UserID);
 
-        // ================================================
         // 5. Save changes
-        // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("User deactivated successfully: {UserId}", request.UserID);

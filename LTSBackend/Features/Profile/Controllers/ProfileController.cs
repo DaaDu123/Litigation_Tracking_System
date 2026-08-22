@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Profile.Commands;
 using LTSBackend.Features.Profile.DTOs;
 using LTSBackend.Features.Profile.Queries;
@@ -23,9 +23,7 @@ public class ProfileController : ControllerBase
         _logger = logger;
     }
 
-    // =====================================================
     // GET MY PROFILE
-    // =====================================================
 
     [HttpGet("me")]
     public async Task<IActionResult> GetMyProfile()
@@ -36,20 +34,15 @@ public class ProfileController : ControllerBase
 
         if (!int.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(ApiResponse<bool>.FailureResponse(
-                "Invalid or missing user identity."));
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user identity."));
         }
 
         var profile = await _mediator.Send(new GetMyProfileQuery(userId));
 
-        return Ok(ApiResponse<ProfileDTO>.SuccessResponse(
-            profile,
-            "Profile fetched successfully."));
+        return Ok(ApiResponse<ProfileDTO>.SuccessResponse(profile,"Profile fetched successfully."));
     }
 
-    // =====================================================
     // UPDATE MY PROFILE
-    // =====================================================
 
     [HttpPut("me")]
     public async Task<IActionResult> UpdateMyProfile([FromForm] UpdateMyProfileCommand command)
@@ -60,15 +53,12 @@ public class ProfileController : ControllerBase
 
         if (!int.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(ApiResponse<bool>.FailureResponse(
-                "Invalid or missing user identity."));
+            return Unauthorized(ApiResponse<bool>.FailureResponse("Invalid or missing user identity."));
         }
 
         var request = command with { UserID = userId };
         var result = await _mediator.Send(request);
 
-        return Ok(ApiResponse<bool>.SuccessResponse(
-            result,
-            "Profile updated successfully!"));
+        return Ok(ApiResponse<bool>.SuccessResponse(result,"Profile updated successfully!"));
     }
 }

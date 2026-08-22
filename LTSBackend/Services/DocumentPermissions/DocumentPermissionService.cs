@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Data;
 using LTSBackend.Models.Security;
 using Microsoft.EntityFrameworkCore;
@@ -11,9 +11,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
     {
         try
         {
-            // ================================================
             // 1. Load the user with role + firm status.
-            // ================================================
             var user = await _context.Users
                 .IgnoreQueryFilters()
                 .AsNoTracking()
@@ -27,9 +25,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 return false;
             }
 
-            // ================================================
             // 2. Reject deactivated, soft-deleted, or blocked-firm accounts.
-            // ================================================
             if (user.IsDeleted || !user.IsActive)
             {
                 _logger.LogWarning("Document access denied - account inactive or deleted: {UserId}", userId);
@@ -43,22 +39,18 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
             }
 
             var role = user.GetRole();
-            // ================================================
             // 3. Super Admin has NO document access.
-            // ================================================
             if (role == UserRole.SuperAdmin)
             {
                 _logger.LogWarning("Document access denied - SuperAdmin has no document access by design: {UserId}", userId);
                 return false;
             }
 
-            // ================================================
             // 4. Multi-tenant isolation (CRITICAL): a user must never access
             // a document belonging to another firm's case, no matter what
             // role they hold. This is checked unconditionally, before any
             // role-specific rule runs, so no branch below can accidentally
             // bypass it.
-            // ================================================
             if (documentId > 0)
             {
                 var docInfo = await _context.Documents
@@ -70,9 +62,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
 
                 if (docInfo == null || docInfo.FirmId == null || docInfo.FirmId != user.FirmID)
                 {
-                    _logger.LogWarning(
-                        "User {UserId} (Firm {UserFirmId}) denied cross-firm access to document {DocumentId} (Firm {DocFirmId})",
-                        userId, user.FirmID, documentId, docInfo?.FirmId);
+                    _logger.LogWarning("User {UserId} (Firm {UserFirmId}) denied cross-firm access to document {DocumentId} (Firm {DocFirmId})",userId, user.FirmID, documentId, docInfo?.FirmId);
                     return false;
                 }
 
@@ -85,19 +75,15 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 }
             }
 
-            // ================================================
             // 5. FirmAdmin and Partner have full access (View/Download/
-            //    Upload/Delete) within their own firm (enforced above).
-            // ================================================
+            // Upload/Delete) within their own firm (enforced above).
             if (role == UserRole.FirmAdmin || role == UserRole.Partner)
             {
                 _logger.LogDebug("Role {Role} has full document access (own firm only)", role);
                 return true;
             }
 
-            // ================================================
             // 6. AssociateLawyer -> read/write on assigned cases only.
-            // ================================================
             if (role == UserRole.AssociateLawyer)
             {
                 bool actionAllowed = action is "View" or "Download" or "Upload";
@@ -108,9 +94,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 return isAssigned;
             }
 
-            // ================================================
             // 7. Intern/Paralegal -> read-only on assigned cases only.
-            // ================================================
             if (role == UserRole.InternParalegal)
             {
                 bool actionAllowed = action is "View" or "Download";
@@ -118,9 +102,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 return await IsUserAssignedToDocumentCaseAsync(userId, documentId, cancellationToken);
             }
 
-            // ================================================
             // 8. Moharrir -> restricted (blind upload) or elevated mode.
-            // ================================================
             if (role == UserRole.Moharrir)
             {
                 return await HandleMohallirAccessAsync(userId, documentId, action, cancellationToken);
@@ -258,9 +240,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 return false;
             }
 
-            // ================================================
             // 8a. Check the user-specific grant first (highest priority).
-            // ================================================
             var userPermission = await _context.DocumentPermissions
                 .IgnoreQueryFilters()
                 .AsNoTracking()
@@ -275,9 +255,7 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
                 return userAllowed;
             }
 
-            // ================================================
             // 8b. Otherwise check the role-based grant.
-            // ================================================
             var user = await _context.Users.IgnoreQueryFilters().AsNoTracking().FirstOrDefaultAsync(u => u.UserID == userId, cancellationToken);
 
             if (user?.RoleID != null)
@@ -297,10 +275,8 @@ public class DocumentPermissionService(AppDbContext _context, ILogger<DocumentPe
             }
         }
 
-        // ================================================
         // 8c. Fallback: no explicit per-document row -> role-level default
         // (restricted = write-only, elevated = view+download+upload).
-        // ================================================
         bool isElevated = await HasMohallirElevatedAccessAsync(userId, cancellationToken);
         if (isElevated && (action == "View" || action == "Download"))
         {

@@ -1,12 +1,8 @@
 @page "/masters/case-statuses"
 @attribute [Authorize(Roles = "FirmAdmin")]
-@using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.Masters.Components
 @using LTSFrontend.Features.Masters.DTOs
 @using LTSFrontend.Features.Masters.Services
-@using LTSFrontend.Shared.Components
-@using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject ICaseStatusService CaseStatusService
 @inject ToastService Toast
 @inject UserSessionState Session

@@ -17,9 +17,7 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
 
         int currentUserId = GetCurrentUserId();
 
-        // ================================================
         // 1. Find Case (firm-scoped)
-        // ================================================
         var caseQuery = _context.Cases.Where(x => x.CaseID == request.CaseID);
             caseQuery = caseQuery.Where(x => x.FirmID == _currentUser.FirmID);
         var caseToUpdate = await caseQuery.FirstOrDefaultAsync(cancellationToken);
@@ -30,9 +28,7 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
             throw new NotFoundException($"Case ID {request.CaseID} not found");
         }
 
-        // ================================================
         // 2. Verify that the new status exists
-        // ================================================
         var newStatus = await _context.CaseStatuses
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.StatusID == request.NewStatusID, cancellationToken);
@@ -43,9 +39,7 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
             throw new NotFoundException($"Status ID {request.NewStatusID} not found");
         }
 
-        // ================================================
         // 3. Check whether it is the same status and skip if so
-        // ================================================
         if (caseToUpdate.StatusID == request.NewStatusID)
         {
             _logger.LogWarning("Attempting to set the same status: {CaseID}", request.CaseID);
@@ -55,18 +49,14 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
             });
         }
 
-        // ================================================
         // 4. Store old status
-        // ================================================
         int oldStatusID = caseToUpdate.StatusID;
 
-        // ================================================
         // 5. Update case status
-        //    FIX: sync IsClosed / ClosureDate with the new status.
-        //    Previously the Case.IsClosed flag (used by vw_ActiveCases /
-        //    vw_ClosedCases) was never updated here, so a case could
-        //    move to a "Closed" status yet still show up as active.
-        // ================================================
+        // FIX: sync IsClosed / ClosureDate with the new status.
+        // Previously the Case.IsClosed flag (used by vw_ActiveCases /
+        // vw_ClosedCases) was never updated here, so a case could
+        // move to a "Closed" status yet still show up as active.
         caseToUpdate.StatusID = request.NewStatusID;
         caseToUpdate.IsClosed = newStatus.IsClosed;
 
@@ -84,9 +74,7 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
         caseToUpdate.ModifiedBy = currentUserId;
         caseToUpdate.ModifiedDate = DateTime.UtcNow;
 
-        // ================================================
         // 6. Create status history entry
-        // ================================================
         var statusHistory = new CaseStatusHistory
         {
             CaseID = request.CaseID,
@@ -99,18 +87,14 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
 
         _context.CaseStatusHistories.Add(statusHistory);
 
-        // ================================================
         // 7. Create Audit Log
-        // ================================================
         var auditLog = _auditService.Create(
             currentUserId,
             $"Case Status Update: {caseToUpdate.CaseNumber} - {newStatus.StatusName}");
 
         _context.AuditLogs.Add(auditLog);
 
-        // ================================================
         // 8. Save changes
-        // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(

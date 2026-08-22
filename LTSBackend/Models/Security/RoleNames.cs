@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 
 namespace LTSBackend.Models.Security;
 
@@ -11,7 +11,7 @@ public static class RoleNames
     public const string Moharrir = nameof(UserRole.Moharrir);
     public const string InternParalegal = nameof(UserRole.InternParalegal);
 
-    // ===== POLICY COMBINATIONS =====
+    // POLICY COMBINATIONS
 
     /// <summary>
     /// Super Admin only - system-wide management

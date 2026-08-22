@@ -21,9 +21,7 @@ namespace LTSBackend.Features.Cases.Controllers;
 [Authorize]
 public class CasesController(IMediator _mediator, ILogger<CasesController> _logger) : ControllerBase
 {
-    // =====================================================
     // GET ALL CASES
-    // =====================================================
     /// <summary>
     /// Role-based visibility (enforced in GetAllCasesHandler, not just here):
     /// - SuperAdmin: all cases, every firm
@@ -52,9 +50,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
             "Cases successfully fetched"));
     }
 
-    // =====================================================
     // GET CASE BY ID
-    // =====================================================
     /// <summary>
     /// Role-based access (enforced in GetCaseByIdHandler, not just here):
     /// - SuperAdmin: any case, any firm
@@ -80,9 +76,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
         return Ok(ApiResponse<CaseDTO>.SuccessResponse(result, "Case successfully fetched"));
     }
 
-    // =====================================================
     // CREATE NEW CASE
-    // =====================================================
     /// <summary>
     /// Role-based: SuperAdmin, FirmAdmin, Partner only
     /// </summary>
@@ -121,9 +115,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
             ApiResponse<long>.SuccessResponse(caseID, "Case successfully created"));
     }
 
-    // =====================================================
     // UPDATE CASE
-    // =====================================================
     /// <summary>
     /// Role-based: SuperAdmin, FirmAdmin, Partner only
     /// </summary>
@@ -160,9 +152,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Case successfully updated"));
     }
 
-    // =====================================================
     // DELETE CASE
-    // =====================================================
     /// <summary>
     /// Role-based: SuperAdmin, FirmAdmin only.
     ///
@@ -191,9 +181,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Case successfully deleted"));
     }
 
-    // =====================================================
     // UPDATE CASE STATUS
-    // =====================================================
     /// <summary>
     /// Role-based: SuperAdmin, FirmAdmin, Partner only
     /// </summary>
@@ -211,9 +199,7 @@ public class CasesController(IMediator _mediator, ILogger<CasesController> _logg
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Case status successfully updated"));
     }
 
-    // =====================================================
     // GET CASE STATUS HISTORY
-    // =====================================================
     /// <summary>
     /// Read side of FR-05 ("System shall maintain case status history").
     /// Every status change is already recorded by CreateCaseHandler /

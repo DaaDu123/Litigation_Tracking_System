@@ -19,9 +19,7 @@ public sealed class UpdateDepartmentHandler(AppDbContext _context, ICurrentUserS
             Description = request.Description?.Trim()
         };
 
-        // ================================================
         // 1. Find department
-        // ================================================
         var department = await _context.Departments.FirstOrDefaultAsync(x => x.DepartmentID == request.DepartmentID, cancellationToken);
 
         if (department == null)
@@ -30,19 +28,15 @@ public sealed class UpdateDepartmentHandler(AppDbContext _context, ICurrentUserS
             throw new NotFoundException("Department not found.");
         }
 
-        // ================================================
         // 1b. Ownership check: a FirmAdmin may edit only their OWN firm's
-        //     custom department - never a system-wide global department.
-        // ================================================
+        // custom department - never a system-wide global department.
         if (department.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Update denied: user {UserId} attempted to edit a global/other-firm department {DepartmentID}", _currentUser.UserID, request.DepartmentID);
             throw new NotFoundException("Department not found.");
         }
 
-        // ================================================
         // 2. Ensure new name is unique (excluding self)
-        // ================================================
         bool nameExists = await _context.Departments.AnyAsync(x => x.DepartmentID != request.DepartmentID &&
              x.DepartmentName.ToLower() == request.DepartmentName.ToLower(),cancellationToken);
 
@@ -55,9 +49,7 @@ public sealed class UpdateDepartmentHandler(AppDbContext _context, ICurrentUserS
             });
         }
 
-        // ================================================
         // 3. Ensure new code is unique (excluding self)
-        // ================================================
         if (!string.IsNullOrWhiteSpace(request.DepartmentCode))
         {
             bool codeExists = await _context.Departments.AnyAsync(x => x.DepartmentID != request.DepartmentID &&
@@ -73,9 +65,7 @@ public sealed class UpdateDepartmentHandler(AppDbContext _context, ICurrentUserS
             }
         }
 
-        // ================================================
         // 4. Apply changes
-        // ================================================
         department.DepartmentName = request.DepartmentName;
         department.DepartmentCode = request.DepartmentCode;
         department.Description = request.Description;

@@ -11,17 +11,13 @@ namespace LTSBackend.Features.Cases.Commands.UpdateCase;
 
 public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor, ICurrentUserService _currentUser) : IRequestHandler<UpdateCaseCommand, bool>
 {
-    public async Task<bool> Handle(
-        UpdateCaseCommand request,
-        CancellationToken cancellationToken)
+    public async Task<bool> Handle(UpdateCaseCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating case: {CaseID}", request.CaseID);
 
         int currentUserId = GetCurrentUserId();
 
-        // ================================================
         // 1. Find Case (firm-scoped - can't touch another firm's case)
-        // ================================================
         var caseQuery = _context.Cases.Where(x => x.CaseID == request.CaseID);
             caseQuery = caseQuery.Where(x => x.FirmID == _currentUser.FirmID);
         var caseToUpdate = await caseQuery.FirstOrDefaultAsync(cancellationToken);
@@ -32,14 +28,10 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
             throw new NotFoundException($"Case ID {request.CaseID} not found");
         }
 
-        // ================================================
         // 2. Validate Court if it is being changed
-        // ================================================
         if (request.CourtID.HasValue && request.CourtID > 0)
         {
-            bool courtExists = await _context.Courts
-                .AsNoTracking()
-                .AnyAsync(x => x.CourtID == request.CourtID, cancellationToken);
+            bool courtExists = await _context.Courts.AsNoTracking().AnyAsync(x => x.CourtID == request.CourtID, cancellationToken);
 
             if (!courtExists)
             {
@@ -50,14 +42,10 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
             caseToUpdate.CourtID = request.CourtID.Value;
         }
 
-        // ================================================
         // 3. Validate Category if it is being changed
-        // ================================================
         if (request.CategoryID.HasValue && request.CategoryID > 0)
         {
-            bool categoryExists = await _context.CaseCategories
-                .AsNoTracking()
-                .AnyAsync(x => x.CategoryID == request.CategoryID, cancellationToken);
+            bool categoryExists = await _context.CaseCategories.AsNoTracking().AnyAsync(x => x.CategoryID == request.CategoryID, cancellationToken);
 
             if (!categoryExists)
             {
@@ -68,14 +56,10 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
             caseToUpdate.CategoryID = request.CategoryID.Value;
         }
 
-        // ================================================
         // 4. Validate Stage if it is being changed
-        // ================================================
         if (request.StageID.HasValue && request.StageID > 0)
         {
-            bool stageExists = await _context.CaseStages
-                .AsNoTracking()
-                .AnyAsync(x => x.StageID == request.StageID, cancellationToken);
+            bool stageExists = await _context.CaseStages.AsNoTracking().AnyAsync(x => x.StageID == request.StageID, cancellationToken);
 
             if (!stageExists)
             {
@@ -86,31 +70,23 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
             caseToUpdate.StageID = request.StageID.Value;
         }
 
-        // ================================================
         // 5. Validate Legal Officer if it is being changed
-        // ================================================
         if (request.CurrentLegalOfficerID.HasValue && request.CurrentLegalOfficerID > 0)
         {
             bool officerExists = await _context.Users
                 .AsNoTracking()
-                .AnyAsync(x => x.UserID == request.CurrentLegalOfficerID &&
-                               x.IsActive && !x.IsDeleted,
-                    cancellationToken);
+                .AnyAsync(x => x.UserID == request.CurrentLegalOfficerID &&x.IsActive && !x.IsDeleted,cancellationToken);
 
             if (!officerExists)
             {
-                _logger.LogWarning("Legal Officer not found: {LegalOfficerID}",
-                    request.CurrentLegalOfficerID);
-                throw new NotFoundException(
-                    $"Legal Officer ID {request.CurrentLegalOfficerID} not found");
+                _logger.LogWarning("Legal Officer not found: {LegalOfficerID}",request.CurrentLegalOfficerID);
+                throw new NotFoundException($"Legal Officer ID {request.CurrentLegalOfficerID} not found");
             }
 
             caseToUpdate.CurrentLegalOfficerID = request.CurrentLegalOfficerID.Value;
         }
 
-        // ================================================
         // 6. Update optional fields
-        // ================================================
         if (!string.IsNullOrEmpty(request.CaseNumber))
         {
             // Check whether another case is already using the same number
@@ -172,28 +148,21 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
             caseToUpdate.IsArchived = request.IsArchived.Value;
         }
 
-        // ================================================
         // 7. Update timestamps
-        // ================================================
         caseToUpdate.ModifiedBy = currentUserId;
         caseToUpdate.ModifiedDate = DateTime.UtcNow;
 
-        // ================================================
         // 8. Create Audit Log
-        // ================================================
         var auditLog = _auditService.Create(currentUserId, $"Case Update: {caseToUpdate.CaseNumber}");
         _context.AuditLogs.Add(auditLog);
 
-        // ================================================
         // 9. Save changes
-        // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Case successfully updated: {CaseID}", request.CaseID);
 
         return true;
     }
-    // ================================================================
     // SECURITY FIX: previously defaulted to UserID = 1 (which, per
     // AppDbContext.SeedUsers, IS the SuperAdmin account) whenever the
     // identity claim was missing or unparsable, instead of failing the
@@ -206,11 +175,9 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
     // than being rejected outright. Throw instead, matching how every
     // other authenticated handler in this codebase treats a missing
     // identity claim.
-    // ================================================================
     private int GetCurrentUserId()
     {
-        var userIdClaim = _httpContextAccessor.HttpContext?.User
-            .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
         {

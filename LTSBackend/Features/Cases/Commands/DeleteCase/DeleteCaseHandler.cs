@@ -17,9 +17,7 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         int currentUserId = GetCurrentUserId();
 
-        // ================================================
         // 1. Find Case (firm-scoped)
-        // ================================================
         var caseQuery = _context.Cases.Where(x => x.CaseID == request.CaseID);
             caseQuery = caseQuery.Where(x => x.FirmID == _currentUser.FirmID);
         var caseToDelete = await caseQuery.FirstOrDefaultAsync(cancellationToken);
@@ -30,22 +28,16 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
             throw new NotFoundException($"Case ID {request.CaseID} not found");
         }
 
-        // ================================================
         // 2. Check whether the Case is archived
-        // ================================================
         if (caseToDelete.IsArchived)
         {
             _logger.LogWarning("An archived case cannot be deleted: {CaseID}", request.CaseID);
-            throw new ValidationException([
-                "Archived cases cannot be deleted. Unarchive it first"
-            ]);
+            throw new ValidationException(["Archived cases cannot be deleted. Unarchive it first"]);
         }
 
-        // ================================================
         // 3. Start transaction (wrapped in CreateExecutionStrategy since
-        //    EnableRetryOnFailure is on - see CreateFirmCommandHandler for
-        //    the full explanation).
-        // ================================================
+        // EnableRetryOnFailure is on - see CreateFirmCommandHandler for
+        // the full explanation).
         var strategy = _context.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>
@@ -53,15 +45,13 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
         await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
         try
         {
-            // ================================================
             // 4. Delete related child records FIRST (FK-safe order,
-            //    grandchildren before children).
-            //    FIX: use _context.Set<HearingAttendance>() instead of
-            //    a named DbSet property — AppDbContext doesn't expose
-            //    one called "HearingAttendance". Set<T>() works as long
-            //    as the entity is part of the EF model, regardless of
-            //    whether a convenience DbSet property was declared.
-            // ================================================
+            // grandchildren before children).
+            // FIX: use _context.Set<HearingAttendance>() instead of
+            // a named DbSet property — AppDbContext doesn't expose
+            // one called "HearingAttendance". Set<T>() works as long
+            // as the entity is part of the EF model, regardless of
+            // whether a convenience DbSet property was declared.
             // 4a. Hearing attendance -> Hearings
             var hearingIds = await _context.Hearings.Where(x => x.CaseID == request.CaseID).Select(x => x.HearingID).ToListAsync(cancellationToken);
 
@@ -125,25 +115,17 @@ public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditServic
             // Persist child deletions before removing the parent
             await _context.SaveChangesAsync(cancellationToken);
 
-            // ================================================
             // 5. Delete the case itself — now FK-safe
-            // ================================================
             _context.Cases.Remove(caseToDelete);
 
-            // ================================================
             // 6. Create Audit Log
-            // ================================================
             var auditLog = _auditService.Create(currentUserId, $"Case Delete: {caseToDelete.CaseNumber}");
             _context.AuditLogs.Add(auditLog);
 
-            // ================================================
             // 7. Save changes
-            // ================================================
             await _context.SaveChangesAsync(cancellationToken);
 
-            // ================================================
             // 8. Commit transaction
-            // ================================================
             await transaction.CommitAsync(cancellationToken);
 
             _logger.LogInformation("Case successfully deleted: {CaseID}", request.CaseID);

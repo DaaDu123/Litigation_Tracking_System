@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.ChangePassword;
@@ -30,9 +30,7 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool
     {
         _logger.LogInformation("Password change attempt for user: {UserId}", request.UserID);
 
-        // ================================================
         // 1. Find user
-        // ================================================
         var user = await _context.Users
             .FirstOrDefaultAsync(
                 x => x.UserID == request.UserID,
@@ -44,9 +42,7 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool
             throw new NotFoundException("User not found.");
         }
 
-        // ================================================
         // 2. Verify old password
-        // ================================================
         bool isOldPasswordValid = _passwordService.VerifyPassword(
             request.OldPassword,
             user.PasswordHash);
@@ -58,9 +54,7 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool
                 new List<string> { "Old password is incorrect." });
         }
 
-        // ================================================
         // 3. Update password
-        // ================================================
         user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;  // FIX: Use UpdatedAt instead of non-existent PasswordChangedDate
 
@@ -80,15 +74,11 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool
             activeTokens.Count,
             user.UserID);
 
-        // ================================================
         // 4. Create audit log
-        // ================================================
         _context.AuditLogs.Add(
             _auditService.Create(user.UserID, "Password Changed"));
 
-        // ================================================
         // 5. Save changes
-        // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Password changed successfully for user: {UserId}", request.UserID);

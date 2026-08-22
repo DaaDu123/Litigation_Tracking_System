@@ -7,7 +7,6 @@
                 ErrorMessage="_errorMessage" OnRetry="LoadAsync" CanManage="CanManageUsers"
                 CurrentUserId="Session.UserID" OnEdit="OpenEditAsync" OnDelete="HandleDeleteAsync" /> *@
 @using LTSFrontend.Features.Users.DTOs
-@using LTSFrontend.Shared.Components
 
 <DataTable TItem="UserDTO" Items="Users" IsLoading="IsLoading" HasError="HasError"
            ErrorMessage="ErrorMessage" OnRetry="OnRetry"

@@ -1,14 +1,11 @@
 @page "/permissions/assign"
 @page "/permissions/assign/{RoleId:int}"
 @attribute [Authorize(Roles = "SuperAdmin")]
-@using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.Permissions.Components
 @using LTSFrontend.Features.Permissions.DTOs
 @using LTSFrontend.Features.Permissions.Services
 @using LTSFrontend.Features.Roles.DTOs
 @using LTSFrontend.Features.Roles.Services
-@using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject IPermissionService PermissionService
 @inject IRoleService RoleService
 @inject ToastService Toast

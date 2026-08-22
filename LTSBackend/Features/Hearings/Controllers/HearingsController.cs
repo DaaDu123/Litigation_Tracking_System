@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -114,11 +114,9 @@ namespace LTSBackend.Features.Hearings.Controllers
             return Ok(new ApiResponse<bool> { Success = result, Data = result, Message = "Hearing deleted successfully" });
         }
 
-        // ================================================================
         // HEARING ATTENDANCE
         // SRS Reference: Complete Database Schema - HearingAttendance table
         // Fixes Critical Issue: "Hearing Attendance Tracking" had model but no API
-        // ================================================================
 
         [HttpPost("{hearingId}/attendance")]
         [Authorize(Roles = RoleNames.AllFirmUsers)]

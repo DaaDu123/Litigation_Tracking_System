@@ -15,12 +15,10 @@ public class GetCaseStatusHistoryHandler(AppDbContext _context,ICurrentUserServi
     {
         _logger.LogInformation("Fetching status history for case: {CaseID}", request.CaseID);
 
-        // ================================================
         // 1. Confirm the case exists and is within the caller's firm.
-        //    (Same tenant check as GetCaseByIdHandler - AppDbContext's
-        //    global query filter already scopes Cases by FirmID, but we
-        //    check explicitly here too so the 404 message is accurate.)
-        // ================================================
+        // (Same tenant check as GetCaseByIdHandler - AppDbContext's
+        // global query filter already scopes Cases by FirmID, but we
+        // check explicitly here too so the 404 message is accurate.)
         var caseExists = await _context.Cases.AsNoTracking().AnyAsync(x => x.CaseID == request.CaseID && x.FirmID == _currentUser.FirmID, cancellationToken);
 
         if (!caseExists)
@@ -29,12 +27,10 @@ public class GetCaseStatusHistoryHandler(AppDbContext _context,ICurrentUserServi
             throw new NotFoundException($"Case ID {request.CaseID} not found");
         }
 
-        // ================================================
         // 1b. Same per-case visibility rule as GetCaseByIdHandler: users
-        //     without full case-directory visibility must be actively
-        //     assigned to this case to see anything about it, including
-        //     its status history. 404 (not 403) so existence isn't leaked.
-        // ================================================
+        // without full case-directory visibility must be actively
+        // assigned to this case to see anything about it, including
+        // its status history. 404 (not 403) so existence isn't leaked.
         if (_currentUser.UserID.HasValue)
         {
             bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
@@ -51,10 +47,8 @@ public class GetCaseStatusHistoryHandler(AppDbContext _context,ICurrentUserServi
             }
         }
 
-        // ================================================
         // 2. Pull the timeline, newest first, with names resolved
-        //    (old status can be null for the very first "New" entry).
-        // ================================================
+        // (old status can be null for the very first "New" entry).
         var history = await _context.CaseStatusHistories
             .AsNoTracking()
             .Where(x => x.CaseID == request.CaseID)

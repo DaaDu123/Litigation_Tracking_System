@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Authorization;
 using LTSBackend.Features.Permissions.Commands.AssignPermissions;
 using LTSBackend.Features.Permissions.DTOs;
@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LTSBackend.Features.Permissions.Controllers;
 
-// ================================================================
 // INTENTIONAL DESIGN - see the identical note on RolesController.
 // [HasPermission("ManageRoles")] is deliberately unreachable by any role
 // except SuperAdmin (who bypasses permission checks entirely) because
@@ -18,7 +17,6 @@ namespace LTSBackend.Features.Permissions.Controllers;
 // platform-wide; do not grant "ManageRoles" to FirmAdmin or any other
 // role without first adding tenant scoping to Role/RolePermission -
 // otherwise this becomes a cross-tenant privilege-escalation path.
-// ================================================================
 [Route("api/[controller]")]
 [ApiController]
 [HasPermission("ManageRoles")]
@@ -33,9 +31,7 @@ public class PermissionsController : ControllerBase
         _logger = logger;
     }
 
-    // =====================================================
     // GET ALL PERMISSIONS
-    // =====================================================
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -44,14 +40,10 @@ public class PermissionsController : ControllerBase
 
         var permissions = await _mediator.Send(new GetAllPermissionsQuery());
 
-        return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(
-            permissions,
-            "Permissions fetched successfully."));
+        return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(permissions,"Permissions fetched successfully."));
     }
 
-    // =====================================================
     // GET ROLE PERMISSIONS
-    // =====================================================
 
     [HttpGet("role/{roleId}")]
     public async Task<IActionResult> GetRolePermissions(int roleId)
@@ -60,26 +52,18 @@ public class PermissionsController : ControllerBase
 
         var permissions = await _mediator.Send(new GetRolePermissionsQuery(roleId));
 
-        return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(
-            permissions,
-            "Role permissions fetched successfully."));
+        return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(permissions,"Role permissions fetched successfully."));
     }
 
-    // =====================================================
     // ASSIGN PERMISSIONS TO ROLE
-    // =====================================================
 
     [HttpPut("assign")]
     public async Task<IActionResult> AssignPermissions([FromBody] AssignPermissionsCommand command)
     {
-        _logger.LogInformation(
-            "Assign permissions request for role: {RoleID}",
-            command.RoleID);
+        _logger.LogInformation("Assign permissions request for role: {RoleID}",command.RoleID);
 
         var result = await _mediator.Send(command);
 
-        return Ok(ApiResponse<bool>.SuccessResponse(
-            result,
-            "Permissions assigned successfully."));
+        return Ok(ApiResponse<bool>.SuccessResponse(result,"Permissions assigned successfully."));
     }
 }

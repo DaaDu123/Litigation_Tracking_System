@@ -1,12 +1,8 @@
 @page "/users"
 @attribute [Authorize(Roles = "Partner,FirmAdmin")]
-@using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.Users.Components
 @using LTSFrontend.Features.Users.DTOs
 @using LTSFrontend.Features.Users.Services
-@using LTSFrontend.Shared.Components
-@using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject IUserService UserService
 @inject UserSessionState Session
 @inject ToastService Toast

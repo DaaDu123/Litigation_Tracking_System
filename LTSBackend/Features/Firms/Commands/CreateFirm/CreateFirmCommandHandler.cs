@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Security;
@@ -31,7 +31,6 @@ public class CreateFirmCommandHandler(
         if (emailExists)
             throw new ValidationException([$"Email '{request.AdminEmail}' already exists."]);
 
-        // ================================================================
         // EnableRetryOnFailure (Program.cs / AppDbContextFactory) means EF
         // Core's SqlServerRetryingExecutionStrategy is active, which does
         // NOT allow a manually-opened transaction to span multiple retried
@@ -40,7 +39,6 @@ public class CreateFirmCommandHandler(
         // inside it) must instead run through CreateExecutionStrategy().
         // ExecuteAsync(...), which knows how to safely retry the *whole*
         // block (including re-opening the transaction) as one atomic unit.
-        // ================================================================
         var strategy = _context.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>

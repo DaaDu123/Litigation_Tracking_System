@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Security;
@@ -22,11 +22,9 @@ public class ApproveFirmAdminRequestCommandHandler(AppDbContext _context,IEmailS
         if (firmAdminRequest.Status != "Pending")
             throw new ValidationException([$"This request has already been {firmAdminRequest.Status.ToLower()}."]);
 
-        // ================================================================
         // Re-check uniqueness at approval time too - the code/email could
         // have been taken by something else (e.g. a direct SuperAdmin
         // CreateFirm call) in the time since the request was submitted.
-        // ================================================================
         bool firmCodeTaken = await _context.Firms.AsNoTracking().AnyAsync(x => x.FirmCode == firmAdminRequest.FirmCode, cancellationToken);
 
         if (firmCodeTaken)

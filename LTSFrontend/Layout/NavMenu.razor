@@ -1,4 +1,3 @@
-@using LTSFrontend.State
 @inject UserSessionState Session
 
 <nav>
@@ -8,13 +7,10 @@
         </NavLink>
     </div>
 
-    @* ===================================================================
-       FIRM-OPERATIONAL AREA - every role except SuperAdmin. SuperAdmin is
-       a platform-level role (Firms + system Audit Logs only) and must not
-       see case/hearing/deadline/user/master-data screens - see
-       RoleNames.cs and DocumentPermissionService for the backend side of
-       this same policy.
-       =================================================================== *@
+    @* Firm-operational area - every role except SuperAdmin. SuperAdmin is a
+       platform-level role (Firms + system Audit Logs only) and must not see
+       case/hearing/deadline/user/master-data screens - see RoleNames.cs and
+       DocumentPermissionService for the backend side of this same policy. *@
     <AuthorizeView Roles="FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal">
         <Authorized>
             <div class="nav-item">
@@ -66,14 +62,11 @@
         </Authorized>
     </AuthorizeView>
 
-    @* ===================================================================
-       SUPERADMIN AREA - platform-level only: Firm workspace provisioning
-       and system-wide Audit Logs. Nothing else. Roles & Permissions stays
-       here too (RolesController/PermissionsController are deliberately
-       SuperAdmin-only - see the design note on RolesController: Role and
-       RolePermission are GLOBAL, non-tenant-scoped tables, so this is a
-       pre-existing architectural constraint, not scope creep).
-       =================================================================== *@
+    @* SuperAdmin area - platform-level only: firm workspace provisioning and
+       system-wide audit logs. Roles & Permissions stay here too
+       (RolesController/PermissionsController are deliberately SuperAdmin-only
+       - Role and RolePermission are GLOBAL, non-tenant-scoped tables, so
+       this is a pre-existing architectural constraint, not scope creep). *@
     <AuthorizeView Roles="SuperAdmin">
         <Authorized>
             <div class="nav-item">

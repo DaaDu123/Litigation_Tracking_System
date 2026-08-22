@@ -1,15 +1,11 @@
 @page "/cases"
 @attribute [Authorize(Roles = "FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal")]
-@using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Core.DTOs
 @using LTSFrontend.Features.Cases.Components
 @using LTSFrontend.Features.Cases.DTOs
 @using LTSFrontend.Features.Cases.Services
 @using LTSFrontend.Features.Masters.DTOs
 @using LTSFrontend.Features.Masters.Services
-@using LTSFrontend.Shared.Components
-@using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject ICaseService CaseService
 @inject ICourtService CourtService
 @inject IMasterDataService MasterDataService

@@ -93,7 +93,6 @@ namespace LTSFrontend.Core.Http
                 }
             }
 
-            // ================================================================
             // SILENT TOKEN REFRESH: the access token is short-lived (60 min
             // by default - see JwtSettings.ExpiryMinutes on the backend).
             // Without this, once it expires every single request would
@@ -105,7 +104,6 @@ namespace LTSFrontend.Core.Http
             // would mean cloning/resending the original request, including
             // any multipart file-upload content that can only be read
             // once - proactive refresh avoids that whole class of bugs).
-            // ================================================================
             bool hasKnownIdentity = _session.UserID != 0;
             bool tokenMissingOrExpiring = string.IsNullOrWhiteSpace(_session.AccessToken) || !_session.AccessTokenExpiry.HasValue || _session.AccessTokenExpiry.Value <= DateTime.UtcNow.AddSeconds(30);
 
@@ -193,7 +191,6 @@ namespace LTSFrontend.Core.Http
 
             var raw = await response.Content.ReadAsStringAsync(ct);
 
-            // ================================================================
             // ROOT-CAUSE FIX: error responses were being deserialized into
             // ApiResponse<T> - the SAME T the caller expects back on
             // success (e.g. `int` for CreateFirmAsync). LTSBackend's error
@@ -206,12 +203,10 @@ namespace LTSFrontend.Core.Http
             // errors (e.g. "Firm code can only contain letters, numbers,
             // and hyphens.") were showing up on screen as a generic
             // "Request failed with status 400" instead of the real reason.
-            //
             // Fix: parse error bodies with a small envelope that has no
             // Data property at all, so it can never fail to bind regardless
             // of what T the caller asked for. Only ever deserialize into
             // ApiResponse<T> once we know the call actually succeeded.
-            // ================================================================
             if (!response.IsSuccessStatusCode)
             {
                 string message = $"Request failed with status {(int)response.StatusCode} ({response.StatusCode}).";

@@ -1,8 +1,8 @@
-﻿namespace LTSBackend.Comman.Enum;
+namespace LTSBackend.Comman.Enum;
 
 public enum PermissionEnum
 {
-    // ===== SUPER ADMIN PERMISSIONS =====
+    // SUPER ADMIN PERMISSIONS
     /// <summary>
     /// Create/Block/Remove Firms
     /// </summary>
@@ -23,7 +23,7 @@ public enum PermissionEnum
     /// </summary>
     ManageSystemUsers = 104,
 
-    // ===== FIRM ADMIN PERMISSIONS =====
+    // FIRM ADMIN PERMISSIONS
     /// <summary>
     /// Create and manage firm users
     /// </summary>
@@ -82,7 +82,7 @@ public enum PermissionEnum
     /// </summary>
     ViewAuditLogs = 208,
 
-    // ===== PARTNER / SENIOR LAWYER =====
+    // PARTNER / SENIOR LAWYER
     /// <summary>
     /// View firm-wide case portfolio
     /// </summary>
@@ -123,7 +123,7 @@ public enum PermissionEnum
     /// </summary>
     ViewFirmAnalytics = 308,
 
-    // ===== ASSOCIATE LAWYER =====
+    // ASSOCIATE LAWYER
     /// <summary>
     /// View assigned cases only
     /// </summary>
@@ -154,7 +154,7 @@ public enum PermissionEnum
     /// </summary>
     LogBillableHours = 406,
 
-    // ===== MOHARRIR (LEGAL CLERK) =====
+    // MOHARRIR (LEGAL CLERK)
     /// <summary>
     /// Data entry - court diaries, hearing dates
     /// </summary>
@@ -180,7 +180,7 @@ public enum PermissionEnum
     /// </summary>
     MaintainCaseRecords = 505,
 
-    // ===== INTERN / PARALEGAL =====
+    // INTERN / PARALEGAL
     /// <summary>
     /// View documents read-only
     /// </summary>
@@ -196,7 +196,7 @@ public enum PermissionEnum
     /// </summary>
     PerformResearch = 603,
 
-    // ===== CROSS-ROLE (every authenticated role has its own dashboard) =====
+    // CROSS-ROLE (every authenticated role has its own dashboard)
     /// <summary>
     /// View one's own role-scoped dashboard (DashboardController). BUG FIX:
     /// same gap as ViewLoginHistory/ViewAuditLogs above - this permission

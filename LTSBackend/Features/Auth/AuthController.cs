@@ -29,9 +29,7 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
-    // =====================================================
     // REGISTRATION & EMAIL VERIFICATION
-    // =====================================================
 
     // SECURITY: rate limited (see Program.cs "auth-moderate" policy) —
     // otherwise open self-registration + resend-otp are spam/enumeration
@@ -71,9 +69,7 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<ResendOtpResponseDTO>.SuccessResponse(result, result.Message));
     }
 
-    // =====================================================
     // LOGIN & LOGOUT
-    // =====================================================
 
     // SECURITY: rate limited (see Program.cs "auth-critical" policy) — the
     // per-account lockout in LoginHandler doesn't stop an attacker trying
@@ -97,9 +93,7 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Logout successful!"));
     }
 
-    // =====================================================
     // TOKEN REFRESH
-    // =====================================================
 
     // SECURITY: rate limited (see Program.cs "auth-critical" policy) —
     // caps how fast a stolen/guessed refresh token cookie can be replayed.
@@ -115,9 +109,7 @@ public class AuthController : ControllerBase
             "Access token refreshed successfully."));
     }
 
-    // =====================================================
     // PASSWORD OPERATIONS
-    // =====================================================
 
     [HttpPost("change-password")]
     [Authorize]
@@ -140,7 +132,8 @@ public class AuthController : ControllerBase
     // SECURITY: rate limited (see Program.cs "auth-moderate" policy) —
     // ForgotPassword returns a generic response regardless of whether the
     // email exists (see ForgotPasswordHandler), but without a rate limit
-    // an attacker could still email-bomb a target or brute-force timing.
+    // an attacker could still email-bomb a target. Also doubles as the
+    // "resend OTP" call for this flow - see ForgotPasswordHandler.
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-moderate")]
@@ -151,16 +144,16 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<ForgotPasswordResponseDTO>.SuccessResponse(result, result.Message));
     }
 
-    // SECURITY: rate limited (see Program.cs "auth-critical" policy) —
-    // the token itself is a high-entropy single-use secret (see
-    // ForgotPasswordHandler), but the endpoint is still rate limited to
-    // slow down any attempt to brute-force it.
+    // SECURITY: rate limited (see Program.cs "auth-critical" policy) — same
+    // brute-force concern as VerifyOtp: this is where a 6-digit code gets
+    // checked, so unlimited guesses inside the 5-minute expiry must be
+    // blocked here too.
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-critical")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command)
     {
-        _logger.LogInformation("Password reset request received (via reset link)");
+        _logger.LogInformation("Password reset request received (via OTP) for email: {Email}", command.Email);
         var result = await _mediator.Send(command);
         return Ok(ApiResponse<ResetPasswordResponseDTO>.SuccessResponse(result, result.Message));
     }

@@ -11,7 +11,6 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCaseParties
     {
         public async Task<List<CasePartyDetailDTO>> Handle(GetCasePartiesQuery request, CancellationToken cancellationToken)
         {
-            // ================================================================
             // SECURITY FIX (IDOR / broken access control): this previously only
             // checked firm (tenant) scoping, which let ANY authenticated user in
             // the firm - including AssociateLawyer, Moharrir, and
@@ -20,7 +19,6 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCaseParties
             // cases"), only SuperAdmin/FirmAdmin/Partner (full case-directory
             // visibility) or a user actually assigned to THIS case may see it -
             // mirrors the check already done in GetCaseAssignmentsHandler.
-            // ================================================================
             if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);

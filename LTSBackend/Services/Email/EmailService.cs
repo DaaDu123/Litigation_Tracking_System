@@ -17,19 +17,6 @@ public class EmailService(IConfiguration _configuration, ILogger<EmailService> _
         _logger.LogInformation("OTP email sent successfully to {Email}", toEmail);
     }
 
-    public async Task SendPasswordResetLinkAsync(string toEmail, string fullName, string resetLink, int expiryMinutes)
-    {
-        var textBody = $"Dear {fullName},\r\n\r\n" +
-                        $"We received a request to reset the password for your LTS account.\r\n\r\n" +
-                        $"Click the link below to set a new password:\r\n{resetLink}\r\n\r\n" +
-                        $"This link is valid for {expiryMinutes} minutes and can only be used once.\r\n\r\n" +
-                        $"If you didn't request a password reset, no action is needed - your password will remain unchanged.\r\n\r\n" +
-                        $"Regards,\r\nLTS System";
-
-        await SendAsync(toEmail, fullName, "LTS - Reset Your Password", textBody);
-        _logger.LogInformation("Password reset link email sent successfully to {Email}", toEmail);
-    }
-
     public async Task SendNotificationEmailAsync(string toEmail, string fullName, string subject, string message)
     {
         var textBody = $"Dear {fullName},\r\n\r\n" +

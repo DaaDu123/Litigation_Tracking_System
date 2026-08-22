@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Services.ProfileService;
@@ -29,11 +29,8 @@ public class UpdateMyProfileHandler : IRequestHandler<UpdateMyProfileCommand, bo
     {
         _logger.LogInformation("Updating profile for user: {UserId}", request.UserID);
 
-        // ================================================
         // 1. Find user
-        // ================================================
-        var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
         {
@@ -41,9 +38,7 @@ public class UpdateMyProfileHandler : IRequestHandler<UpdateMyProfileCommand, bo
             throw new NotFoundException("User not found.");
         }
 
-        // ================================================
         // 2. Handle profile image update
-        // ================================================
         if (request.ProfileImage != null)
         {
             // Delete old image if exists
@@ -58,17 +53,13 @@ public class UpdateMyProfileHandler : IRequestHandler<UpdateMyProfileCommand, bo
             _logger.LogInformation("New profile image saved for user: {UserId}", request.UserID);
         }
 
-        // ================================================
         // 3. Update user properties
-        // ================================================
         user.FullName = request.FullName;
         user.Phone = request.Phone;
         user.Department = request.Department;
         user.UpdatedAt = DateTime.UtcNow;
 
-        // ================================================
         // 4. Save changes
-        // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Profile updated successfully for user: {UserId}", request.UserID);

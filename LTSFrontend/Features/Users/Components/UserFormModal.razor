@@ -4,11 +4,8 @@
    one save. Opened imperatively from UserList.razor via @ref:
      _formModal.OpenForCreateAsync() / OpenForEditAsync(user); *@
 @using LTSFrontend.Core.Enums
-@using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.Users.DTOs
 @using LTSFrontend.Features.Users.Services
-@using LTSFrontend.Shared.Components
-@using Microsoft.AspNetCore.Components.Forms
 @inject IUserService UserService
 
 <div class="lts-modal-backdrop @(_isOpen ? "show" : "")" @onclick="CloseIfNotSaving"></div>

@@ -15,9 +15,7 @@ public class GetDocumentHandler(AppDbContext _context, IDocumentPermissionServic
     {
         _logger.LogInformation("Get document request - ID: {DocumentId}, User: {UserId}", request.DocumentID, request.UserID);
 
-        // ================================================
         // 1. Check user permissions
-        // ================================================
         bool canView = await _permissionService.CanUserAccessDocumentAsync(
             request.UserID,
             request.DocumentID,
@@ -30,9 +28,7 @@ public class GetDocumentHandler(AppDbContext _context, IDocumentPermissionServic
             throw new UnauthorizedException("You don't have permission to view this document");
         }
 
-        // ================================================
         // 2. Fetch document
-        // ================================================
         var document = await _context.Documents
             .AsNoTracking()
             .Include(x => x.DocumentType)
@@ -45,9 +41,7 @@ public class GetDocumentHandler(AppDbContext _context, IDocumentPermissionServic
             throw new NotFoundException($"Document {request.DocumentID} not found");
         }
 
-        // ================================================
         // 3. Map to DTO
-        // ================================================
         var user = await _context.Users
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.UserID == document.UploadedBy, cancellationToken);

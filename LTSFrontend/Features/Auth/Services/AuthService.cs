@@ -74,7 +74,8 @@ namespace LTSFrontend.Features.Auth.Services
         {
             var payload = new
             {
-                request.Token,
+                request.Email,
+                request.OtpCode,
                 request.NewPassword
             };
 

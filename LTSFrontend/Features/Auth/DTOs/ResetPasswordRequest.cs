@@ -3,11 +3,17 @@ using System.ComponentModel.DataAnnotations;
 namespace LTSFrontend.Features.Auth.DTOs
 {
     /// <summary>Mirrors LTSBackend.Features.Auth.ResetPassword.ResetPasswordCommand / ResetPasswordValidator.
-    /// Token comes from the reset-link email (query string), not typed by the user.</summary>
+    /// Email + OtpCode come from the forgot-password step; both are sent
+    /// together with the new password in one call (see ResetPasswordHandler).</summary>
     public class ResetPasswordRequest : IValidatableObject
     {
-        [Required(ErrorMessage = "This reset link is invalid or has expired. Please request a new one.")]
-        public string Token { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "OTP code is required.")]
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "OTP code must be 6 digits.")]
+        public string OtpCode { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "New password is required.")]
         [MinLength(8, ErrorMessage = "Password must be at least 8 characters long.")]

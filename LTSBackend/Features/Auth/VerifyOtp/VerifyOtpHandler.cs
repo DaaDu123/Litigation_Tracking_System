@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Features.Auth.VerifyOtp;
@@ -18,9 +18,7 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
     {
         _logger.LogInformation("OTP verification attempt for email: {Email}", request.Email);
 
-        // ================================================
         // 1. Find and validate OTP (Purpose must be Registration)
-        // ================================================
         var otp = await _context.UserOtps
             .FirstOrDefaultAsync(x =>
                 x.Email == request.Email &&
@@ -36,9 +34,7 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
             throw new ValidationException(new List<string> { "Invalid or expired OTP code." });
         }
 
-        // ================================================
         // 2. Find user and load role
-        // ================================================
         var user = await _context.Users.Include(x => x.Role).FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         if (user == null)
@@ -47,26 +43,20 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
             throw new NotFoundException("User not found.");
         }
 
-        // ================================================
         // 3. Activate user account and mark OTP as used
-        // ================================================
         user.IsActive = true;
         otp.IsUsed = true;
 
-        // ================================================
         // 4. Generate tokens
-        // ================================================
         var accessToken = _jwtService.GenerateToken(user);
         var refreshToken = _jwtService.GenerateRefreshToken();
 
-        // ================================================
         // 5. Save refresh token
-        //    FIX: expiry was hardcoded to 7 days here, inconsistent
-        //    with Login/RefreshToken handlers which use the configured
-        //    JwtSettings.RefreshTokenDays via GetRefreshTokenExpiry().
-        //    SECURITY: only the SHA-256 hash is persisted, matching
-        //    LoginHandler/RefreshTokenHandler — never the raw token.
-        // ================================================
+        // FIX: expiry was hardcoded to 7 days here, inconsistent
+        // with Login/RefreshToken handlers which use the configured
+        // JwtSettings.RefreshTokenDays via GetRefreshTokenExpiry().
+        // SECURITY: only the SHA-256 hash is persisted, matching
+        // LoginHandler/RefreshTokenHandler — never the raw token.
         _context.RefreshTokens.Add(new RefreshTokenEntity
         {
             UserID = user.UserID,
@@ -75,22 +65,16 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
             IsRevoked = false
         });
 
-        // ================================================
         // 6. Create audit log
-        //    FIX: every other significant auth action (Login, Logout,
-        //    Register, ResetPassword, ChangePassword, RefreshToken)
-        //    writes an audit entry — this was missing here.
-        // ================================================
+        // FIX: every other significant auth action (Login, Logout,
+        // Register, ResetPassword, ChangePassword, RefreshToken)
+        // writes an audit entry — this was missing here.
         _context.AuditLogs.Add(_auditService.Create(user.UserID, "Email Verified via OTP"));
 
-        // ================================================
         // 7. Save all changes
-        // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
-        // ================================================
         // 8. Set refresh token cookie
-        // ================================================
         if (_httpContextAccessor.HttpContext != null)
         {
             _jwtService.SetRefreshTokenCookie(_httpContextAccessor.HttpContext.Response, refreshToken);

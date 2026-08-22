@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.AuditLogs.DTOs;
 using LTSBackend.Features.AuditLogs.Queries.GetAuditLogs;
 using LTSBackend.Features.Authorization;
@@ -21,9 +21,7 @@ public class AuditLogsController : ControllerBase
         _logger = logger;
     }
 
-    // =====================================================
     // GET ALL AUDIT LOGS
-    // =====================================================
 
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] string? action, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)

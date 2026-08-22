@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
@@ -16,13 +16,11 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
     {
         _logger.LogInformation("Create user request for email: {Email}", request.Email);
 
-        // ================================================
         // 0. Load the acting user first (needed both for the
         // role-hierarchy checks below AND for the email-reuse
         // ownership check in step 1 - we need to know the acting
         // firm before we can decide whether a soft-deleted row with
         // this email belongs to "us" or to another firm).
-        // ================================================
         var actingUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserID == request.ActingUserID, cancellationToken);
         if (actingUser == null)
         {
@@ -30,23 +28,19 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             throw new ValidationException(["Could not identify the requesting user."]);
         }
 
-        // ================================================
         // 2c. Multi-tenancy: new user inherits the acting user's
         // firm. SuperAdmin has no firm of their own, so they can't
         // create firm-scoped users via this endpoint - firms are
         // bootstrapped (with their first Firm Admin) via
         // POST /api/firms instead.
-        // ================================================
         if (actingUser.FirmID == null)
         {
             _logger.LogWarning("SuperAdmin {ActingUserId} attempted to create a user via /api/users instead of /api/firms", request.ActingUserID);
             throw new ValidationException(["SuperAdmin cannot create a firm user via this endpoint - create the firm first via POST /api/firms."]);
         }
 
-        // ================================================
         // 1. Check whether the email already exists, and whether a
         // soft-deleted row for it can be reused.
-       // ================================================
         var existingUser = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         bool isReuse = false;
@@ -78,9 +72,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             isReuse = true;
         }
 
-        // ================================================
         // 2. Verify that the Role is valid and exists
-        // ================================================
         if (!request.RoleID.HasValue || request.RoleID <= 0)
         {
             _logger.LogWarning("User creation failed: Invalid RoleID");
@@ -101,10 +93,8 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             throw new NotFoundException($"Role ID {request.RoleID} not found");
         }
 
-        // ================================================
         // 2b. Enforce role hierarchy — the acting user cannot
         // assign a role above their own or assign SuperAdmin
-        // ================================================
         var actingRole = actingUser.GetRole();
         if (actingRole == null || !RoleHierarchy.CanAssignRole(actingRole.Value, request.RoleID.Value))
         {
@@ -112,16 +102,12 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             throw new ValidationException(["You are not authorized to assign this role."]);
         }
 
-        // ================================================
         // 3. Get role details
-        // ================================================
         var role = await _context.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.RoleID == request.RoleID, cancellationToken);
 
         _logger.LogInformation("Role fetched: {RoleName}", role?.RoleName);
 
-        // ================================================
         // 4. Validate Department if one was provided
-        // ================================================
         if (!string.IsNullOrEmpty(request.Department))
         {
             bool deptExists = await _context.Departments.AsNoTracking().AnyAsync(x => x.DepartmentName == request.Department, cancellationToken);
@@ -132,14 +118,10 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             }
         }
 
-        // ================================================
         // 5. Hash the password
-        // ================================================
         string passwordHash = _passwordService.HashPassword(request.Password);
 
-        // ================================================
         // 6. Handle profile image upload
-        // ================================================
         string? profileImagePath = null;
         if (request.ProfileImage is { Length: > 0 })
         {
@@ -158,16 +140,13 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             }
         }
 
-        // ================================================
         // 7/8. Either reuse the existing soft-deleted record, or
         // create a brand new User row.
-        // ================================================
         int resultUserId;
         User? newUser = null;
 
         if (isReuse)
         {
-            // ============================================
             // REUSE PATH — restore the original row instead of
             // inserting a new one. Same UserID, same EmployeeNo,
             // same historical CreatedAt/audit trail; everything
@@ -176,7 +155,6 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             // since the earlier lookup was a fresh query and the
             // row is invisible to normal tracked queries while
             // IsDeleted == true.
-            // ================================================
             var userToRestore = await _context.Users.IgnoreQueryFilters().FirstAsync(x => x.Email == request.Email, cancellationToken);
 
             _logger.LogInformation("Reusing soft-deleted user record {UserID} (previously firm {PreviousFirmId}) for email {Email}, new firm {NewFirmId}",userToRestore.UserID, userToRestore.FirmID, request.Email, actingUser.FirmID);
@@ -205,9 +183,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         }
         else
         {
-            // ============================================
             // NORMAL PATH — brand new person, brand new row.
-            // ============================================
             string employeeNo = GenerateEmployeeNo();
 
             newUser = new User
@@ -235,14 +211,12 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             resultUserId = 0; // populated after SaveChanges below
         }
 
-        // ================================================
         // 9. Persist. Race-condition guard: two concurrent requests
         // could both pass the email-existence check above before
         // either commits (classic TOCTOU). The filtered unique index
         // on Users.Email is the real backstop - catch its violation
         // here and turn it into the same clean validation message
         // instead of an unhandled 500.
-        // ================================================
         try
         {
             await _context.SaveChangesAsync(cancellationToken);

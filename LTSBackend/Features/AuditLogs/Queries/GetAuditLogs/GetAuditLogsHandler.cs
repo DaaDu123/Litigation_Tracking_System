@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Data;
 using LTSBackend.Features.AuditLogs.DTOs;
 using LTSBackend.Services.CurrentUser;
@@ -34,7 +34,6 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
             .Include(x => x.User)
             .AsQueryable();
 
-        // ================================================
         // CRITICAL FIX (cross-tenant data leak): AuditLog has no FirmID
         // column, and this query previously applied no tenant scoping at
         // all - relying entirely on AppDbContext's global query filter,
@@ -42,13 +41,10 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
         // review pass. Explicit scoping here as well (defense in depth,
         // matching this codebase's convention elsewhere) so this can never
         // regress even if a future change reads via IgnoreQueryFilters().
-        // ================================================
         if (!_currentUser.IsSuperAdmin)
             query = query.Where(x => x.User != null && x.User.FirmID == _currentUser.FirmID);
 
-        // ================================================
         // 1. Search by user name or email
-        // ================================================
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim();
@@ -61,9 +57,7 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
             _logger.LogInformation("Applied search filter: {Search}", search);
         }
 
-        // ================================================
         // 2. Filter by action
-        // ================================================
         if (!string.IsNullOrWhiteSpace(request.Action))
         {
             query = query.Where(x =>
@@ -72,9 +66,7 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
             _logger.LogInformation("Applied action filter: {Action}", request.Action);
         }
 
-        // ================================================
         // 3. Filter by date range
-        // ================================================
         if (request.FromDate.HasValue)
         {
             query = query.Where(x =>
@@ -91,14 +83,10 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
             _logger.LogInformation("Applied to date filter: {ToDate}", request.ToDate);
         }
 
-        // ================================================
         // 4. Get total record count
-        // ================================================
         var total = await query.CountAsync(cancellationToken);
 
-        // ================================================
         // 5. Apply pagination and ordering
-        // ================================================
         var items = await query
             .OrderByDescending(x => x.Timestamp)
             .Skip((request.PageNumber - 1) * request.PageSize)

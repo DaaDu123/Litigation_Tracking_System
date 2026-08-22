@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +6,6 @@ namespace LTSBackend.Services.Permissions;
 
 public class PermissionService(AppDbContext _context, ILogger<PermissionService> _logger) : IPermissionService
 {
-    // ================================================
     // Fixed, hard-coded permission set for SuperAdmin (the platform owner).
     // Deliberately NOT "every permission" - see the Roles SRS: SuperAdmin's
     // job is workspace provisioning, FirmAdmin account custody, data
@@ -19,7 +18,6 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
     // and the FirmAdmin account lifecycle are global, non-tenant-scoped
     // concerns with no other legitimate owner - not because SuperAdmin is
     // meant to have broad reach.
-    // ================================================
     private static readonly HashSet<string> SuperAdminPermissions = new(StringComparer.Ordinal)
     {
         nameof(PermissionEnum.ManageFirms),          // Firm workspace provisioning/blocking/removal
@@ -43,15 +41,13 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
     {
         try
         {
-            // ================================================
             // 1. Load the user with role + role-permissions + firm status.
-            //    IgnoreQueryFilters(): this service is also used by the
-            //    authorization handler itself, so it must be able to see
-            //    the record regardless of the caller's own tenant scope in
-            //    order to correctly evaluate it (and then explicitly reject
-            //    inactive/blocked accounts below, rather than have them
-            //    silently disappear behind a filter).
-            // ================================================
+            // IgnoreQueryFilters(): this service is also used by the
+            // authorization handler itself, so it must be able to see
+            // the record regardless of the caller's own tenant scope in
+            // order to correctly evaluate it (and then explicitly reject
+            // inactive/blocked accounts below, rather than have them
+            // silently disappear behind a filter).
             var user = await _context.Users
                 .IgnoreQueryFilters()
                 .AsNoTracking()
@@ -67,12 +63,10 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
                 return false;
             }
 
-            // ================================================
             // 2. Reject deactivated, soft-deleted, or blocked-firm accounts.
-            //    A valid, unexpired JWT does not by itself mean the account
-            //    is still allowed to act - Firm Admins can deactivate/block
-            //    users at any time, and Super Admin can suspend a firm.
-            // ================================================
+            // A valid, unexpired JWT does not by itself mean the account
+            // is still allowed to act - Firm Admins can deactivate/block
+            // users at any time, and Super Admin can suspend a firm.
             if (user.IsDeleted || !user.IsActive)
             {
                 _logger.LogWarning("Permission check denied - account inactive or deleted: {UserId}", userId);
@@ -85,19 +79,17 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
                 return false;
             }
 
-            // ================================================
             // 3. Super Admin holds ONLY the fixed platform-owner permission
-            //    set below - NOT every permission. Super Admin is scoped to:
-            //    workspace/firm provisioning, FirmAdmin account management,
-            //    system-wide audit/login-history visibility, the platform
-            //    dashboard, and (because Role/RolePermission are global,
-            //    non-tenant-scoped tables with no other legitimate owner -
-            //    see RolesController/PermissionsController) RBAC config.
-            //    Everything firm-internal (cases, documents, hearings,
-            //    master data, firm-level user management) is explicitly
-            //    OUT of scope and falls through to "denied" below, same as
-            //    any other role that lacks the permission.
-            // ================================================
+            // set below - NOT every permission. Super Admin is scoped to:
+            // workspace/firm provisioning, FirmAdmin account management,
+            // system-wide audit/login-history visibility, the platform
+            // dashboard, and (because Role/RolePermission are global,
+            // non-tenant-scoped tables with no other legitimate owner -
+            // see RolesController/PermissionsController) RBAC config.
+            // Everything firm-internal (cases, documents, hearings,
+            // master data, firm-level user management) is explicitly
+            // OUT of scope and falls through to "denied" below, same as
+            // any other role that lacks the permission.
             if (user.GetRole() == UserRole.SuperAdmin)
             {
                 bool superAdminAllowed = SuperAdminPermissions.Contains(permission);
@@ -105,9 +97,7 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
                 return superAdminAllowed;
             }
 
-            // ================================================
             // 4. Otherwise check the role's granted permissions.
-            // ================================================
             bool hasPermission = user.Role.RolePermissions.Any(rp => rp.Permission.PermissionName == permission);
 
             _logger.LogDebug("Permission check for user {UserId} on {Permission}: {Result}", userId, permission, hasPermission);

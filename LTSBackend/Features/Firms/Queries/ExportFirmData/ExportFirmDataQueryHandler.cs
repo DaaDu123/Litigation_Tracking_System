@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Text;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
@@ -67,7 +67,6 @@ public class ExportFirmDataQueryHandler(AppDbContext _context, ILogger<ExportFir
         }
     }
 
-    // ================================================================
     // SECURITY FIX (CSV / Excel Formula Injection): several of the
     // exported columns (FullName, Department, Designation, PartyName,
     // Organization) are user-controlled free text. If any such value
@@ -80,7 +79,6 @@ public class ExportFirmDataQueryHandler(AppDbContext _context, ILogger<ExportFir
     // a leading apostrophe forces spreadsheet apps to treat the cell as
     // plain text, neutralizing the formula while keeping the visible
     // value unchanged for a human reading the CSV directly.
-    // ================================================================
     private static readonly char[] FormulaTriggerChars = { '=', '+', '-', '@', '\t', '\r' };
 
     private static string CsvEscape(string value)

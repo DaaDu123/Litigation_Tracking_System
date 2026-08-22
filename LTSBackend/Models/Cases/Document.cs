@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using LTSBackend.Models.Masters;
 
@@ -34,7 +34,6 @@ public class Document
     [MaxLength(255)]
     public string? Remarks { get; set; }
 
-    // ================================================================
     // DRAFT WORKFLOW (SRS - Intern/Paralegal role):
     // "All uploaded work remains in Draft until approved by Partner or
     // Firm Admin." IsDraft is set true automatically for InternParalegal
@@ -43,7 +42,6 @@ public class Document
     // FirmAdmin can call. Uploads by every other role are never drafts
     // (published immediately), matching the SRS which only imposes this
     // gate on Intern/Paralegal work.
-    // ================================================================
     public bool IsDraft { get; set; } = false;
 
     // No [ForeignKey]/navigation property here, matching the existing

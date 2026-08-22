@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
@@ -21,10 +21,8 @@ public class SubmitFirmAdminRequestCommandHandler(AppDbContext _context,IPasswor
         var firmCode = request.FirmCode.Trim().ToUpperInvariant();
         var adminEmail = request.AdminEmail.Trim();
 
-        // ================================================================
         // 1. Firm code must not already belong to a live firm, and must not
-        //    already be tied to another still-Pending request.
-        // ================================================================
+        // already be tied to another still-Pending request.
         bool firmCodeTaken = await _context.Firms.AsNoTracking().AnyAsync(x => x.FirmCode == firmCode, cancellationToken);
 
         if (firmCodeTaken)
@@ -35,10 +33,8 @@ public class SubmitFirmAdminRequestCommandHandler(AppDbContext _context,IPasswor
         if (firmCodePending)
             throw new ValidationException([$"A request for firm code '{firmCode}' is already pending Super Admin review."]);
 
-        // ================================================================
         // 2. Admin email must not already exist as a real user, and must
-        //    not already be tied to another still-Pending request.
-        // ================================================================
+        // not already be tied to another still-Pending request.
         bool emailTaken = await _context.Users.AsNoTracking().AnyAsync(x => x.Email == adminEmail, cancellationToken);
 
         if (emailTaken)
@@ -49,11 +45,9 @@ public class SubmitFirmAdminRequestCommandHandler(AppDbContext _context,IPasswor
         if (emailPending)
             throw new ValidationException([$"A request for email '{adminEmail}' is already pending Super Admin review."]);
 
-        // ================================================================
         // 3. Persist the pending request. Password is hashed now - the
-        //    plaintext is never stored - so Approve just copies the hash
-        //    onto the new User row.
-        // ================================================================
+        // plaintext is never stored - so Approve just copies the hash
+        // onto the new User row.
         var firmAdminRequest = new FirmAdminRequest
         {
             FirmName = request.FirmName,
@@ -75,11 +69,9 @@ public class SubmitFirmAdminRequestCommandHandler(AppDbContext _context,IPasswor
         _logger.LogInformation("Firm Admin request {RequestId} submitted for firm code {FirmCode} by {AdminEmail}",
             firmAdminRequest.RequestID, firmCode, adminEmail);
 
-        // ================================================================
         // 4. Alert every Super Admin - in-app Notification AND an
-        //    immediate email (not the 2-minute background dispatcher,
-        //    this needs to reach them right away).
-        // ================================================================
+        // immediate email (not the 2-minute background dispatcher,
+        // this needs to reach them right away).
         await NotifySuperAdminsAsync(firmAdminRequest, cancellationToken);
 
         return firmAdminRequest.RequestID;

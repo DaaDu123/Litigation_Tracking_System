@@ -18,14 +18,12 @@ namespace LTSBackend.Features.CaseNotes.Queries.GetCaseNotes
         {
             int currentUserId = GetCurrentUserId();
 
-            // ================================================================
             // SECURITY FIX (IDOR / broken access control): previously only firm
             // (tenant) scoping was applied, so any firm user - including
             // AssociateLawyer, Moharrir, InternParalegal - could read case
             // notes (including confidential legal opinions, gated separately
             // below) for a case they are not assigned to. Mirrors the check
             // already used in GetCaseAssignmentsHandler.
-            // ================================================================
             if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);

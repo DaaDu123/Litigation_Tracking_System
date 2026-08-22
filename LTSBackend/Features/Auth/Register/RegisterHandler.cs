@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Security;
@@ -17,9 +17,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
     {
         _logger.LogInformation("Starting registration for email: {Email}", request.Email);
 
-        // ================================================
         // 1. Check if email already exists
-        // ================================================
         bool emailExists = await _context.Users.AsNoTracking().AnyAsync(x => x.Email == request.Email, cancellationToken);
 
         if (emailExists)
@@ -28,9 +26,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             throw new ValidationException(new List<string> { "Email already exists." });
         }
 
-        // ================================================
         // 2. Resolve the firm this user is registering into
-        // ================================================
         var firm = await _context.Firms.FirstOrDefaultAsync(x => x.FirmCode == request.FirmCode.Trim().ToUpper(), cancellationToken);
 
         if (firm == null)
@@ -48,9 +44,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             throw new ValidationException(["This firm workspace is currently blocked. Please contact your Firm Administrator."]);
         }
 
-        // ================================================
         // 3. Get default role (InternParalegal)
-        // ================================================
         var defaultRole = await _context.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.RoleID == (int)UserRole.InternParalegal, cancellationToken);
 
         if (defaultRole == null)
@@ -59,9 +53,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             throw new NotFoundException("Default role not found. Please contact administrator.");
         }
 
-        // ================================================
         // 3. Create user account
-        // ================================================
         var user = new User
         {
             FullName = request.FullName,
@@ -82,9 +74,7 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
 
         _logger.LogInformation("User created successfully with ID: {UserId}", user.UserID);
 
-        // ================================================
         // 4. Clean up old unused Registration OTPs
-        // ================================================
         var oldOtps = await _context.UserOtps.Where(x => x.Email == request.Email && !x.IsUsed && x.Purpose == OtpPurpose.Registration).ToListAsync(cancellationToken);
 
         if (oldOtps.Count > 0)
@@ -94,15 +84,11 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
             _logger.LogInformation("Removed {Count} old OTPs for {Email}", oldOtps.Count, request.Email);
         }
 
-        // ================================================
         // 5. Generate 6-digit OTP
-        // ================================================
         string otpCode = GenerateSecureOtp();
         _logger.LogInformation("OTP generated for {Email}", request.Email);
 
-        // ================================================
         // 6. Save OTP with expiry (Purpose = Registration)
-        // ================================================
         var userOtp = new UserOtp
         {
             Email = request.Email,
@@ -119,16 +105,12 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
 
         _logger.LogInformation("OTP saved for user: {UserId}", user.UserID);
 
-        // ================================================
         // 7. Create audit log
-        // ================================================
         var auditLog = _auditService.Create(user.UserID, "User Registered");
         _context.AuditLogs.Add(auditLog);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // ================================================
         // 8. Send OTP email
-        // ================================================
         try
         {
             _logger.LogInformation("Sending OTP email to: {Email}", request.Email);

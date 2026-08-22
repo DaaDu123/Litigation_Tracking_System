@@ -1,12 +1,8 @@
 @page "/masters/document-types"
 @attribute [Authorize(Roles = "FirmAdmin")]
-@using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.Masters.Components
 @using LTSFrontend.Features.Masters.DTOs
 @using LTSFrontend.Features.Masters.Services
-@using LTSFrontend.Shared.Components
-@using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject IDocumentTypeService DocumentTypeService
 @inject ToastService Toast
 @inject UserSessionState Session

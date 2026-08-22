@@ -2,9 +2,6 @@
 @attribute [Authorize(Roles = "FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal")]
 @using LTSFrontend.Features.CaseAssignments.DTOs
 @using LTSFrontend.Features.CaseAssignments.Services
-@using LTSFrontend.Shared.Components
-@using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject ICaseAssignmentService AssignmentService
 @inject ToastService Toast
 @inject NavigationManager Nav

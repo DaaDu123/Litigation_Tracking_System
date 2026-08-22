@@ -11,13 +11,13 @@ namespace LTSFrontend.Core.Enums
     /// </summary>
     public enum Permission
     {
-        // ===== SUPER ADMIN =====
+        // SUPER ADMIN
         ManageFirms = 101,
         ViewSystemAuditLogs = 102,
         ManageDataMigration = 103,
         ManageSystemUsers = 104,
 
-        // ===== FIRM ADMIN =====
+        // FIRM ADMIN
         ManageFirmUsers = 201,
         ViewFirmCaseDirectory = 202,
         AssignLawyersToCases = 203,
@@ -27,7 +27,7 @@ namespace LTSFrontend.Core.Enums
         DeleteLoginHistory = 207,
         ViewAuditLogs = 208,
 
-        // ===== PARTNER / SENIOR LAWYER =====
+        // PARTNER / SENIOR LAWYER
         ViewFirmCases = 301,
         CreateCases = 302,
         UpdateCases = 303,
@@ -37,7 +37,7 @@ namespace LTSFrontend.Core.Enums
         ApproveFilings = 307,
         ViewFirmAnalytics = 308,
 
-        // ===== ASSOCIATE LAWYER =====
+        // ASSOCIATE LAWYER
         ViewAssignedCases = 401,
         UploadDocuments = 402,
         DownloadAssignedDocuments = 403,
@@ -45,19 +45,19 @@ namespace LTSFrontend.Core.Enums
         TrackDeadlines = 405,
         LogBillableHours = 406,
 
-        // ===== MOHARRIR (LEGAL CLERK) =====
+        // MOHARRIR (LEGAL CLERK)
         EnterCaseData = 501,
         UploadCaseDocuments = 502,
         ViewDocumentsIfPermitted = 503,
         DownloadDocumentsIfPermitted = 504,
         MaintainCaseRecords = 505,
 
-        // ===== INTERN / PARALEGAL =====
+        // INTERN / PARALEGAL
         ViewDocumentsReadOnly = 601,
         DraftDocuments = 602,
         PerformResearch = 603,
 
-        // ===== CROSS-ROLE =====
+        // CROSS-ROLE
         ViewDashboard = 701
     }
 

@@ -1,6 +1,5 @@
 @page "/cases/{CaseId:long}"
 @attribute [Authorize(Roles = "FirmAdmin,Partner,AssociateLawyer,Moharrir,InternParalegal")]
-@using LTSFrontend.Core.Exceptions
 @using LTSFrontend.Features.CaseAssignments.Components
 @using LTSFrontend.Features.CaseNotes.Components
 @using LTSFrontend.Features.CaseParties.Components
@@ -11,9 +10,6 @@
 @using LTSFrontend.Features.Documents.Components
 @using LTSFrontend.Features.Hearings.Components
 @using LTSFrontend.Features.Milestones.Components
-@using LTSFrontend.Shared.Components
-@using LTSFrontend.State
-@using Microsoft.AspNetCore.Authorization
 @inject ICaseService CaseService
 @inject ToastService Toast
 @inject NavigationManager Nav

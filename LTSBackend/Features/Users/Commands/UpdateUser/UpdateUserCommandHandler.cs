@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Enum;
+using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.ProfileService;
@@ -13,9 +13,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
     {
         _logger.LogInformation("Updating user: {UserId}", request.UserID);
 
-        // ================================================
         // 1. Find user
-        // ================================================
         var user = await _context.Users
             .FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
@@ -25,9 +23,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             throw new NotFoundException("User not found.");
         }
 
-        // ================================================
         // 2. Validate RoleID
-        // ================================================
         if (!request.RoleID.HasValue)
         {
             _logger.LogWarning("Update failed: RoleID is required");
@@ -40,8 +36,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             throw new ValidationException([$"Invalid role. Role ID {request.RoleID} does not exist."]);
         }
 
-        bool roleExists = await _context.Roles
-            .AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
+        bool roleExists = await _context.Roles.AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
 
         if (!roleExists)
         {
@@ -49,9 +44,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             throw new NotFoundException($"Role with ID {request.RoleID} not found.");
         }
 
-        // ================================================
         // 2b. Enforce role hierarchy + self-protection
-        // ================================================
         if (user.UserID == request.ActingUserID && request.RoleID.Value != user.RoleID)
         {
             _logger.LogWarning("User {ActingUserId} attempted to change their own role", request.ActingUserID);
@@ -66,19 +59,15 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             throw new ValidationException(["You are not authorized to assign this role."]);
         }
 
-        // ================================================
         // 2c. Multi-tenancy: can only edit users in your own firm
         // (SuperAdmin, whose FirmID is null, bypasses this check)
-        // ================================================
         if (actingUser!.FirmID != null && user.FirmID != actingUser.FirmID)
         {
             _logger.LogWarning("User {ActingUserId} attempted to update a user from a different firm: {TargetUserId}", request.ActingUserID, request.UserID);
             throw new ValidationException(["You can only edit users within your own firm."]);
         }
 
-        // ================================================
         // 3. Check if new email is unique
-        // ================================================
         bool emailExists = await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID && !x.IsDeleted, cancellationToken);
 
         if (emailExists)
@@ -87,9 +76,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             throw new ValidationException(["Email is already in use by another user."]);
         }
 
-        // ================================================
         // 4. Handle profile image update
-        // ================================================
         if (request.ProfileImage != null)
         {
             string? oldImagePath = user.ProfileImage;
@@ -104,9 +91,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             }
         }
 
-        // ================================================
         // 5. Update user properties
-        // ================================================
         bool roleOrStatusChanged = user.RoleID != request.RoleID || user.IsActive != request.IsActive;
         user.FullName = request.FullName;
         user.Email = request.Email;
@@ -122,9 +107,7 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
             _logger.LogInformation("Rotated security stamp for user {UserId} - role or active status changed, invalidating any already-issued access token",user.UserID);
         }
 
-        // ================================================
         // 6. Save changes
-        // ================================================
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("User updated successfully: {UserId}", request.UserID);

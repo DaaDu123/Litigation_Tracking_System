@@ -12,9 +12,7 @@ public sealed class DeleteDepartmentHandler(AppDbContext _context, ICurrentUserS
     {
         _logger.LogInformation("Deleting department: {DepartmentID}", request.DepartmentID);
 
-        // ================================================
         // 1. Find department
-        // ================================================
         var department = await _context.Departments.FirstOrDefaultAsync(x => x.DepartmentID == request.DepartmentID, cancellationToken);
 
         if (department == null)
@@ -23,21 +21,17 @@ public sealed class DeleteDepartmentHandler(AppDbContext _context, ICurrentUserS
             throw new NotFoundException("Department not found.");
         }
 
-        // ================================================
         // 1b. Ownership check: a FirmAdmin may delete only their OWN firm's
-        //     custom department - never a system-wide global department.
-        // ================================================
+        // custom department - never a system-wide global department.
         if (department.FirmID != _currentUser.FirmID)
         {
             _logger.LogWarning("Delete denied: user {UserId} attempted to delete a global/other-firm department {DepartmentID}", _currentUser.UserID, request.DepartmentID);
             throw new NotFoundException("Department not found.");
         }
 
-        // ================================================
         // 2. Block delete if cases reference this department
         // (Cases.ResponsibleDepartmentID has an FK with DeleteBehavior.NoAction,
         // so an unchecked delete would otherwise fail with a raw SQL FK error)
-        // ================================================
         int caseCount = await _context.Cases.CountAsync(x => x.ResponsibleDepartmentID == request.DepartmentID, cancellationToken);
 
         if (caseCount > 0)
@@ -51,9 +45,7 @@ public sealed class DeleteDepartmentHandler(AppDbContext _context, ICurrentUserS
             });
         }
 
-        // ================================================
         // 3. Delete department
-        // ================================================
         _context.Departments.Remove(department);
         await _context.SaveChangesAsync(cancellationToken);
 

@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Users.Commands.ActivateUser;
 using LTSBackend.Features.Users.Commands.CreateUser;
 using LTSBackend.Features.Users.Commands.DeleteUser;

@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
 using LTSBackend.Models.Security;
@@ -33,21 +33,15 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
             request.PermissionIds.Count,
             request.RoleID);
 
-        // ================================================
         // 1. Normalize permission IDs (deduplicate)
-        // ================================================
         var permissionIds = request.PermissionIds
             .Distinct()
             .ToList();
 
-        // ================================================
         // 2. Find role with current permissions
-        // ================================================
         var role = await _context.Roles
             .Include(x => x.RolePermissions)
-            .FirstOrDefaultAsync(
-                x => x.RoleID == request.RoleID,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.RoleID == request.RoleID,cancellationToken);
 
         if (role == null)
         {
@@ -55,9 +49,7 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
             throw new NotFoundException("Role not found.");
         }
 
-        // ================================================
-        // ✅ FIX: Protected system roles ki permissions modify na hone dein
-        // ================================================
+        // FIX: Protected system roles ki permissions modify na hone dein
         if (ProtectedRoles.Contains(role.RoleName, StringComparer.OrdinalIgnoreCase))
         {
             _logger.LogWarning("Assign permissions blocked: {RoleName} is a protected system role: {RoleID}", role.RoleName, request.RoleID);
@@ -68,9 +60,7 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
                 });
         }
 
-        // ================================================
         // 3. Validate all permissions exist
-        // ================================================
         var validPermissionIds = await _context.Permissions
             .Where(x => permissionIds.Contains(x.PermissionID))
             .Select(x => x.PermissionID)
@@ -78,40 +68,30 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
 
         if (permissionIds.Count != validPermissionIds.Count)
         {
-            _logger.LogWarning(
-                "Assign permissions failed: Invalid permissions for role: {RoleID}",
-                request.RoleID);
+            _logger.LogWarning("Assign permissions failed: Invalid permissions for role: {RoleID}",request.RoleID);
 
-            throw new ValidationException(
-                new List<string> { "One or more permissions are invalid." });
+            throw new ValidationException(new List<string> { "One or more permissions are invalid." });
         }
 
-        // ================================================
         // 4. Begin transaction (wrapped in CreateExecutionStrategy since
-        //    EnableRetryOnFailure is on - see CreateFirmCommandHandler for
-        //    the full explanation).
-        // ================================================
+        // EnableRetryOnFailure is on - see CreateFirmCommandHandler for
+        // the full explanation).
         var strategy = _context.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>
         {
-            await using var transaction =
-                await _context.Database.BeginTransactionAsync(cancellationToken);
+            await using var transaction =await _context.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                // ================================================
                 // 5. Remove old permissions
-                // ================================================
                 _context.RolePermissions.RemoveRange(role.RolePermissions);
                 await _context.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation("Removed {Count} old permissions for role: {RoleID}",
                     role.RolePermissions.Count, request.RoleID);
 
-                // ================================================
                 // 6. Assign new permissions
-                // ================================================
                 var rolePermissions = permissionIds
                     .Select(permissionId => new RolePermission
                     {
@@ -119,18 +99,13 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
                         PermissionID = permissionId
                     });
 
-                await _context.RolePermissions.AddRangeAsync(
-                    rolePermissions,
-                    cancellationToken);
+                await _context.RolePermissions.AddRangeAsync(rolePermissions,cancellationToken);
 
                 await _context.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("Assigned {Count} new permissions to role: {RoleID}",
-                    permissionIds.Count, request.RoleID);
+                _logger.LogInformation("Assigned {Count} new permissions to role: {RoleID}",permissionIds.Count, request.RoleID);
 
-                // ================================================
                 // 7. Commit transaction
-                // ================================================
                 await transaction.CommitAsync(cancellationToken);
 
                 _logger.LogInformation("Permissions assigned successfully to role: {RoleID}", request.RoleID);

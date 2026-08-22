@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Exceptions;
+using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Models.Cases;
 using LTSBackend.Services.Audit;
@@ -15,9 +15,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
     {
         _logger.LogInformation("Creating new case: {CaseNumber}", request.CaseNumber);
 
-        // ================================================
         // Get logged-in user ID + firm (multi-tenancy)
-        // ================================================
         int currentUserId = GetCurrentUserId();
 
         if (_currentUser.FirmID == null)
@@ -27,9 +25,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
         int firmId = _currentUser.FirmID.Value;
 
-        // ================================================
         // 1. Case Number uniqueness check (firm-scoped)
-        // ================================================
         bool caseExists = await _context.Cases
             .AsNoTracking()
             .AnyAsync(x => x.CaseNumber == request.CaseNumber && x.FirmID == firmId, cancellationToken);
@@ -47,19 +43,13 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         // (type-or-select combo box on the Create Case form).
         int resolvedCourtId = await GetOrCreateCourtIdAsync(request.CourtID, request.CourtName, firmId, cancellationToken);
 
-        // ================================================
         // 3. Category: use the picked ID, or resolve/create by the typed name
-        // ================================================
         int resolvedCategoryId = await GetOrCreateCategoryIdAsync(request.CategoryID, request.CategoryName, firmId, cancellationToken);
 
-        // ================================================
         // 4. Department: same type-or-select pattern (optional field)
-        // ================================================
         int? resolvedDepartmentId = await GetOrCreateDepartmentIdAsync(request.ResponsibleDepartmentID, request.DepartmentName, firmId, cancellationToken);
 
-        // ================================================
         // 5. Legal Officer check — ONLY if a value was provided
-        // ================================================
         if (request.CurrentLegalOfficerID.HasValue)
         {
             var legalOfficer = await _context.Users
@@ -78,12 +68,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             }
         }
 
-        // ================================================
         // 6. Default Status = "New"
-        // ================================================
-        var defaultStatus = await _context.CaseStatuses
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.StatusName == "New", cancellationToken);
+        var defaultStatus = await _context.CaseStatuses.AsNoTracking().FirstOrDefaultAsync(x => x.StatusName == "New", cancellationToken);
 
         if (defaultStatus == null)
         {
@@ -91,12 +77,8 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             throw new NotFoundException("Default status 'New' not found");
         }
 
-        // ================================================
         // 7. Default Stage = "Filing"
-        // ================================================
-        var defaultStage = await _context.CaseStages
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.StageName == "Filing", cancellationToken);
+        var defaultStage = await _context.CaseStages.AsNoTracking().FirstOrDefaultAsync(x => x.StageName == "Filing", cancellationToken);
 
         if (defaultStage == null)
         {
@@ -104,14 +86,10 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
             throw new NotFoundException("Default stage 'Filing' not found");
         }
 
-        // ================================================
         // 8. Unique Internal Reference Number generate karo
-        // ================================================
         string internalRefNo = await GenerateUniqueInternalReferenceNoAsync(cancellationToken);
 
-        // ================================================
         // 9. Build the Case object
-        // ================================================
         var newCase = new Case
         {
             FirmID = firmId,
@@ -142,12 +120,9 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         _context.Cases.Add(newCase);
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Case created: {CaseID} with RefNo: {InternalRefNo}",
-            newCase.CaseID, internalRefNo);
+        _logger.LogInformation("Case created: {CaseID} with RefNo: {InternalRefNo}",newCase.CaseID, internalRefNo);
 
-        // ================================================
         // 10. Initial Status History
-        // ================================================
         var statusHistory = new CaseStatusHistory
         {
             CaseID = newCase.CaseID,
@@ -160,9 +135,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
 
         _context.CaseStatusHistories.Add(statusHistory);
 
-        // ================================================
         // 11. Audit Log
-        // ================================================
         var auditLog = _auditService.Create(currentUserId, $"Case Create: {newCase.CaseNumber}");
         _context.AuditLogs.Add(auditLog);
 
@@ -195,9 +168,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
             var candidate = GenerateInternalReferenceNo();
-            bool alreadyExists = await _context.Cases
-                .AsNoTracking()
-                .AnyAsync(x => x.InternalReferenceNo == candidate, cancellationToken);
+            bool alreadyExists = await _context.Cases.AsNoTracking().AnyAsync(x => x.InternalReferenceNo == candidate, cancellationToken);
 
             if (!alreadyExists)
             {
@@ -219,12 +190,9 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
     private static string GenerateRandomString(int length)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        return new string(Enumerable.Range(0, length)
-            .Select(_ => chars[Random.Shared.Next(chars.Length)])
-            .ToArray());
+        return new string(Enumerable.Range(0, length).Select(_ => chars[Random.Shared.Next(chars.Length)]).ToArray());
     }
 
-    // ================================================
     // Type-or-select helpers for Court / Category / Department.
     // The Create Case form lets the user either pick an existing
     // option or type a brand-new one. If an ID was picked we validate
@@ -232,15 +200,12 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
     // matching existing record (case-insensitive) if one exists for
     // this firm/global scope, otherwise we create a new firm-owned
     // record on the fly so it's available for every future case too.
-    // ================================================
 
     private async Task<int> GetOrCreateCourtIdAsync(int courtId, string? courtName, int firmId, CancellationToken cancellationToken)
     {
         if (courtId > 0)
         {
-            var court = await _context.Courts
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.CourtID == courtId && x.IsActive, cancellationToken);
+            var court = await _context.Courts.AsNoTracking().FirstOrDefaultAsync(x => x.CourtID == courtId && x.IsActive, cancellationToken);
 
             if (court == null)
             {
@@ -251,8 +216,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         var name = courtName!.Trim();
-        var existing = await _context.Courts
-            .FirstOrDefaultAsync(x => x.IsActive && x.CourtName.ToLower() == name.ToLower(), cancellationToken);
+        var existing = await _context.Courts.FirstOrDefaultAsync(x => x.IsActive && x.CourtName.ToLower() == name.ToLower(), cancellationToken);
         if (existing != null)
         {
             return existing.CourtID;
@@ -275,9 +239,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
     {
         if (categoryId > 0)
         {
-            var category = await _context.CaseCategories
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.CategoryID == categoryId, cancellationToken);
+            var category = await _context.CaseCategories.AsNoTracking().FirstOrDefaultAsync(x => x.CategoryID == categoryId, cancellationToken);
 
             if (category == null)
             {
@@ -288,8 +250,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         var name = categoryName!.Trim();
-        var existing = await _context.CaseCategories
-            .FirstOrDefaultAsync(x => x.IsActive && x.CategoryName.ToLower() == name.ToLower(), cancellationToken);
+        var existing = await _context.CaseCategories.FirstOrDefaultAsync(x => x.IsActive && x.CategoryName.ToLower() == name.ToLower(), cancellationToken);
         if (existing != null)
         {
             return existing.CategoryID;
@@ -311,9 +272,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
     {
         if (departmentId.HasValue && departmentId.Value > 0)
         {
-            var department = await _context.Departments
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.DepartmentID == departmentId.Value && x.IsActive, cancellationToken);
+            var department = await _context.Departments.AsNoTracking().FirstOrDefaultAsync(x => x.DepartmentID == departmentId.Value && x.IsActive, cancellationToken);
 
             if (department == null)
             {
@@ -329,8 +288,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         }
 
         var name = departmentName.Trim();
-        var existing = await _context.Departments
-            .FirstOrDefaultAsync(x => x.IsActive && x.DepartmentName.ToLower() == name.ToLower(), cancellationToken);
+        var existing = await _context.Departments.FirstOrDefaultAsync(x => x.IsActive && x.DepartmentName.ToLower() == name.ToLower(), cancellationToken);
         if (existing != null)
         {
             return existing.DepartmentID;

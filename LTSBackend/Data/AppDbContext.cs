@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using LTSBackend.Models.Audit;
 using LTSBackend.Models.Cases;
 using LTSBackend.Models.Masters;
@@ -66,9 +66,7 @@ public class AppDbContext : DbContext
     /// </summary>
     private bool BypassTenantFilter => !IsAuthenticatedRequest || IsSuperAdminRequest;
 
-    // ================================================================
-    // ✅ SECURITY MODELS (User, Role, Permission)
-    // ================================================================
+    // SECURITY MODELS (User, Role, Permission)
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Firm> Firms { get; set; } = null!;
     public DbSet<FirmAdminRequest> FirmAdminRequests { get; set; } = null!;
@@ -81,14 +79,10 @@ public class AppDbContext : DbContext
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
     public DbSet<LoginHistory> LoginHistories { get; set; } = null!;
 
-    // ================================================================
-    // ✅ AUDIT MODELS
-    // ================================================================
+    // AUDIT MODELS
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
-    // ================================================================
-    // ✅ MASTER TABLES (Court, Category, Status, Stage, etc.)
-    // ================================================================
+    // MASTER TABLES (Court, Category, Status, Stage, etc.)
     public DbSet<Department> Departments { get; set; } = null!;
     public DbSet<Court> Courts { get; set; } = null!;
     public DbSet<CaseCategory> CaseCategories { get; set; } = null!;
@@ -96,41 +90,31 @@ public class AppDbContext : DbContext
     public DbSet<CaseStage> CaseStages { get; set; } = null!;
     public DbSet<DocumentType> DocumentTypes { get; set; } = null!;
 
-    // ================================================================
-    // ✅ CORE CASE MANAGEMENT (Cases, Parties, Assignments)
-    // ================================================================
+    // CORE CASE MANAGEMENT (Cases, Parties, Assignments)
     public DbSet<Case> Cases { get; set; } = null!;
     public DbSet<CaseParty> CaseParties { get; set; } = null!;
     public DbSet<CaseAssignment> CaseAssignments { get; set; } = null!;
     public DbSet<CaseStatusHistory> CaseStatusHistories { get; set; } = null!;
     public DbSet<CaseMilestone> CaseMilestones { get; set; } = null!;
 
-    // ================================================================
-    // ✅ HEARINGS & DEADLINES
-    // ================================================================
+    // HEARINGS & DEADLINES
     public DbSet<Hearing> Hearings { get; set; } = null!;
     public DbSet<HearingAttendance> HearingAttendances { get; set; } = null!;
     public DbSet<Deadline> Deadlines { get; set; } = null!;
 
-    // ================================================================
-    // ✅ DOCUMENTS & NOTES
-    // ================================================================
+    // DOCUMENTS & NOTES
     public DbSet<Document> Documents { get; set; } = null!;
     public DbSet<DocumentPermission> DocumentPermissions { get; set; } = null!;
     public DbSet<CaseNote> CaseNotes { get; set; } = null!;
 
-    // ================================================================
-    // ✅ NOTIFICATIONS
-    // ================================================================
+    // NOTIFICATIONS
     public DbSet<Notification> Notifications { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // ================================================================
-        // ✅ USER ENTITY CONFIGURATION
-        // ================================================================
+        // USER ENTITY CONFIGURATION
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.UserID);
@@ -151,9 +135,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => !e.IsDeleted && (BypassTenantFilter || e.FirmID == RequestFirmId));
         });
 
-        // ================================================================
-        // ✅ FIRM ENTITY CONFIGURATION (multi-tenant workspace)
-        // ================================================================
+        // FIRM ENTITY CONFIGURATION (multi-tenant workspace)
         modelBuilder.Entity<Firm>(entity =>
         {
             entity.HasKey(e => e.FirmID);
@@ -164,10 +146,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.MigrationNotes).HasMaxLength(500);
         });
 
-        // ================================================================
-        // ✅ FIRM ADMIN REQUEST ENTITY CONFIGURATION
+        // FIRM ADMIN REQUEST ENTITY CONFIGURATION
         // (public "request to become a Firm Admin" -> SuperAdmin approval)
-        // ================================================================
         modelBuilder.Entity<FirmAdminRequest>(entity =>
         {
             entity.HasKey(e => e.RequestID);
@@ -182,9 +162,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Status);
         });
 
-        // ================================================================
-        // ✅ ROLE ENTITY CONFIGURATION
-        // ================================================================
+        // ROLE ENTITY CONFIGURATION
         modelBuilder.Entity<Role>(entity =>
         {
             entity.HasKey(e => e.RoleID);
@@ -193,9 +171,7 @@ public class AppDbContext : DbContext
             entity.HasMany(e => e.RolePermissions).WithOne(rp => rp.Role).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // ================================================================
-        // ✅ PERMISSION ENTITY CONFIGURATION
-        // ================================================================
+        // PERMISSION ENTITY CONFIGURATION
         modelBuilder.Entity<Permission>(entity =>
         {
             entity.HasKey(e => e.PermissionID);
@@ -203,9 +179,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.PermissionName).IsUnique();
         });
 
-        // ================================================================
-        // ✅ ROLEPERMISSION ENTITY CONFIGURATION (join table)
-        // ================================================================
+        // ROLEPERMISSION ENTITY CONFIGURATION (join table)
         modelBuilder.Entity<RolePermission>(entity =>
         {
             entity.HasKey(x => x.RolePermissionID);
@@ -214,9 +188,7 @@ public class AppDbContext : DbContext
             entity.HasOne(x => x.Permission).WithMany(p => p.RolePermissions).HasForeignKey(x => x.PermissionID).OnDelete(DeleteBehavior.Cascade);
         });
 
-        // ================================================================
-        // ✅ REFRESHTOKEN ENTITY CONFIGURATION
-        // ================================================================
+        // REFRESHTOKEN ENTITY CONFIGURATION
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.HasKey(e => e.RefreshTokenID);
@@ -231,9 +203,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.User.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ USEROTP ENTITY CONFIGURATION
-        // ================================================================
+        // USEROTP ENTITY CONFIGURATION
         modelBuilder.Entity<UserOtp>(entity =>
         {
             entity.HasKey(e => e.OtpID);
@@ -250,9 +220,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.User == null || e.User.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ PASSWORDRESETTOKEN ENTITY CONFIGURATION
-        // ================================================================
+        // PASSWORDRESETTOKEN ENTITY CONFIGURATION
         modelBuilder.Entity<PasswordResetToken>(entity =>
         {
             entity.HasKey(e => e.TokenID);
@@ -270,9 +238,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.User == null || e.User!.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ LOGINHISTORY ENTITY CONFIGURATION
-        // ================================================================
+        // LOGINHISTORY ENTITY CONFIGURATION
         modelBuilder.Entity<LoginHistory>(entity =>
         {
             entity.HasKey(e => e.LoginID);
@@ -289,9 +255,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.User.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ AUDITLOG ENTITY CONFIGURATION
-        // ================================================================
+        // AUDITLOG ENTITY CONFIGURATION
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.HasKey(e => e.LogID);
@@ -300,31 +264,12 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Timestamp).IsDescending();
             entity.HasIndex(e => e.UserID);
 
-            // ================================================================
-            // CRITICAL FIX: AuditLog has no FirmID column, and until now had
-            // NO tenant scoping whatsoever - GetAuditLogsHandler queried
-            // _context.AuditLogs with zero FirmID filter. This was masked
-            // only by "ViewAuditLogs" never being seeded to any role except
-            // via SuperAdmin's permission-check bypass (see PermissionService)
-            // - the instant that permission is granted to FirmAdmin (a very
-            // natural-looking fix, and exactly what already happened for the
-            // analogous "ViewLoginHistory" permission elsewhere in this
-            // codebase), every firm's ENTIRE audit trail - case deletions,
-            // user creation, permission/role changes, document activity -
-            // becomes visible to every other firm's admin. Scope by the
-            // acting user's firm at the model level so this can never regress
-            // silently regardless of what the handler above does. Rows with
-            // no UserID (system/platform-level events with no single firm
-            // owner) are hidden from every non-SuperAdmin caller rather than
-            // shown to all of them.
-            // ================================================================
+            
             entity.HasQueryFilter(e => BypassTenantFilter || (e.User != null && e.User.FirmID == RequestFirmId));
         });
 
-        // ================================================================
-        // ✅ COURT ENTITY CONFIGURATION (per-tenant scoping added - see
+        // COURT ENTITY CONFIGURATION (per-tenant scoping added - see
         // Models/Masters/Court.cs for the full rationale)
-        // ================================================================
         modelBuilder.Entity<Court>(entity =>
         {
             entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
@@ -335,10 +280,8 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ DEPARTMENT ENTITY CONFIGURATION (per-tenant scoping added - see
+        // DEPARTMENT ENTITY CONFIGURATION (per-tenant scoping added - see
         // Models/Masters/Department.cs for the full rationale)
-        // ================================================================
         modelBuilder.Entity<Department>(entity =>
         {
             entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
@@ -346,10 +289,8 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ CASECATEGORY / CASESTATUS / CASESTAGE / DOCUMENTTYPE ENTITY
+        // CASECATEGORY / CASESTATUS / CASESTAGE / DOCUMENTTYPE ENTITY
         // CONFIGURATION (per-tenant scoping - same pattern as Court/Department)
-        // ================================================================
         modelBuilder.Entity<CaseCategory>(entity =>
         {
             entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
@@ -374,9 +315,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == null || e.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ CASE ENTITY CONFIGURATION
-        // ================================================================
+        // CASE ENTITY CONFIGURATION
         modelBuilder.Entity<Case>(entity =>
         {
             entity.HasKey(e => e.CaseID);
@@ -406,9 +345,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ CASE PARTIES ENTITY CONFIGURATION
-        // ================================================================
+        // CASE PARTIES ENTITY CONFIGURATION
         modelBuilder.Entity<CaseParty>(entity =>
         {
             entity.HasKey(e => e.PartyID);
@@ -421,9 +358,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ CASE ASSIGNMENTS ENTITY CONFIGURATION
-        // ================================================================
+        // CASE ASSIGNMENTS ENTITY CONFIGURATION
         modelBuilder.Entity<CaseAssignment>(entity =>
         {
             entity.HasKey(e => e.AssignmentID);
@@ -438,9 +373,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ CASE STATUS HISTORY ENTITY CONFIGURATION
-        // ================================================================
+        // CASE STATUS HISTORY ENTITY CONFIGURATION
         modelBuilder.Entity<CaseStatusHistory>(entity =>
         {
             entity.HasKey(e => e.HistoryID);
@@ -450,9 +383,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ CASE MILESTONES ENTITY CONFIGURATION
-        // ================================================================
+        // CASE MILESTONES ENTITY CONFIGURATION
         modelBuilder.Entity<CaseMilestone>(entity =>
         {
             entity.HasKey(e => e.MilestoneID);
@@ -463,9 +394,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ HEARINGS ENTITY CONFIGURATION
-        // ================================================================
+        // HEARINGS ENTITY CONFIGURATION
         modelBuilder.Entity<Hearing>(entity =>
         {
             entity.HasKey(e => e.HearingID);
@@ -479,9 +408,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ HEARING ATTENDANCE ENTITY CONFIGURATION
-        // ================================================================
+        // HEARING ATTENDANCE ENTITY CONFIGURATION
         modelBuilder.Entity<HearingAttendance>(entity =>
         {
             entity.HasKey(e => e.AttendanceID);
@@ -493,9 +420,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Hearing.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ DEADLINES ENTITY CONFIGURATION
-        // ================================================================
+        // DEADLINES ENTITY CONFIGURATION
         modelBuilder.Entity<Deadline>(entity =>
         {
             entity.HasKey(e => e.DeadlineID);
@@ -507,9 +432,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ DOCUMENTS ENTITY CONFIGURATION
-        // ================================================================
+        // DOCUMENTS ENTITY CONFIGURATION
         modelBuilder.Entity<Document>(entity =>
         {
             entity.HasKey(e => e.DocumentID);
@@ -524,9 +447,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ DOCUMENT PERMISSIONS ENTITY CONFIGURATION
-        // ================================================================
+        // DOCUMENT PERMISSIONS ENTITY CONFIGURATION
         modelBuilder.Entity<DocumentPermission>(entity =>
         {
             entity.HasKey(e => e.PermissionID);
@@ -540,9 +461,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || e.Document.Case.FirmID == RequestFirmId);
         });
 
-        // ================================================================
-        // ✅ CASE NOTES ENTITY CONFIGURATION
-        // ================================================================
+        // CASE NOTES ENTITY CONFIGURATION
         modelBuilder.Entity<CaseNote>(entity =>
         {
             entity.HasKey(e => e.NoteID);
@@ -553,7 +472,6 @@ public class AppDbContext : DbContext
             // Cascading tenant filter via the owning Case's FirmID.
             entity.HasQueryFilter(e => BypassTenantFilter || e.Case.FirmID == RequestFirmId);
         });
-        // ================================================================
         modelBuilder.Entity<NotificationType>(entity =>
         {
             entity.HasKey(e => e.NotificationTypeID);
@@ -561,9 +479,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.TypeName).IsUnique();
         });
 
-        // ================================================================
-        // ✅ NOTIFICATIONS ENTITY CONFIGURATION
-        // ================================================================
+        // NOTIFICATIONS ENTITY CONFIGURATION
         modelBuilder.Entity<Notification>(entity =>
         {
             entity.HasKey(e => e.NotificationID);
@@ -578,9 +494,7 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || (e.User != null && e.User.FirmID == RequestFirmId));
         });
 
-        // ================================================================================
-        // ✅✅✅ SEED DATA - COMPLETE INITIALIZATION ====================================
-        // ================================================================================
+        // Seed data - initial firms/roles/permissions/etc for a fresh DB
         SeedFirms(modelBuilder);
         SeedRoles(modelBuilder);
         SeedPermissions(modelBuilder);
@@ -595,9 +509,7 @@ public class AppDbContext : DbContext
         SeedNotificationTypes(modelBuilder);
     }
 
-    // ====================================================================================
     // FIRMS - Multi-tenant workspace seeds
-    // ====================================================================================
     // NOTE: Seed data (HasData) must be deterministic. Using DateTime.UtcNow here
     // (or as a property's default initializer) bakes a different value into the
     // model every single time the project is built, which makes EF Core think the
@@ -629,25 +541,20 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // USERS - Complete seed users with all roles (using real BCrypt hashes)
     // ⚠️ All six seeded accounts below share the same demo password: Demo@12345
     // Each has its own distinct salt (hashes differ) even though the password matches.
     // These are DEV/DEMO credentials only - rotate or remove before any real deployment.
-    // ====================================================================================
-    // ====================================================================================
     // BUG FIX (CRITICAL): none of the six seeded demo users had RoleID set.
     // GetRole() therefore returned null for all of them, PermissionService
     // treated every one of them as roleless, and JwtService could not add a
     // Role claim to their tokens - meaning every seeded account, INCLUDING
     // the SuperAdmin, was locked out of every permission check out of the
     // box. RoleID is now set explicitly for each seeded user below.
-    //
     // SecurityStamp values are fixed, deterministic strings (not
     // Guid.NewGuid()) for the same reason SeedTimestamp is a constant: HasData
     // requires stable seed values, or EF Core thinks the model has pending
     // changes on every build even with no real schema change.
-    // ====================================================================================
     private static void SeedUsers(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasData(
@@ -744,9 +651,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // DEPARTMENTS - Government/Organization departments
-    // ====================================================================================
     private static void SeedDepartments(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Department>().HasData(
@@ -758,9 +663,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // COURTS - Pakistani courts hierarchy
-    // ====================================================================================
     private static void SeedCourts(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Court>().HasData(
@@ -775,9 +678,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // CASE CATEGORIES - Types of litigation
-    // ====================================================================================
     private static void SeedCaseCategories(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CaseCategory>().HasData(
@@ -792,9 +693,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // CASE STATUS - Case lifecycle statuses
-    // ====================================================================================
     private static void SeedCaseStatus(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CaseStatus>().HasData(
@@ -808,9 +707,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // CASE STAGES - Stages of litigation
-    // ====================================================================================
     private static void SeedCaseStages(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CaseStage>().HasData(
@@ -823,9 +720,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // DOCUMENT TYPES - Types of legal documents
-    // ====================================================================================
     private static void SeedDocumentTypes(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<DocumentType>().HasData(
@@ -840,9 +735,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // ROLES - 6 role levels in hierarchy
-    // ====================================================================================
     private static void SeedRoles(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Role>().HasData(
@@ -855,9 +748,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // PERMISSIONS - 30+ granular permissions
-    // ====================================================================================
     private static void SeedPermissions(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Permission>().HasData(
@@ -912,9 +803,7 @@ public class AppDbContext : DbContext
         );
     }
 
-    // ====================================================================================
     // ROLE-PERMISSIONS - Complete matrix mapping roles to permissions
-    // ====================================================================================
     private static void SeedRolePermissions(ModelBuilder modelBuilder)
     {
         var rolePermissions = new List<RolePermission>();
@@ -1004,9 +893,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RolePermission>().HasData(rolePermissions);
     }
 
-    // ====================================================================================
     // NOTIFICATION TYPES - Automated notification triggers
-    // ====================================================================================
     private static void SeedNotificationTypes(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<NotificationType>().HasData(
