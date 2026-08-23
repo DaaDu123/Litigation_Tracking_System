@@ -24,6 +24,13 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
 {
     // =====================================================
     // CREATE USER — FirmAdmin + SuperAdmin
+    // Registers a brand-new user (Partner / Associate Lawyer / Moharrir /
+    // Intern Paralegal, etc.) inside the acting FirmAdmin's own firm, or a
+    // new firm-scoped account created by a SuperAdmin. Accepts multipart
+    // form data because the create form can also carry a profile photo.
+    // The acting user's ID is pulled from the JWT claim (never trusted from
+    // the request body) and stamped onto the command as ActingUserID so the
+    // handler can enforce role-hierarchy and firm-scoping rules.
     // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
@@ -40,7 +47,11 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // GET ALL USERS
+    // GET ALL USERS — Partner and above
+    // Returns the full, firm-scoped list of active users so admin/partner
+    // screens (user grids, assignment dropdowns, etc.) can populate. Row
+    // level scoping to the caller's firm is enforced inside the query
+    // handler, not here.
     // =====================================================
     [HttpGet]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
@@ -54,7 +65,10 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // GET USER BY ID
+    // GET USER BY ID — Partner and above
+    // Fetches a single user's full profile/detail record by their UserID.
+    // Used by user-detail screens and by CreatedAtAction on user creation.
+    // Returns 404 if no such user exists (or isn't visible to this firm).
     // =====================================================
     [HttpGet("{id}")]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
@@ -72,6 +86,11 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
 
     // =====================================================
     // UPDATE USER — FirmAdmin only
+    // Edits an existing user's details (name, contact info, role, photo,
+    // etc.). The route id and the command's UserID must match, guarding
+    // against a mismatched/forged request body. The acting user's ID is
+    // taken from the JWT claim and stamped onto the command for auditing
+    // and role-hierarchy checks inside the handler.
     // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
@@ -93,6 +112,10 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
 
     // =====================================================
     // DELETE USER (Deactivate — reversible) — FirmAdmin only
+    // Soft-deletes/deactivates a user so they can no longer log in, without
+    // erasing their historical case/hearing/document records. This is
+    // reversible via the Activate endpoint below. Distinct from
+    // PermanentDelete, which removes the record outright.
     // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
@@ -111,6 +134,9 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
 
     // =====================================================
     // ACTIVATE USER (reverses Deactivate) — FirmAdmin only
+    // Re-enables a previously deactivated user so they can log in again.
+    // Does not touch a permanently-deleted user — once permanently deleted,
+    // a user cannot be reactivated through this endpoint.
     // =====================================================
     [HttpPut("{id}/activate")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
@@ -129,6 +155,10 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
 
     // =====================================================
     // PERMANENT DELETE — FirmAdmin only
+    // Hard-deletes a (typically already-deactivated) user record from the
+    // system. Unlike Delete/Activate above, this is NOT reversible from the
+    // application — the row is gone. Used for cleaning up test accounts or
+    // records a firm no longer wants retained at all.
     // =====================================================
     [HttpDelete("{id}/permanent")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
@@ -187,7 +217,12 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // GET MY PROFILE
+    // GET MY PROFILE — Any authenticated user
+    // Lets the currently logged-in user fetch their own profile (name,
+    // email, role, photo, etc.) for the "My Profile" screen, without
+    // needing the Partner-and-above permission required by GetById. The
+    // user ID is read from the caller's own JWT claim, so a user can never
+    // use this endpoint to view someone else's profile.
     // =====================================================
     [HttpGet("profile/me")]
     public async Task<IActionResult> GetMyProfile()

@@ -7,7 +7,10 @@ namespace LTSBackend.Services.BackgroundServices;
 
 public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<ReminderService> logger) : BackgroundService
 {
-    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(6);
+    // The sweep now runs once a day at a fixed wall-clock time (UTC) instead
+    // of every few hours, so reminder emails go out at a predictable time
+    // every morning rather than drifting depending on when the app started.
+    private static readonly TimeSpan ScheduledRunTimeUtc = TimeSpan.FromHours(8); // 8:00 AM UTC
 
     private const string DeadlineAlertType = "DeadlineAlert";
     private const string HearingReminderType = "HearingReminder";
@@ -16,6 +19,20 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            var delay = GetDelayUntilNextRun(DateTime.UtcNow, ScheduledRunTimeUtc);
+
+            try
+            {
+                await Task.Delay(delay, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+
+            if (stoppingToken.IsCancellationRequested)
+                break;
+
             try
             {
                 await GenerateRemindersAsync(stoppingToken);
@@ -24,9 +41,21 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
             {
                 logger.LogError(ex, "Error generating reminders");
             }
-
-            await Task.Delay(CheckInterval, stoppingToken);
         }
+    }
+
+    /// <summary>
+    /// Calculates how long to wait before the next scheduled sweep so that it
+    /// always lands at <paramref name="scheduledTimeUtc"/> (UTC) — today if
+    /// that time hasn't passed yet, otherwise tomorrow at the same time.
+    /// Kept as an internal static method so it can be unit tested without
+    /// spinning up the hosted service.
+    /// </summary>
+    internal static TimeSpan GetDelayUntilNextRun(DateTime nowUtc, TimeSpan scheduledTimeUtc)
+    {
+        var todayRun = nowUtc.Date.Add(scheduledTimeUtc);
+        var nextRun = nowUtc <= todayRun ? todayRun : todayRun.AddDays(1);
+        return nextRun - nowUtc;
     }
 
     private async Task GenerateRemindersAsync(CancellationToken ct)
@@ -53,7 +82,19 @@ public class ReminderService(IServiceScopeFactory scopeFactory, ILogger<Reminder
         }
 
         // DEADLINE REMINDERS
-        var dueDeadlines = await context.Deadlines.Where(d => !d.Completed && d.DueDate.AddDays(-d.ReminderDays) <= today && d.DueDate >= today).ToListAsync(ct);
+        // Each deadline lets the user pick how many days beforehand they want
+        // to be warned (Deadline.ReminderDays, set when the deadline is
+        // created/updated). That custom window is respected here — but as a
+        // safety net, a reminder is ALWAYS guaranteed once 7 days (one week)
+        // or less remain, even if the user configured a shorter custom
+        // window (e.g. 2 days). So a deadline qualifies if EITHER:
+        //   a) today falls inside the user's own ReminderDays window, or
+        //   b) one week or less remains until the due date (guaranteed floor)
+        var dueDeadlines = await context.Deadlines
+            .Where(d => !d.Completed &&
+                        d.DueDate >= today &&
+                        (d.DueDate.AddDays(-d.ReminderDays) <= today || d.DueDate.AddDays(-7) <= today))
+            .ToListAsync(ct);
 
         foreach (var deadline in dueDeadlines)
         {

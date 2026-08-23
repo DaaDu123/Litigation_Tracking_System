@@ -17,12 +17,13 @@ namespace LTSBackend.Features.Departments.Controllers;
 [Authorize]
 public class DepartmentsController(IMediator mediator) : ControllerBase
 {
-    // GET ALL DEPARTMENTS
-    // Any authenticated user can read master data - required
-    // for populating dropdowns on Case / User forms etc.
+    // =====================================================
+    // GET ALL DEPARTMENTS — Any authenticated user
+    // Returns departments for populating dropdowns on Case/User forms.
     // Query results are automatically scoped by the caller's visibility
     // (system-wide global departments + their own firm's custom ones) via
     // the HasQueryFilter on Department in AppDbContext.
+    // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] bool activeOnly = false)
     {
@@ -30,7 +31,10 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<DepartmentDTO>>.SuccessResponse(departments));
     }
 
-    // GET DEPARTMENT BY ID
+    // =====================================================
+    // GET DEPARTMENT BY ID — Any authenticated user
+    // Fetches a single department's details by its ID.
+    // =====================================================
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -38,14 +42,14 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<DepartmentDTO>.SuccessResponse(department));
     }
 
-    // CREATE DEPARTMENT
-    // ARCHITECTURE FIX APPLIED: same per-tenant model as Court - FirmID is
+    // =====================================================
+    // CREATE DEPARTMENT — FirmAdmin and above
+    // Adds a new department. Same per-tenant model as Court — FirmID is
     // nullable (NULL = system-wide global department; a real value = a
     // firm's own custom department). CreateDepartmentHandler assigns
-    // ownership on create, Update/DeleteDepartmentHandler enforce that a
-    // FirmAdmin may only touch their OWN firm's custom departments. This
-    // replaced an earlier temporary SuperAdmin-only lockdown. Requires the
-    // pending EF migration that adds Department.FirmID before deployment.
+    // ownership on create. Requires the EF migration that adds
+    // Department.FirmID to be applied.
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Create(CreateDepartmentCommand command)
@@ -54,9 +58,12 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<int>.SuccessResponse(id, "Department created successfully."));
     }
 
-    // UPDATE DEPARTMENT
-    // Firm Admin may only update their OWN firm's custom department
-    // (enforced in UpdateDepartmentHandler).
+    // =====================================================
+    // UPDATE DEPARTMENT — FirmAdmin and above
+    // Edits an existing department. A FirmAdmin may only update their
+    // OWN firm's custom department (enforced in UpdateDepartmentHandler)
+    // — never a global or another firm's department.
+    // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, UpdateDepartmentCommand command)
@@ -68,9 +75,13 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Department updated successfully."));
     }
 
-    // DELETE DEPARTMENT
-    // Firm Admin may only delete their OWN firm's custom department
-    // (enforced in DeleteDepartmentHandler).
+    // =====================================================
+    // DELETE DEPARTMENT — FirmAdmin and above
+    // Removes a department the firm no longer needs. A FirmAdmin may only
+    // delete their OWN firm's custom department (enforced in
+    // DeleteDepartmentHandler) — never a global or another firm's
+    // department.
+    // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)

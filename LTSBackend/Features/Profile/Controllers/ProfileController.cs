@@ -23,8 +23,13 @@ public class ProfileController : ControllerBase
         _logger = logger;
     }
 
-    // GET MY PROFILE
-
+    // =====================================================
+    // GET MY PROFILE — Any authenticated user
+    // Returns the currently logged-in user's own profile (name, email,
+    // phone, designation, photo, etc.). The user ID always comes from
+    // their own JWT claim, so a user can never fetch someone else's
+    // profile through this endpoint.
+    // =====================================================
     [HttpGet("me")]
     public async Task<IActionResult> GetMyProfile()
     {
@@ -42,8 +47,13 @@ public class ProfileController : ControllerBase
         return Ok(ApiResponse<ProfileDTO>.SuccessResponse(profile,"Profile fetched successfully."));
     }
 
-    // UPDATE MY PROFILE
-
+    // =====================================================
+    // UPDATE MY PROFILE — Any authenticated user
+    // Lets a user edit their own profile fields (name, contact info,
+    // photo, etc.). Per SRS FR-19, a user cannot change their own role
+    // through this endpoint — role changes are FirmAdmin/SuperAdmin-only,
+    // handled elsewhere (UsersController.Update).
+    // =====================================================
     [HttpPut("me")]
     public async Task<IActionResult> UpdateMyProfile([FromForm] UpdateMyProfileCommand command)
     {

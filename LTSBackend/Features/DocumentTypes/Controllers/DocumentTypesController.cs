@@ -23,6 +23,12 @@ namespace LTSBackend.Features.DocumentTypes.Controllers;
 [Authorize]
 public class DocumentTypesController(IMediator mediator) : ControllerBase
 {
+    // =====================================================
+    // GET ALL DOCUMENT TYPES — Any authenticated user
+    // Returns the document types (Petition, Affidavit, Court Order,
+    // Evidence, Reply, Judgment, etc.) available to the caller's firm, for
+    // Document upload/edit dropdowns.
+    // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText, [FromQuery] bool activeOnly = true)
     {
@@ -30,6 +36,10 @@ public class DocumentTypesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<DocumentTypeDTO>>.SuccessResponse(types));
     }
 
+    // =====================================================
+    // GET DOCUMENT TYPE BY ID — Any authenticated user
+    // Fetches a single document type's details by its ID.
+    // =====================================================
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -37,6 +47,11 @@ public class DocumentTypesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<DocumentTypeDTO>.SuccessResponse(type));
     }
 
+    // =====================================================
+    // CREATE DOCUMENT TYPE — FirmAdmin and above
+    // Adds a new document type. A FirmAdmin's new type is scoped to their
+    // own firm; only a SuperAdmin can create a global type.
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Create(CreateDocumentTypeCommand command)
@@ -45,6 +60,11 @@ public class DocumentTypesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<int>.SuccessResponse(id, "Document type created successfully."));
     }
 
+    // =====================================================
+    // UPDATE DOCUMENT TYPE — FirmAdmin and above
+    // Edits an existing document type's name/description/active flag.
+    // Route id and body DocumentTypeID must match.
+    // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, UpdateDocumentTypeCommand command)
@@ -56,6 +76,11 @@ public class DocumentTypesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Document type updated successfully."));
     }
 
+    // =====================================================
+    // DELETE DOCUMENT TYPE — FirmAdmin and above
+    // Removes a document type the firm no longer uses. Ownership/in-use
+    // checks are enforced in the handler.
+    // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)

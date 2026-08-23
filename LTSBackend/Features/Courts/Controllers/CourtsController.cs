@@ -17,13 +17,16 @@ namespace LTSBackend.Features.Courts.Controllers;
 [Authorize]
 public class CourtsController(IMediator mediator) : ControllerBase
 {
-    // GET ALL COURTS
-    // Any authenticated user can read master data.
-    // Default: activeOnly=true (dropdown use case)
-    // Admin panel: pass activeOnly=false to see all records
-    // Query results are automatically scoped by the caller's visibility
-    // (system-wide global courts + their own firm's custom courts) via
-    // the HasQueryFilter on Court in AppDbContext.
+    // =====================================================
+    // GET ALL COURTS — Any authenticated user
+    // Returns the courts available to the caller's firm for Case
+    // create/edit dropdowns and admin screens. Default activeOnly=true
+    // covers the dropdown use case; pass activeOnly=false in an admin
+    // panel to see every record including inactive ones. Query results
+    // are automatically scoped (system-wide global courts + the caller's
+    // own firm's custom courts) via the HasQueryFilter on Court in
+    // AppDbContext — not by anything in this controller.
+    // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText,[FromQuery] bool activeOnly = true)
     {
@@ -31,7 +34,10 @@ public class CourtsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<CourtDTO>>.SuccessResponse(courts));
     }
 
-    // GET COURT BY ID
+    // =====================================================
+    // GET COURT BY ID — Any authenticated user
+    // Fetches a single court's details by its ID.
+    // =====================================================
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -39,18 +45,15 @@ public class CourtsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<CourtDTO>.SuccessResponse(court));
     }
 
-    // CREATE COURT
-    // ARCHITECTURE FIX APPLIED: Court is now genuinely per-tenant-aware.
-    // FirmID is nullable on the Court entity - NULL means a system-wide
-    // global court (managed by SuperAdmin, visible to every firm), a
-    // real value means a firm's own custom court entry. CreateCourtHandler
-    // sets FirmID = null for SuperAdmin or the caller's own FirmID for
-    // FirmAdmin, and UpdateCourtHandler/DeleteCourtHandler enforce that a
-    // FirmAdmin may only touch their OWN firm's custom courts - never a
-    // global entry or another firm's. This replaced an earlier temporary
-    // SuperAdmin-only lockdown that existed before Court had any tenant
-    // boundary at all. Requires the pending EF migration that adds the
-    // Court.FirmID column to be applied before deployment.
+    // =====================================================
+    // CREATE COURT — FirmAdmin and above
+    // Adds a new court. Court is per-tenant-aware: FirmID is nullable on
+    // the Court entity — NULL means a system-wide global court (managed by
+    // SuperAdmin, visible to every firm), a real value means a firm's own
+    // custom court entry. CreateCourtHandler sets FirmID = null for
+    // SuperAdmin or the caller's own FirmID for FirmAdmin. Requires the EF
+    // migration that adds the Court.FirmID column to be applied.
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Create(CreateCourtCommand command)
@@ -59,9 +62,12 @@ public class CourtsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<int>.SuccessResponse(id, "Court created successfully."));
     }
 
-    // UPDATE COURT
-    // Firm Admin may only update their OWN firm's custom court (enforced
-    // in UpdateCourtHandler) - never a global or another firm's court.
+    // =====================================================
+    // UPDATE COURT — FirmAdmin and above
+    // Edits an existing court's details. A FirmAdmin may only update
+    // their OWN firm's custom court (enforced in UpdateCourtHandler) —
+    // never a global or another firm's court.
+    // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, UpdateCourtCommand command)
@@ -73,9 +79,12 @@ public class CourtsController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Court updated successfully."));
     }
 
-    // DELETE COURT
-    // Firm Admin may only delete their OWN firm's custom court (enforced
-    // in DeleteCourtHandler) - never a global or another firm's court.
+    // =====================================================
+    // DELETE COURT — FirmAdmin and above
+    // Removes a court the firm no longer needs. A FirmAdmin may only
+    // delete their OWN firm's custom court (enforced in
+    // DeleteCourtHandler) — never a global or another firm's court.
+    // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)

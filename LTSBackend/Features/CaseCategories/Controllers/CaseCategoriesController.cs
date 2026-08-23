@@ -26,8 +26,13 @@ namespace LTSBackend.Features.CaseCategories.Controllers;
 [Authorize]
 public class CaseCategoriesController(IMediator mediator) : ControllerBase
 {
-    // Any authenticated user can read master data (needed for Case forms/dropdowns).
-    // Results are automatically scoped (global + own firm) by the HasQueryFilter on CaseCategory.
+    // =====================================================
+    // GET ALL CASE CATEGORIES — Any authenticated user
+    // Returns the case categories available to the caller's firm (global
+    // ones plus the firm's own), for populating Case create/edit
+    // dropdowns. Scoping to global + own firm happens automatically via
+    // the EF Core HasQueryFilter on CaseCategory, not in this controller.
+    // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText, [FromQuery] bool activeOnly = true)
     {
@@ -35,6 +40,10 @@ public class CaseCategoriesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<CaseCategoryDTO>>.SuccessResponse(categories));
     }
 
+    // =====================================================
+    // GET CASE CATEGORY BY ID — Any authenticated user
+    // Fetches a single category's details by its ID.
+    // =====================================================
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -42,6 +51,12 @@ public class CaseCategoriesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<CaseCategoryDTO>.SuccessResponse(category));
     }
 
+    // =====================================================
+    // CREATE CASE CATEGORY — FirmAdmin and above
+    // Adds a new category. A FirmAdmin's new category is scoped to their
+    // own firm only; only a SuperAdmin can create a global (FirmID = NULL)
+    // category visible to every firm (enforced in the handler).
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Create(CreateCaseCategoryCommand command)
@@ -50,6 +65,13 @@ public class CaseCategoriesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<int>.SuccessResponse(id, "Case category created successfully."));
     }
 
+    // =====================================================
+    // UPDATE CASE CATEGORY — FirmAdmin and above
+    // Edits an existing category's name/description/active flag. Route id
+    // and body CategoryID must match. A FirmAdmin cannot edit another
+    // firm's or a global category — that ownership check happens in the
+    // handler.
+    // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, UpdateCaseCategoryCommand command)
@@ -61,6 +83,12 @@ public class CaseCategoriesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Case category updated successfully."));
     }
 
+    // =====================================================
+    // DELETE CASE CATEGORY — FirmAdmin and above
+    // Removes a category the firm no longer needs. Ownership/ in-use
+    // checks (e.g. can't delete a global category, or one still assigned
+    // to existing cases) are enforced in the handler.
+    // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)

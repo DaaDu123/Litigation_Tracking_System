@@ -32,11 +32,15 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
     };
 
 
-    // Checks whether a user holds a specific permission. Denies (returns false)
-    // for missing/roleless/inactive/deleted/blocked-firm users, so a permission
-    // check can never silently "pass" for an account that should not be able
-    // to act at all - this is enforced here in addition to the JWT-level
-    // active-status check (Program.cs OnTokenValidated) as defence in depth.
+    // =====================================================
+    // HAS PERMISSION ASYNC
+    // Checks whether a user holds a specific permission. Denies (returns
+    // false) for missing/roleless/inactive/deleted/blocked-firm users, so
+    // a permission check can never silently "pass" for an account that
+    // should not be able to act at all - this is enforced here in
+    // addition to the JWT-level active-status check (Program.cs
+    // OnTokenValidated) as defence in depth.
+    // =====================================================
     public async Task<bool> HasPermissionAsync(int userId, string permission, CancellationToken cancellationToken = default)
     {
         try
@@ -111,8 +115,12 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
         }
     }
 
-    // Returns the full list of permission names available to the user (every
-    // permission for SuperAdmin, otherwise the role's granted permission set).
+    // =====================================================
+    // GET PERMISSIONS ASYNC
+    // Returns the full list of permission names available to the user
+    // (the fixed platform-owner set for SuperAdmin, otherwise the role's
+    // granted permission set).
+    // =====================================================
     public async Task<List<string>> GetPermissionsAsync(int userId, CancellationToken cancellationToken = default)
     {
         try
@@ -155,7 +163,11 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
         }
     }
 
-    // Checks whether the user's currently assigned role matches the given role.
+    // =====================================================
+    // HAS ROLE ASYNC
+    // Checks whether the user's currently assigned role matches the given
+    // role.
+    // =====================================================
     public async Task<bool> HasRoleAsync(int userId, UserRole role, CancellationToken cancellationToken = default)
     {
         try
@@ -185,7 +197,11 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
         }
     }
 
-    // Returns the user's current role as an enum, or null if unset/unrecognised.
+    // =====================================================
+    // GET USER ROLE ASYNC
+    // Returns the user's current role as an enum, or null if
+    // unset/unrecognised.
+    // =====================================================
     public async Task<UserRole?> GetUserRoleAsync(int userId, CancellationToken cancellationToken = default)
     {
         try
@@ -213,23 +229,29 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
         }
     }
 
+    // =====================================================
+    // HAS FULL CASE DIRECTORY VISIBILITY ASYNC
     // SRS "View Firm Case Directory": a plain permission check against
     // ViewFirmCaseDirectory (granted to FirmAdmin and Partner in
     // SeedRolePermissions). SuperAdmin is deliberately NOT special-cased
-    // here anymore - case data is firm-internal business, out of scope for
-    // the platform owner - so this now falls through to the same
-    // permission check as everyone else, which correctly denies SuperAdmin.
+    // here - case data is firm-internal business, out of scope for the
+    // platform owner - so this falls through to the same permission check
+    // as everyone else, which correctly denies SuperAdmin.
+    // =====================================================
     public async Task<bool> HasFullCaseDirectoryVisibilityAsync(int userId, CancellationToken cancellationToken = default)
     {
         return await HasPermissionAsync(userId, nameof(PermissionEnum.ViewFirmCaseDirectory), cancellationToken);
     }
 
-    // SRS RBAC "Case assignment" check: confirms both that the case belongs
-    // to the user's own firm (tenant isolation) AND that an active
-    // CaseAssignment row links this user to it. Deliberately does NOT treat
-    // SuperAdmin/full-directory-visibility roles as "assigned" - callers
-    // that want those roles to bypass the assignment check should call
-    // HasFullCaseDirectoryVisibilityAsync first.
+    // =====================================================
+    // IS USER ASSIGNED TO CASE ASYNC
+    // SRS RBAC "Case assignment" check: confirms both that the case
+    // belongs to the user's own firm (tenant isolation) AND that an
+    // active CaseAssignment row links this user to it. Deliberately does
+    // NOT treat SuperAdmin/full-directory-visibility roles as "assigned"
+    // - callers that want those roles to bypass the assignment check
+    // should call HasFullCaseDirectoryVisibilityAsync first.
+    // =====================================================
     public async Task<bool> IsUserAssignedToCaseAsync(int userId, long caseId, CancellationToken cancellationToken = default)
     {
         try

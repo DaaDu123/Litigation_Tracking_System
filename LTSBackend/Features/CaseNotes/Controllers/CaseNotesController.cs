@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.CaseNotes.Commands.CreateNote;
 using LTSBackend.Features.CaseNotes.Commands.DeleteNote;
 using LTSBackend.Features.CaseNotes.Commands.UpdateNote;
@@ -20,7 +20,11 @@ namespace LTSBackend.Features.CaseNotes.Controllers;
 [Authorize]
 public class CaseNotesController(IMediator _mediator) : ControllerBase
 {
-    // GET api/casenotes/case/5
+    // =====================================================
+    // GET NOTES FOR A CASE — Any firm user
+    // Returns every note/legal-opinion entry recorded against the given
+    // case, newest-first, for the Case Notes / activity-trail panel.
+    // =====================================================
     [HttpGet("case/{caseId}")]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> GetByCase(long caseId)
@@ -29,7 +33,10 @@ public class CaseNotesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<List<CaseNoteDetailDTO>>.SuccessResponse(result, "Case notes fetched"));
     }
 
-    // POST api/casenotes
+    // =====================================================
+    // CREATE NOTE — Any firm user
+    // Adds a new note or legal-opinion entry against a case.
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> Create([FromBody] CreateCaseNoteDTO dto)
@@ -38,7 +45,10 @@ public class CaseNotesController(IMediator _mediator) : ControllerBase
         return CreatedAtAction(nameof(GetByCase), new { caseId = dto.CaseID }, ApiResponse<long>.SuccessResponse(id, "Note successfully added"));
     }
 
-    // PUT api/casenotes/12
+    // =====================================================
+    // UPDATE NOTE — Any firm user
+    // Edits the text/title of an existing note.
+    // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> Update(long id, [FromBody] UpdateCaseNoteDTO dto)
@@ -48,7 +58,10 @@ public class CaseNotesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Note successfully updated"));
     }
 
-    // DELETE api/casenotes/12
+    // =====================================================
+    // DELETE NOTE — Any firm user
+    // Permanently removes a note from the case's activity trail.
+    // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> Delete(long id)

@@ -23,6 +23,12 @@ namespace LTSBackend.Features.CaseStatuses.Controllers;
 [Authorize]
 public class CaseStatusesController(IMediator mediator) : ControllerBase
 {
+    // =====================================================
+    // GET ALL CASE STATUSES — Any authenticated user
+    // Returns the workflow statuses (New, Pending, Active, Hearing
+    // Scheduled, Closed, Archived, etc.) available to the caller's firm,
+    // for Case create/edit dropdowns and status-change screens.
+    // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText, [FromQuery] bool activeOnly = true)
     {
@@ -30,6 +36,10 @@ public class CaseStatusesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<CaseStatusDTO>>.SuccessResponse(statuses));
     }
 
+    // =====================================================
+    // GET CASE STATUS BY ID — Any authenticated user
+    // Fetches a single status's details by its ID.
+    // =====================================================
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -37,6 +47,11 @@ public class CaseStatusesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<CaseStatusDTO>.SuccessResponse(status));
     }
 
+    // =====================================================
+    // CREATE CASE STATUS — FirmAdmin and above
+    // Adds a new workflow status. A FirmAdmin's new status is scoped to
+    // their own firm; only a SuperAdmin can create a global status.
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Create(CreateCaseStatusCommand command)
@@ -45,6 +60,11 @@ public class CaseStatusesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<int>.SuccessResponse(id, "Case status created successfully."));
     }
 
+    // =====================================================
+    // UPDATE CASE STATUS — FirmAdmin and above
+    // Edits an existing status's name/sequence/colour/closed flag. Route
+    // id and body StatusID must match.
+    // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Update(int id, UpdateCaseStatusCommand command)
@@ -56,6 +76,11 @@ public class CaseStatusesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Case status updated successfully."));
     }
 
+    // =====================================================
+    // DELETE CASE STATUS — FirmAdmin and above
+    // Removes a status the firm no longer uses. Ownership/in-use checks
+    // are enforced in the handler.
+    // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> Delete(int id)

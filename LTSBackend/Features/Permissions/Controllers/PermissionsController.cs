@@ -31,8 +31,11 @@ public class PermissionsController : ControllerBase
         _logger = logger;
     }
 
-    // GET ALL PERMISSIONS
-
+    // =====================================================
+    // GET ALL PERMISSIONS — requires "ManageRoles" (SuperAdmin in practice)
+    // Returns every permission defined on the platform, for populating the
+    // role/permission-assignment screen.
+    // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -43,8 +46,11 @@ public class PermissionsController : ControllerBase
         return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(permissions,"Permissions fetched successfully."));
     }
 
-    // GET ROLE PERMISSIONS
-
+    // =====================================================
+    // GET ROLE PERMISSIONS — requires "ManageRoles" (SuperAdmin in practice)
+    // Returns the permissions currently granted to a specific role, so the
+    // assignment screen can show what's checked/unchecked.
+    // =====================================================
     [HttpGet("role/{roleId}")]
     public async Task<IActionResult> GetRolePermissions(int roleId)
     {
@@ -55,8 +61,13 @@ public class PermissionsController : ControllerBase
         return Ok(ApiResponse<List<PermissionDTO>>.SuccessResponse(permissions,"Role permissions fetched successfully."));
     }
 
-    // ASSIGN PERMISSIONS TO ROLE
-
+    // =====================================================
+    // ASSIGN PERMISSIONS TO ROLE — requires "ManageRoles" (SuperAdmin in practice)
+    // Replaces a role's ENTIRE permission set platform-wide with the
+    // supplied list. See the class-level note above — this is a global,
+    // non-tenant-scoped operation, which is exactly why it's locked to
+    // SuperAdmin today.
+    // =====================================================
     [HttpPut("assign")]
     public async Task<IActionResult> AssignPermissions([FromBody] AssignPermissionsCommand command)
     {

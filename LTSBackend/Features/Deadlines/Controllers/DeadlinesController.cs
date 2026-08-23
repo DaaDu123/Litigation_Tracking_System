@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Deadlines.Commands.CompleteDeadline;
 using LTSBackend.Features.Deadlines.Commands.CreateDeadline;
 using LTSBackend.Features.Deadlines.Commands.DeleteDeadline;
@@ -23,7 +23,11 @@ namespace LTSBackend.Features.Deadlines.Controllers;
 [Authorize]
 public class DeadlinesController(IMediator _mediator) : ControllerBase
 {
-    // GET api/deadlines/upcoming
+    // =====================================================
+    // GET UPCOMING DEADLINES — Any firm user
+    // Returns deadlines due within the next N days (daysAhead, optional)
+    // across the caller's visible cases, for the deadline-tracker widget.
+    // =====================================================
     [HttpGet("upcoming")]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> GetUpcoming([FromQuery] int? daysAhead)
@@ -32,7 +36,11 @@ public class DeadlinesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<List<DeadlineDetailDTO>>.SuccessResponse(result, "Upcoming deadlines fetched"));
     }
 
-    // GET api/deadlines/case/5?completed=false
+    // =====================================================
+    // GET DEADLINES FOR A CASE — Any firm user
+    // Lists a specific case's deadlines. Pass completed=true/false to
+    // filter to only completed or only pending ones.
+    // =====================================================
     [HttpGet("case/{caseId}")]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> GetByCase(long caseId, [FromQuery] bool? completed)
@@ -41,7 +49,13 @@ public class DeadlinesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<List<DeadlineDetailDTO>>.SuccessResponse(result, "Case deadlines fetched"));
     }
 
-    // POST api/deadlines
+    // =====================================================
+    // CREATE DEADLINE — Lawyer roles
+    // Adds a new deadline against a case, with a due date and the user's
+    // own choice of ReminderDays (how many days before the due date they
+    // want to be warned — see CreateDeadlineValidator/ReminderService for
+    // how that value is used and its one-week guaranteed floor).
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.AllLawyers)]
     public async Task<IActionResult> Create([FromBody] CreateDeadlineDTO dto)
@@ -50,7 +64,11 @@ public class DeadlinesController(IMediator _mediator) : ControllerBase
         return CreatedAtAction(nameof(GetByCase), new { caseId = dto.CaseID }, ApiResponse<long>.SuccessResponse(id, "Deadline successfully created"));
     }
 
-    // PUT api/deadlines/12
+    // =====================================================
+    // UPDATE DEADLINE — Lawyer roles
+    // Edits an existing deadline's type, due date, reminder window, or
+    // remarks.
+    // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.AllLawyers)]
     public async Task<IActionResult> Update(long id, [FromBody] UpdateDeadlineDTO dto)
@@ -60,7 +78,11 @@ public class DeadlinesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Deadline successfully updated"));
     }
 
-    // PUT api/deadlines/12/complete
+    // =====================================================
+    // COMPLETE DEADLINE — Lawyer roles
+    // Marks a deadline as completed so it stops appearing in "upcoming"
+    // lists and stops generating reminder emails.
+    // =====================================================
     [HttpPut("{id}/complete")]
     [Authorize(Roles = RoleNames.AllLawyers)]
     public async Task<IActionResult> Complete(long id)
@@ -69,7 +91,12 @@ public class DeadlinesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Deadline marked complete"));
     }
 
-    // DELETE api/deadlines/12
+    // =====================================================
+    // DELETE DEADLINE — Partner and above
+    // Permanently removes a deadline. Restricted to Partner-and-above
+    // since deleting a legal deadline is a higher-risk action than
+    // creating/updating/completing one.
+    // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
     public async Task<IActionResult> Delete(long id)

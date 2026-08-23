@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Authorization;
 using LTSBackend.Features.LoginHistory.Commands.DeleteOldHistory;
 using LTSBackend.Features.LoginHistory.DeleteAllOldHistory;
@@ -18,7 +18,12 @@ namespace LTSBackend.Features.LoginHistory.Controllers;
 [Route("api/[controller]")]
 [Authorize]
 public class LoginHistoryController(IMediator mediator) : ControllerBase
-{    
+{
+    // =====================================================
+    // GET ALL LOGIN HISTORY — requires "ViewLoginHistory" permission
+    // Returns a paged, filterable (search, date range, status) list of
+    // login attempts across the firm, for the security-monitoring screen.
+    // =====================================================
     [HttpGet]
     [HasPermission("ViewLoginHistory")]
     public async Task<IActionResult> GetAll(
@@ -33,6 +38,12 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<PagedResult<LoginHistoryDTO>>.SuccessResponse(result, "Login history fetched successfully."));
     }
 
+    // =====================================================
+    // GET MY LOGIN HISTORY — Any authenticated user
+    // Returns the currently logged-in user's own login history, for their
+    // personal security/profile screen. The user ID is read from their own
+    // JWT claim, so this can never return another user's history.
+    // =====================================================
     [HttpGet("my")]
     public async Task<IActionResult> MyHistory()
     {
@@ -47,6 +58,10 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<List<MyLoginHistoryDTO>>.SuccessResponse(result, "My login history fetched successfully."));
     }
 
+    // =====================================================
+    // DELETE LOGIN HISTORY RECORD — requires "DeleteLoginHistory" permission
+    // Removes a single login-history entry by its ID.
+    // =====================================================
     [HttpDelete("{id:int}")]
     [HasPermission("DeleteLoginHistory")]
     public async Task<IActionResult> Delete(int id)
@@ -56,7 +71,12 @@ public class LoginHistoryController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Login history deleted successfully."));
     }
 
-    // Bulk-deletes logged-out records older than the given retention window.
+    // =====================================================
+    // CLEANUP OLD LOGIN HISTORY — requires "DeleteLoginHistory" permission
+    // Bulk-deletes logged-out records older than the given retention
+    // window (default 90 days), to keep the login-history table from
+    // growing unbounded.
+    // =====================================================
     [HttpDelete("cleanup")]
     [HasPermission("DeleteLoginHistory")]
     public async Task<IActionResult> Cleanup([FromQuery] int days = 90)

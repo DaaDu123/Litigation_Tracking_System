@@ -21,6 +21,14 @@ namespace LTSBackend.Features.Dashboard.Controllers;
 [HasPermission("ViewDashboard")]
 public class DashboardController(IMediator _mediator, ICurrentUserService _currentUser, ILogger<DashboardController> _logger) : ControllerBase
 {
+    // =====================================================
+    // GET DASHBOARD STATS — requires "ViewDashboard" permission
+    // Returns the statistics for whichever dashboard matches the caller's
+    // OWN role — never a role picked by the request. SuperAdmin gets the
+    // platform-wide (firm/audit) view; every other role gets the firm's
+    // case/hearing/deadline view (further narrowed to "assigned only" for
+    // AssociateLawyer/Moharrir/InternParalegal inside GetFirmDashboardQuery).
+    // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetStats()
     {

@@ -29,11 +29,14 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
-    // REGISTRATION & EMAIL VERIFICATION
-
-    // SECURITY: rate limited (see Program.cs "auth-moderate" policy) —
-    // otherwise open self-registration + resend-otp are spam/enumeration
-    // vectors.
+    // =====================================================
+    // REGISTER — Anonymous
+    // Self-registration entry point: creates an unverified account and
+    // triggers an OTP email so the user can verify ownership of the email
+    // address before they can log in.
+    // SECURITY: rate limited ("auth-moderate", see Program.cs) — open
+    // self-registration is otherwise a spam/enumeration vector.
+    // =====================================================
     [HttpPost("register")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-moderate")]
@@ -44,9 +47,15 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<RegisterResponseDTO>.SuccessResponse(result, result.Message));
     }
 
-    // SECURITY: rate limited (see Program.cs "auth-critical" policy) — this
-    // is the endpoint that brute-forces a 6-digit OTP; without a limit an
+    // =====================================================
+    // VERIFY OTP — Anonymous
+    // Confirms the 6-digit one-time code sent to the user's email during
+    // registration (or another OTP-based flow) and marks the account as
+    // verified so it can log in.
+    // SECURITY: rate limited ("auth-critical", see Program.cs) — this is
+    // the endpoint that brute-forces a 6-digit OTP; without a limit an
     // attacker gets unlimited guesses inside the 5-minute expiry window.
+    // =====================================================
     [HttpPost("verify-otp")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-critical")]
@@ -57,8 +66,13 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<VerifyOtpResponseDTO>.SuccessResponse(result, result.Message));
     }
 
-    // SECURITY: rate limited (see Program.cs "auth-moderate" policy) —
-    // prevents using resend as an email-bombing vector.
+    // =====================================================
+    // RESEND OTP — Anonymous
+    // Issues a fresh OTP (e.g. because the previous one expired or the
+    // email never arrived) for the same verification flow as Register.
+    // SECURITY: rate limited ("auth-moderate", see Program.cs) — prevents
+    // this endpoint being used as an email-bombing vector.
+    // =====================================================
     [HttpPost("resend-otp")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-moderate")]
@@ -69,11 +83,15 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<ResendOtpResponseDTO>.SuccessResponse(result, result.Message));
     }
 
-    // LOGIN & LOGOUT
-
-    // SECURITY: rate limited (see Program.cs "auth-critical" policy) — the
+    // =====================================================
+    // LOGIN — Anonymous
+    // Validates email/password and, on success, issues the access token
+    // (plus sets the refresh-token cookie) that every other authenticated
+    // endpoint relies on.
+    // SECURITY: rate limited ("auth-critical", see Program.cs) — the
     // per-account lockout in LoginHandler doesn't stop an attacker trying
     // many different email addresses from one IP; this closes that gap.
+    // =====================================================
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-critical")]
@@ -84,6 +102,11 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<LoginResponseDTO>.SuccessResponse(result, "Login successful!"));
     }
 
+    // =====================================================
+    // LOGOUT — Any authenticated user
+    // Invalidates the caller's current refresh token/session so the
+    // access/refresh token pair can no longer be used to get new tokens.
+    // =====================================================
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout()
@@ -93,10 +116,14 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Logout successful!"));
     }
 
-    // TOKEN REFRESH
-
-    // SECURITY: rate limited (see Program.cs "auth-critical" policy) —
-    // caps how fast a stolen/guessed refresh token cookie can be replayed.
+    // =====================================================
+    // REFRESH TOKEN — Anonymous (relies on the refresh-token cookie)
+    // Exchanges a still-valid refresh token (sent as an HttpOnly cookie,
+    // not in the body) for a new short-lived access token, so the user
+    // stays logged in without re-entering credentials.
+    // SECURITY: rate limited ("auth-critical", see Program.cs) — caps how
+    // fast a stolen/guessed refresh token cookie can be replayed.
+    // =====================================================
     [HttpPost("refresh-token")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-critical")]
@@ -109,8 +136,13 @@ public class AuthController : ControllerBase
             "Access token refreshed successfully."));
     }
 
-    // PASSWORD OPERATIONS
-
+    // =====================================================
+    // CHANGE PASSWORD — Any authenticated user
+    // Lets an already-logged-in user change their own password by
+    // supplying their current password plus a new one. The acting user's
+    // ID always comes from their own JWT claim, never from the request
+    // body, so a user can only ever change their own password here.
+    // =====================================================
     [HttpPost("change-password")]
     [Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand command)
@@ -129,11 +161,16 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Password changed successfully!"));
     }
 
-    // SECURITY: rate limited (see Program.cs "auth-moderate" policy) —
-    // ForgotPassword returns a generic response regardless of whether the
-    // email exists (see ForgotPasswordHandler), but without a rate limit
-    // an attacker could still email-bomb a target. Also doubles as the
-    // "resend OTP" call for this flow - see ForgotPasswordHandler.
+    // =====================================================
+    // FORGOT PASSWORD — Anonymous
+    // Starts the "I forgot my password" flow: if the email exists, an OTP
+    // is emailed to it. Always returns the same generic response whether
+    // or not the email is registered (see ForgotPasswordHandler) so the
+    // endpoint can't be used to check which emails have accounts. Also
+    // doubles as the "resend OTP" call for this specific flow.
+    // SECURITY: rate limited ("auth-moderate", see Program.cs) — without a
+    // rate limit an attacker could still email-bomb a target address.
+    // =====================================================
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-moderate")]
@@ -144,10 +181,14 @@ public class AuthController : ControllerBase
         return Ok(ApiResponse<ForgotPasswordResponseDTO>.SuccessResponse(result, result.Message));
     }
 
-    // SECURITY: rate limited (see Program.cs "auth-critical" policy) — same
-    // brute-force concern as VerifyOtp: this is where a 6-digit code gets
-    // checked, so unlimited guesses inside the 5-minute expiry must be
-    // blocked here too.
+    // =====================================================
+    // RESET PASSWORD — Anonymous
+    // Completes the forgot-password flow: verifies the OTP sent by
+    // ForgotPassword and, if valid, sets the new password.
+    // SECURITY: rate limited ("auth-critical", see Program.cs) — same
+    // brute-force concern as VerifyOtp: a 6-digit code is checked here, so
+    // unlimited guesses inside the 5-minute expiry must be blocked.
+    // =====================================================
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-critical")]

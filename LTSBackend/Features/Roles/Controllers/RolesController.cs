@@ -37,6 +37,12 @@ namespace LTSBackend.Features.Roles.Controllers;
 [HasPermission("ManageRoles")]
 public class RolesController(IMediator mediator) : ControllerBase
 {
+    // =====================================================
+    // GET ALL ROLES — requires "ManageRoles" (SuperAdmin in practice)
+    // Returns every role defined on the platform (SuperAdmin, FirmAdmin,
+    // Partner, Associate, Moharrir, Intern, etc.), for the platform-level
+    // role-management screen.
+    // =====================================================
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -44,6 +50,11 @@ public class RolesController(IMediator mediator) : ControllerBase
 
         return Ok(ApiResponse<List<RoleDTO>>.SuccessResponse(roles));
     }
+
+    // =====================================================
+    // GET ROLE BY ID — requires "ManageRoles" (SuperAdmin in practice)
+    // Fetches a single role's details by its ID.
+    // =====================================================
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -51,6 +62,11 @@ public class RolesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<RoleDTO>.SuccessResponse(role));
     }
 
+    // =====================================================
+    // CREATE ROLE — requires "ManageRoles" (SuperAdmin in practice)
+    // Adds a brand-new, platform-wide role definition. See the
+    // class-level note above for why this is intentionally SuperAdmin-only.
+    // =====================================================
     [HttpPost]
     public async Task<IActionResult> Create(CreateRoleCommand command)
     {
@@ -58,6 +74,11 @@ public class RolesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<int>.SuccessResponse(id, "Role created successfully."));
     }
 
+    // =====================================================
+    // UPDATE ROLE — requires "ManageRoles" (SuperAdmin in practice)
+    // Edits an existing role's name/description. Route id and body
+    // RoleID must match.
+    // =====================================================
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, UpdateRoleCommand command)
     {
@@ -67,6 +88,10 @@ public class RolesController(IMediator mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Role updated successfully."));
     }
 
+    // =====================================================
+    // DELETE ROLE — requires "ManageRoles" (SuperAdmin in practice)
+    // Removes a platform-wide role definition.
+    // =====================================================
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

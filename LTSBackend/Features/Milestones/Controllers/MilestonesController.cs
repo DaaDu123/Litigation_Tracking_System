@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.Milestones.Commands.CompleteMilestone;
 using LTSBackend.Features.Milestones.Commands.CreateMilestone;
 using LTSBackend.Features.Milestones.Commands.DeleteMilestone;
@@ -22,7 +22,10 @@ namespace LTSBackend.Features.Milestones.Controllers;
 [Authorize]
 public class MilestonesController(IMediator _mediator) : ControllerBase
 {
-    // GET api/milestones/case/5
+    // =====================================================
+    // GET MILESTONES FOR A CASE — Any firm user
+    // Lists every milestone recorded against the given case.
+    // =====================================================
     [HttpGet("case/{caseId}")]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> GetByCase(long caseId)
@@ -31,7 +34,10 @@ public class MilestonesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<List<MilestoneDetailDTO>>.SuccessResponse(result, "Case milestones fetched"));
     }
 
-    // POST api/milestones
+    // =====================================================
+    // CREATE MILESTONE — Lawyer roles
+    // Adds a new milestone (target date + description) against a case.
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.AllLawyers)]
     public async Task<IActionResult> Create([FromBody] CreateMilestoneDTO dto)
@@ -40,7 +46,10 @@ public class MilestonesController(IMediator _mediator) : ControllerBase
         return CreatedAtAction(nameof(GetByCase), new { caseId = dto.CaseID }, ApiResponse<long>.SuccessResponse(id, "Milestone successfully created"));
     }
 
-    // PUT api/milestones/12
+    // =====================================================
+    // UPDATE MILESTONE — Lawyer roles
+    // Edits an existing milestone's name/description/date.
+    // =====================================================
     [HttpPut("{id}")]
     [Authorize(Roles = RoleNames.AllLawyers)]
     public async Task<IActionResult> Update(long id, [FromBody] UpdateMilestoneDTO dto)
@@ -50,7 +59,10 @@ public class MilestonesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Milestone successfully updated"));
     }
 
-    // PUT api/milestones/12/complete
+    // =====================================================
+    // COMPLETE MILESTONE — Lawyer roles
+    // Marks a milestone as completed, recording who completed it and when.
+    // =====================================================
     [HttpPut("{id}/complete")]
     [Authorize(Roles = RoleNames.AllLawyers)]
     public async Task<IActionResult> Complete(long id)
@@ -59,7 +71,12 @@ public class MilestonesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Milestone marked complete"));
     }
 
-    // DELETE api/milestones/12
+    // =====================================================
+    // DELETE MILESTONE — Partner and above
+    // Permanently removes a milestone. Restricted to Partner-and-above
+    // since deleting case-outcome history is higher-risk than
+    // creating/updating one.
+    // =====================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
     public async Task<IActionResult> Delete(long id)

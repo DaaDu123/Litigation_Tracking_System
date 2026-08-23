@@ -1,4 +1,4 @@
-﻿using LTSBackend.Comman.Responses;
+using LTSBackend.Comman.Responses;
 using LTSBackend.Features.CaseParties.Commands.CreateCaseParty;
 using LTSBackend.Features.CaseParties.Commands.DeleteCaseParty;
 using LTSBackend.Features.CaseParties.Commands.UpdateCaseParty;
@@ -22,7 +22,11 @@ namespace LTSBackend.Features.CaseParties.Controllers;
 [Authorize]
 public class CasePartiesController(IMediator _mediator) : ControllerBase
 {
-    // GET api/cases/5/parties
+    // =====================================================
+    // GET PARTIES FOR A CASE — Any firm user
+    // Lists every party (plaintiff, defendant, petitioner, respondent,
+    // etc.) recorded against the given case.
+    // =====================================================
     [HttpGet]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> GetByCase(long caseId)
@@ -31,7 +35,10 @@ public class CasePartiesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<List<CasePartyDetailDTO>>.SuccessResponse(result, "Case parties fetched"));
     }
 
-    // GET api/cases/5/parties/12
+    // =====================================================
+    // GET PARTY BY ID — Any firm user
+    // Fetches a single party's full detail record within a case.
+    // =====================================================
     [HttpGet("{partyId}")]
     [Authorize(Roles = RoleNames.AllFirmUsers)]
     public async Task<IActionResult> GetById(long caseId, long partyId)
@@ -40,7 +47,12 @@ public class CasePartiesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<CasePartyDetailDTO>.SuccessResponse(result, "Party fetched"));
     }
 
-    // POST api/cases/5/parties
+    // =====================================================
+    // CREATE PARTY — Lawyer roles
+    // Adds a new party (plaintiff/defendant/petitioner/respondent, etc.)
+    // to the given case. CaseID is taken from the route, not trusted from
+    // the request body.
+    // =====================================================
     [HttpPost]
     [Authorize(Roles = RoleNames.AllLawyers)]
     public async Task<IActionResult> Create(long caseId, [FromBody] CreateCasePartyDTO dto)
@@ -50,7 +62,11 @@ public class CasePartiesController(IMediator _mediator) : ControllerBase
         return CreatedAtAction(nameof(GetById), new { caseId, partyId }, ApiResponse<long>.SuccessResponse(partyId, "Party successfully added"));
     }
 
-    // PUT api/cases/5/parties/12
+    // =====================================================
+    // UPDATE PARTY — Lawyer roles
+    // Edits an existing party's details (name, contact info, lawyer name,
+    // etc.).
+    // =====================================================
     [HttpPut("{partyId}")]
     [Authorize(Roles = RoleNames.AllLawyers)]
     public async Task<IActionResult> Update(long caseId, long partyId, [FromBody] UpdateCasePartyDTO dto)
@@ -60,7 +76,12 @@ public class CasePartiesController(IMediator _mediator) : ControllerBase
         return Ok(ApiResponse<bool>.SuccessResponse(result, "Party successfully updated"));
     }
 
-    // DELETE api/cases/5/parties/12
+    // =====================================================
+    // DELETE PARTY — Partner and above
+    // Removes a party from a case. Restricted to Partner-and-above since
+    // removing a party (e.g. a defendant) is a more consequential edit
+    // than adding/updating one.
+    // =====================================================
     [HttpDelete("{partyId}")]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
     public async Task<IActionResult> Delete(long caseId, long partyId)

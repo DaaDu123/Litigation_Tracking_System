@@ -69,6 +69,8 @@ public class CreateCaseValidator : AbstractValidator<CreateCaseCommand>
             .WithMessage("Registration Date must be on or after the Institution Date");
 
         RuleFor(x => x.ExpectedDisposalDate)
+            .GreaterThanOrEqualTo(DateTime.Now.Date)
+            .WithMessage("Expected Disposal Date cannot be in the past")
             .GreaterThan(x => x.RegistrationDate)
             .WithMessage("Expected Disposal Date must be after the Registration Date")
             .When(x => x.ExpectedDisposalDate.HasValue);
