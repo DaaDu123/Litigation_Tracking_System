@@ -9,18 +9,19 @@ using System.Security.Claims;
 
 namespace LTSBackend.Features.Deadlines.Commands.CompleteDeadline
 {
-    public class CompleteDeadlineHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
-        ICurrentUserService _currentUser,
-        IPermissionService _permissionService,
-        IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CompleteDeadlineCommand, bool>
+    public class CompleteDeadlineHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
+        IPermissionService _permissionService,IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CompleteDeadlineCommand, bool>
     {
+        // =====================================================
+        // HANDLE — marks a deadline complete
+        // Same visibility rule as Create/Update. Sets Completed = true
+        // and stamps CompletedDate, which stops it from appearing in
+        // "upcoming" lists and stops ReminderService from emailing
+        // about it.
+        // =====================================================
         public async Task<bool> Handle(CompleteDeadlineCommand request, CancellationToken cancellationToken)
         {
-            var deadline = await _context.Deadlines
-                .Include(d => d.Case)
-                .FirstOrDefaultAsync(d => d.DeadlineID == request.DeadlineID, cancellationToken);
+            var deadline = await _context.Deadlines.Include(d => d.Case).FirstOrDefaultAsync(d => d.DeadlineID == request.DeadlineID, cancellationToken);
 
             if (deadline == null || (deadline.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Deadline ID {request.DeadlineID} not found");

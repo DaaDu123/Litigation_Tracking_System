@@ -10,14 +10,16 @@ using System.Security.Claims;
 
 namespace LTSBackend.Features.CaseParties.Commands.CreateCaseParty
 {
-    public class CreateCasePartyHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
-        ICurrentUserService _currentUser,
-        IPermissionService _permissionService,
-        IHttpContextAccessor _httpContextAccessor,
-        ILogger<CreateCasePartyHandler> _logger) : IRequestHandler<CreateCasePartyCommand, long>
+    public class CreateCasePartyHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,IPermissionService _permissionService,
+        IHttpContextAccessor _httpContextAccessor,ILogger<CreateCasePartyHandler> _logger) : IRequestHandler<CreateCasePartyCommand, long>
     {
+        // =====================================================
+        // HANDLE — adds a new party (plaintiff/defendant/etc.) to a case
+        // Verifies the case belongs to the caller's own firm, and — since
+        // Create is open to AssociateLawyer/Moharrir at the controller —
+        // that the caller has full case-directory visibility or is
+        // actually assigned to this specific case.
+        // =====================================================
         public async Task<long> Handle(CreateCasePartyCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Party.CaseID, cancellationToken);

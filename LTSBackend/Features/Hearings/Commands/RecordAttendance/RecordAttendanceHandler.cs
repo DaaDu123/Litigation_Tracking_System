@@ -18,6 +18,13 @@ namespace LTSBackend.Features.Hearings.Commands.RecordAttendance
         IPermissionService _permissionService,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<RecordAttendanceCommand, long>
     {
+        // =====================================================
+        // HANDLE — logs a user's attendance at a hearing
+        // Firm isolation plus the assignment-or-full-visibility check
+        // (Record is open to every firm role at the controller). Blocks
+        // recording the same user's attendance twice for the same
+        // hearing.
+        // =====================================================
         public async Task<long> Handle(RecordAttendanceCommand request, CancellationToken cancellationToken)
         {
             var hearing = await _context.Hearings

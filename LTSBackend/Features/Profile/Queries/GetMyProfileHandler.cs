@@ -7,29 +7,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Profile.Queries;
 
-public class GetMyProfileHandler : IRequestHandler<GetMyProfileQuery, ProfileDTO>
+public class GetMyProfileHandler(AppDbContext _context, ILogger<GetMyProfileHandler> _logger) : IRequestHandler<GetMyProfileQuery, ProfileDTO>
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<GetMyProfileHandler> _logger;
 
-    public GetMyProfileHandler(AppDbContext context, ILogger<GetMyProfileHandler> logger)
-    {
-        _context = context;
-        _logger = logger;
-    }
-
-    public async Task<ProfileDTO> Handle(
-        GetMyProfileQuery request,
-        CancellationToken cancellationToken)
+    // =====================================================
+    // HANDLE — fetches the caller's own profile
+    // request.UserID is always the caller's own ID (from their JWT
+    // claim), so this can never return another user's profile.
+    // =====================================================
+    public async Task<ProfileDTO> Handle(GetMyProfileQuery request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching profile for user: {UserId}", request.UserID);
 
         var user = await _context.Users
             .AsNoTracking()
             .Include(x => x.Role)
-            .FirstOrDefaultAsync(
-                x => x.UserID == request.UserID,
-                cancellationToken);
+            .FirstOrDefaultAsync(x => x.UserID == request.UserID,cancellationToken);
 
         if (user == null)
         {

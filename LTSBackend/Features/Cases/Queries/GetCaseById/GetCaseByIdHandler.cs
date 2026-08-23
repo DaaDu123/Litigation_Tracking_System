@@ -10,6 +10,13 @@ namespace LTSBackend.Features.Cases.Queries.GetCaseById;
 
 public class GetCaseByIdHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService, ILogger<GetCaseByIdHandler> _logger) : IRequestHandler<GetCaseByIdQuery, CaseDTO?>
 {
+    // =====================================================
+    // HANDLE — fetches a single case's full detail (firm + assignment scoped)
+    // Firm-scoped lookup, then the same assignment check as GetAllCases:
+    // a user without full case-directory visibility must be actively
+    // assigned to THIS case, or gets 404 (not 403) so the case's
+    // existence isn't disclosed.
+    // =====================================================
     public async Task<CaseDTO?> Handle(GetCaseByIdQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching case: {CaseID}", request.CaseID);

@@ -10,11 +10,15 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCasePartyById
 {
     public class GetCasePartyByIdHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCasePartyByIdQuery, CasePartyDetailDTO>
     {
+        // =====================================================
+        // HANDLE — fetches a single party's details by ID
+        // Firm isolation plus the same assignment check as
+        // GetCasePartiesHandler; returns 404 (not 403) so a user who
+        // shouldn't see the party isn't told it exists.
+        // =====================================================
         public async Task<CasePartyDetailDTO> Handle(GetCasePartyByIdQuery request, CancellationToken cancellationToken)
         {
-            var party = await _context.CaseParties.AsNoTracking()
-                .Include(p => p.Case)
-                .FirstOrDefaultAsync(p => p.PartyID == request.PartyID, cancellationToken);
+            var party = await _context.CaseParties.AsNoTracking().Include(p => p.Case).FirstOrDefaultAsync(p => p.PartyID == request.PartyID, cancellationToken);
 
             if (party == null || (party.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Party ID {request.PartyID} not found");

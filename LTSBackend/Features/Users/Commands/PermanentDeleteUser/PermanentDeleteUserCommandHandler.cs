@@ -7,6 +7,15 @@ namespace LTSBackend.Features.Users.Commands.PermanentDeleteUser;
 
 public class PermanentDeleteUserCommandHandler(AppDbContext _context, ILogger<PermanentDeleteUserCommandHandler> _logger) : IRequestHandler<PermanentDeleteUserCommand, bool>
 {
+    // =====================================================
+    // HANDLE — soft-deletes a user, freeing their email for reuse
+    // Despite the name, this sets IsDeleted = true rather than removing
+    // the row (CreateUserCommandHandler's uniqueness check excludes
+    // IsDeleted rows, which is what actually frees the email up — see
+    // ReleaseUserEmailCommand for the cross-firm reuse case). Same
+    // self-protection, hierarchy, and own-firm scoping rules as
+    // DeleteUserCommandHandler, plus revokes every active refresh token.
+    // =====================================================
     public async Task<bool> Handle(PermanentDeleteUserCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Permanently deleting user: {UserId}", request.UserID);

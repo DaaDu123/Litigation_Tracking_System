@@ -5,6 +5,11 @@ namespace LTSBackend.Features.Users.Commands.CreateUser;
 
 public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 {
+    // Requires name/email/password (standard complexity rules)/a defined
+    // RoleID; phone/department are optional but format/length-checked.
+    // ProfileImage, if supplied, must be under 5MB, a JPG/JPEG/PNG/WebP
+    // file, AND have a byte signature matching that extension (blocks a
+    // renamed/mislabeled file).
     public CreateUserCommandValidator()
     {
         RuleFor(x => x.FullName)

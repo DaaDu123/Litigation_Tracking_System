@@ -4,6 +4,9 @@ namespace LTSBackend.Features.Auth.Register;
 
 public class RegisterValidator : AbstractValidator<RegisterCommand>
 {
+    // Validates the self-registration form: name/email/password-complexity/
+    // optional phone format, and requires a FirmCode (the firm's own
+    // registration code) so the account can be scoped to the right firm.
     public RegisterValidator()
     {
         RuleFor(x => x.FullName)

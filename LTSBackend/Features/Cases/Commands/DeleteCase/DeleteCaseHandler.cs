@@ -11,6 +11,18 @@ namespace LTSBackend.Features.Cases.Commands.DeleteCase;
 
 public class DeleteCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<DeleteCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor, ICurrentUserService _currentUser) : IRequestHandler<DeleteCaseCommand, bool>
 {
+    // =====================================================
+    // HANDLE — permanently deletes a case and all its child records
+    // Firm-scoped lookup; refuses to delete an archived case (must be
+    // unarchived first). Runs inside a DB transaction (via
+    // CreateExecutionStrategy, compatible with EnableRetryOnFailure) that
+    // deletes every dependent record in FK-safe order — grandchildren
+    // (hearing attendance, document permissions) before children
+    // (hearings, documents, parties, assignments, deadlines, milestones,
+    // status history, notes, notifications) — before removing the case
+    // itself and writing an audit log entry. Rolls back entirely on any
+    // failure.
+    // =====================================================
     public async Task<bool> Handle(DeleteCaseCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deleting case: {CaseID}", request.CaseID);

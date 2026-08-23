@@ -16,6 +16,11 @@ namespace LTSBackend.Features.Milestones.Commands.CompleteMilestone
         IPermissionService _permissionService,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CompleteMilestoneCommand, bool>
     {
+        // =====================================================
+        // HANDLE — marks a milestone complete
+        // Same visibility rule as Create. Records who completed it and
+        // when.
+        // =====================================================
         public async Task<bool> Handle(CompleteMilestoneCommand request, CancellationToken cancellationToken)
         {
             var milestone = await _context.CaseMilestones

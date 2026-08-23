@@ -3,6 +3,9 @@ namespace LTSBackend.Features.Profile.Commands;
 
 public class UpdateMyProfileValidator : AbstractValidator<UpdateMyProfileCommand>
 {
+    // Requires a full name; phone/department are optional but
+    // format/length-checked. ProfileImage, if supplied, must be under 5MB
+    // and a JPG/JPEG/PNG/WebP file.
     public UpdateMyProfileValidator()
     {
         RuleFor(x => x.FullName)

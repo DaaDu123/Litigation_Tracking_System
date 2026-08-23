@@ -8,6 +8,11 @@ namespace LTSBackend.Features.Courts.Commands.DeleteCourt;
 
 public sealed class DeleteCourtHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<DeleteCourtHandler> _logger): IRequestHandler<DeleteCourtCommand, bool>
 {
+    // =====================================================
+    // HANDLE — removes a court the firm no longer needs
+    // Same ownership check as Update (own firm's custom court only),
+    // plus an in-use check: cannot delete while cases still reference it.
+    // =====================================================
     public async Task<bool> Handle(DeleteCourtCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deleting court: {CourtID}", request.CourtID);
@@ -31,8 +36,7 @@ public sealed class DeleteCourtHandler(AppDbContext _context, ICurrentUserServic
         }
 
         // 2. Block delete if cases reference this court
-        int caseCount = await _context.Cases
-            .CountAsync(x => x.CourtID == request.CourtID, cancellationToken);
+        int caseCount = await _context.Cases.CountAsync(x => x.CourtID == request.CourtID, cancellationToken);
 
         if (caseCount > 0)
         {

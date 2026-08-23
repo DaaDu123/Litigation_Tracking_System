@@ -24,6 +24,13 @@ namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
             _permissionService = permissionService;
         }
 
+        // =====================================================
+        // HANDLE — paged list of a case's hearings, scoped to who's allowed to see it
+        // Same assignment-or-full-visibility rule as
+        // GetCaseAssignmentsHandler (empty page, not an error, if
+        // denied), plus firm isolation. Newest-first, with priority
+        // labels computed per hearing.
+        // =====================================================
         public async Task<PagedHearingResult<HearingDetailDTO>> Handle(GetCaseHearingsQuery request, CancellationToken cancellationToken)
         {
             // SECURITY FIX (IDOR): firm scoping alone let any firm user - including

@@ -14,6 +14,14 @@ namespace LTSBackend.Features.CaseNotes.Commands.CreateNote
         IPermissionService _permissionService,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateCaseNoteCommand, long>
     {
+        // =====================================================
+        // HANDLE — adds a new note against a case
+        // Verifies the case belongs to the caller's own firm, and — since
+        // the controller allows AssociateLawyer/Moharrir/InternParalegal
+        // too — that the caller either has full case-directory visibility
+        // or is actually assigned to this specific case, before recording
+        // the note.
+        // =====================================================
         public async Task<long> Handle(CreateCaseNoteCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Note.CaseID, cancellationToken);

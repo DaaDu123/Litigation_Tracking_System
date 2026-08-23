@@ -9,6 +9,13 @@ namespace LTSBackend.Features.Departments.Commands.CreateDepartment;
 
 public sealed class CreateDepartmentHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<CreateDepartmentHandler> _logger) : IRequestHandler<CreateDepartmentCommand, int>
 {
+    // =====================================================
+    // HANDLE — creates a new department
+    // Trims input, checks the name is unique among what the caller can
+    // see (global departments + their own firm's), then saves it. FirmID is
+    // set to the caller's own firm for a FirmAdmin, or left null (global,
+    // visible to every firm) for a SuperAdmin.
+    // =====================================================
     public async Task<int> Handle(CreateDepartmentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating department: {DepartmentName}", request.DepartmentName);
@@ -37,8 +44,7 @@ public sealed class CreateDepartmentHandler(AppDbContext _context, ICurrentUserS
         // 2. Ensure department code is unique (if provided)
         if (!string.IsNullOrWhiteSpace(request.DepartmentCode))
         {
-            bool codeExists = await _context.Departments.AnyAsync(x => x.DepartmentCode != null &&
-               x.DepartmentCode.ToLower() == request.DepartmentCode.ToLower(),cancellationToken);
+            bool codeExists = await _context.Departments.AnyAsync(x => x.DepartmentCode != null &&x.DepartmentCode.ToLower() == request.DepartmentCode.ToLower(),cancellationToken);
 
             if (codeExists)
             {

@@ -23,6 +23,13 @@ public class UpdateRoleHandler : IRequestHandler<UpdateRoleCommand, bool>
         _logger = logger;
     }
 
+    // =====================================================
+    // HANDLE — renames/redescribes a role and replaces its permission set
+    // Refuses to touch a protected system role (SuperAdmin/FirmAdmin),
+    // checks the new name doesn't collide with another role, validates
+    // every supplied PermissionID exists, then inside one retry-safe
+    // transaction updates the role and swaps in the new permission set.
+    // =====================================================
     public async Task<bool> Handle(
         UpdateRoleCommand request,
         CancellationToken cancellationToken)

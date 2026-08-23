@@ -4,6 +4,10 @@ namespace LTSBackend.Features.FirmAdminRequests.Commands.SubmitFirmAdminRequest;
 
 public class SubmitFirmAdminRequestValidator : AbstractValidator<SubmitFirmAdminRequestCommand>
 {
+    // Requires the firm's name/code (letters, numbers, hyphens only) and
+    // the requesting admin's name/email/password (standard complexity
+    // rules) — the same shape as CreateFirmValidator, since this is the
+    // self-service version of that same operation.
     public SubmitFirmAdminRequestValidator()
     {
         RuleFor(x => x.FirmName).NotEmpty().MaximumLength(150);

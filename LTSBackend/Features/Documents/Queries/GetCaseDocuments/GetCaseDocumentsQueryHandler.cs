@@ -8,7 +8,23 @@ namespace LTSBackend.Features.Documents.Queries.GetCaseDocuments
 {
     public class GetCaseDocumentsQueryHandler (AppDbContext _context) : IRequestHandler<GetCaseDocumentsQuery, List<DocumentDetailDTO>>
     {
-        // Returns a case's latest documents, filtered by firm isolation, case-assignment, and Moharrir/draft visibility rules.
+        // =====================================================
+        // HANDLE — lists a case's latest documents, filtered per-viewer
+        // A layered set of visibility rules, all resolved once per user
+        // up front (see the N+1 fix note in memory: role/firm/
+        // case-assignment resolved once, then per-document overrides
+        // batched in a single query) rather than per document:
+        //   - Firm isolation (SuperAdmin exempt), and the user's own
+        //     account/firm must be active and not blocked/deleted.
+        //   - AssociateLawyer/InternParalegal/Moharrir must be actively
+        //     assigned to this case.
+        //   - Moharrir additionally only sees documents where a
+        //     per-user or per-role DocumentPermissions override (or
+        //     their Elevated-mode default) grants CanView.
+        //   - Draft (Intern-uploaded, unapproved) documents are hidden
+        //     from everyone except their own uploader and
+        //     FirmAdmin/Partner.
+        // =====================================================
         public async Task<List<DocumentDetailDTO>> Handle(GetCaseDocumentsQuery request, CancellationToken cancellationToken)
         {
             var caseFirmId = await _context.Cases
@@ -44,8 +60,7 @@ namespace LTSBackend.Features.Documents.Queries.GetCaseDocuments
                 var now = DateTime.UtcNow;
                 isAssignedToCase = await _context.CaseAssignments
                     .AsNoTracking()
-                    .AnyAsync(a => a.CaseID == request.CaseID && a.UserID == request.UserID
-                        && (a.EndDate == null || a.EndDate > now), cancellationToken);
+                    .AnyAsync(a => a.CaseID == request.CaseID && a.UserID == request.UserID && (a.EndDate == null || a.EndDate > now), cancellationToken);
             }
 
             if (!fullFirmAccess && role is UserRole.AssociateLawyer or UserRole.InternParalegal && !isAssignedToCase)

@@ -9,6 +9,13 @@ namespace LTSBackend.Features.Milestones.Queries.GetCaseMilestones
 {
     public class GetCaseMilestonesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCaseMilestonesQuery, List<MilestoneDetailDTO>>
     {
+        // =====================================================
+        // HANDLE — lists a case's milestones, scoped to who's allowed to see it
+        // Same assignment-or-full-visibility rule as
+        // GetCaseAssignmentsHandler (empty list, not an error, if
+        // denied), plus firm isolation. Resolves each completed
+        // milestone's "completed by" name for display.
+        // =====================================================
         public async Task<List<MilestoneDetailDTO>> Handle(GetCaseMilestonesQuery request, CancellationToken cancellationToken)
         {
             // SECURITY FIX (IDOR): firm scoping alone let any firm user - including

@@ -6,6 +6,9 @@ namespace LTSBackend.Features.Users.Commands.UpdateUser;
 
 public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
 {
+    // Requires a valid UserID plus the same name/email/role/phone/
+    // department/profile-image rules as CreateUserCommandValidator (minus
+    // the password, which isn't editable through this command).
     public UpdateUserCommandValidator()
     {
         RuleFor(x => x.UserID)

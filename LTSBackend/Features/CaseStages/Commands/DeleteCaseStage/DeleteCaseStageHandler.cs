@@ -8,6 +8,11 @@ namespace LTSBackend.Features.CaseStages.Commands.DeleteCaseStage;
 
 public sealed class DeleteCaseStageHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<DeleteCaseStageHandler> _logger) : IRequestHandler<DeleteCaseStageCommand, bool>
 {
+    // =====================================================
+    // HANDLE — removes a case stage the firm no longer needs
+    // Same ownership check as Update (own firm's custom case stage only),
+    // plus an in-use check: cannot delete while cases still reference it.
+    // =====================================================
     public async Task<bool> Handle(DeleteCaseStageCommand request, CancellationToken cancellationToken)
     {
         var stage = await _context.CaseStages.FirstOrDefaultAsync(x => x.StageID == request.StageID, cancellationToken);

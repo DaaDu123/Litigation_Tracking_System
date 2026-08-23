@@ -14,7 +14,16 @@ namespace LTSBackend.Features.Documents.Commands.UploadDocument;
 public class UploadDocumentHandler(AppDbContext _context, IFileService _fileService, IDocumentPermissionService _permissionService, IAuditService _auditService,
     ICurrentUserService _currentUser, ILogger<UploadDocumentHandler> _logger) : IRequestHandler<UploadDocumentCommand, UploadDocumentResult>
 {
-    // Validates the request, saves the file to secure storage, and records the document (with Moharrir blind-upload and Intern draft rules).
+    // =====================================================
+    // HANDLE — uploads a file and applies role-based document permissions
+    // Validates the user, the CanUserUploadToCaseAsync permission, the
+    // case (firm-scoped), and the document type, then saves the file to
+    // secure disk storage and records the Document row. An Intern's
+    // upload is marked IsDraft = true (pending approval). Then grants
+    // per-role DocumentPermissions: a Restricted-mode Moharrir gets NO
+    // view/download grant at all ("blind upload" — write-only), while
+    // everyone else gets a role-appropriate view/download grant.
+    // =====================================================
     public async Task<UploadDocumentResult> Handle(UploadDocumentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Document upload started for case {CaseId} by user {UserId}", request.CaseID, request.UserID);

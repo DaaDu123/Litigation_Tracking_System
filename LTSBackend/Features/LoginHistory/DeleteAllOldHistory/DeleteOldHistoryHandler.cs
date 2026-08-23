@@ -23,7 +23,11 @@ namespace LTSBackend.Features.LoginHistory.Commands.DeleteOldHistory;
 /// </summary>
 public class DeleteOldHistoryHandler(AppDbContext context) : IRequestHandler<DeleteOldHistoryCommand, int>
 {
-    // Removes every (tenant-scoped) logged-out record older than request.Days and returns the count removed.
+    // =====================================================
+    // HANDLE — bulk retention sweep for old, logged-out login records
+    // Removes every (tenant-scoped) logged-out record older than
+    // request.Days and returns the count removed.
+    // =====================================================
     public async Task<int> Handle(DeleteOldHistoryCommand request, CancellationToken cancellationToken)
     {
         var cutOffDate = DateTime.UtcNow.AddDays(-request.Days);

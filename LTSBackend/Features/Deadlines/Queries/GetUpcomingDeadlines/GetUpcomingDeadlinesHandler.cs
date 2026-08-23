@@ -8,6 +8,14 @@ namespace LTSBackend.Features.Deadlines.Queries.GetUpcomingDeadlines
 {
     public class GetUpcomingDeadlinesHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<GetUpcomingDeadlinesQuery, List<DeadlineDetailDTO>>
     {
+        // =====================================================
+        // HANDLE — deadlines due soon across the caller's own firm
+        // Firm-scoped (previously leaked every firm's deadlines to any
+        // logged-in user). A deadline is included once "today" falls
+        // inside its reminder window — using the request's own
+        // daysAhead override if supplied, else each deadline's own
+        // ReminderDays — or once it's already overdue.
+        // =====================================================
         public async Task<List<DeadlineDetailDTO>> Handle(GetUpcomingDeadlinesQuery request, CancellationToken cancellationToken)
         {
             var now = DateTime.UtcNow.Date;

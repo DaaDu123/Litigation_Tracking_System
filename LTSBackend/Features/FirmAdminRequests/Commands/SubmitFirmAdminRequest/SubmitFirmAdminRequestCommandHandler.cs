@@ -16,6 +16,15 @@ public class SubmitFirmAdminRequestCommandHandler(AppDbContext _context,IPasswor
     // NotificationTypeID = 6 ("FirmAdminRequest") - seeded in AppDbContext.SeedNotificationTypes.
     private const int FirmAdminRequestNotificationTypeId = 6;
 
+    // =====================================================
+    // HANDLE — anonymous self-service request for a new firm workspace
+    // Checks the FirmCode and admin email aren't already a live
+    // firm/user OR already tied to another still-pending request,
+    // hashes the password immediately (plaintext is never stored),
+    // saves the request as Pending, and alerts every active SuperAdmin
+    // (in-app notification + an immediate email, not the 2-minute
+    // dispatcher poll).
+    // =====================================================
     public async Task<int> Handle(SubmitFirmAdminRequestCommand request, CancellationToken cancellationToken)
     {
         var firmCode = request.FirmCode.Trim().ToUpperInvariant();
@@ -66,8 +75,7 @@ public class SubmitFirmAdminRequestCommandHandler(AppDbContext _context,IPasswor
         _context.FirmAdminRequests.Add(firmAdminRequest);
         await _context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Firm Admin request {RequestId} submitted for firm code {FirmCode} by {AdminEmail}",
-            firmAdminRequest.RequestID, firmCode, adminEmail);
+        _logger.LogInformation("Firm Admin request {RequestId} submitted for firm code {FirmCode} by {AdminEmail}",firmAdminRequest.RequestID, firmCode, adminEmail);
 
         // 4. Alert every Super Admin - in-app Notification AND an
         // immediate email (not the 2-minute background dispatcher,

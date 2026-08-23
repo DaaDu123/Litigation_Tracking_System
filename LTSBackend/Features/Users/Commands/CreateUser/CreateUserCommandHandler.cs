@@ -12,6 +12,21 @@ namespace LTSBackend.Features.Users.Commands.CreateUser;
 
 public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _passwordService, IFileService _fileService, ILogger<CreateUserCommandHandler> _logger) : IRequestHandler<CreateUserCommand, int>
 {
+    // =====================================================
+    // HANDLE — creates a new firm user, or reclaims a soft-deleted email
+    // Enforces: SuperAdmin can't create firm users here (must bootstrap a
+    // firm via POST /api/firms instead); a live email can never be
+    // reused; a soft-deleted email is only reusable by its own original
+    // firm, or by any firm once a SuperAdmin has explicitly released it
+    // (ReleaseUserEmailCommand); the target role must exist and must pass
+    // RoleHierarchy.CanAssignRole against the acting user's own role (no
+    // assigning a role above your own, no assigning SuperAdmin). On the
+    // reuse path, the original row (same UserID/EmployeeNo/CreatedAt) is
+    // restored and reassigned rather than inserting a new one, and its
+    // SecurityStamp is rotated to invalidate any stale tokens. Guards
+    // against a concurrent duplicate-email race via the DB's unique index
+    // rather than trusting the earlier existence check alone.
+    // =====================================================
     public async Task<int> Handle(CreateUserCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Create user request for email: {Email}", request.Email);
@@ -241,6 +256,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         return resultUserId;
     }
 
+    // Builds a new EmployeeNo in the EMP-yyyyMMdd-XXXX format.
     private static string GenerateEmployeeNo()
     {
         var now = DateTime.UtcNow;
@@ -248,6 +264,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         return $"EMP-{now:yyyyMMdd}-{randomPart}";
     }
 
+    // Generates a short random alphanumeric suffix for the employee number.
     private static string GenerateRandomString(int length)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

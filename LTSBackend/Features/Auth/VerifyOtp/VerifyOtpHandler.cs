@@ -14,6 +14,12 @@ namespace LTSBackend.Features.Auth.VerifyOtp;
 public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IAuditService _auditService, IHttpContextAccessor _httpContextAccessor, ILogger<VerifyOtpHandler> _logger) : IRequestHandler<VerifyOtpCommand, VerifyOtpResponseDTO>
 {
 
+    // =====================================================
+    // HANDLE — Anonymous, completes the registration flow
+    // Validates the emailed Registration OTP, activates the account
+    // (IsActive = true), issues an access + refresh token pair so the
+    // user is immediately logged in, and writes an audit log entry.
+    // =====================================================
     public async Task<VerifyOtpResponseDTO> Handle(VerifyOtpCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("OTP verification attempt for email: {Email}", request.Email);

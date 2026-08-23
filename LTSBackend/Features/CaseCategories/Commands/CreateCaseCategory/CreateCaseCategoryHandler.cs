@@ -9,6 +9,13 @@ namespace LTSBackend.Features.CaseCategories.Commands.CreateCaseCategory;
 
 public sealed class CreateCaseCategoryHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<CreateCaseCategoryHandler> _logger) : IRequestHandler<CreateCaseCategoryCommand, int>
 {
+    // =====================================================
+    // HANDLE — creates a new case category
+    // Trims input, checks the name is unique among what the caller can
+    // see (global categories + their own firm's), then saves it. FirmID is
+    // set to the caller's own firm for a FirmAdmin, or left null (global,
+    // visible to every firm) for a SuperAdmin.
+    // =====================================================
     public async Task<int> Handle(CreateCaseCategoryCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating case category: {CategoryName}", request.CategoryName);

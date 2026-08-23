@@ -23,6 +23,13 @@ public class DeleteRoleHandler : IRequestHandler<DeleteRoleCommand, bool>
         _logger = logger;
     }
 
+    // =====================================================
+    // HANDLE — removes a platform-wide role definition
+    // Refuses to delete a protected system role (SuperAdmin/FirmAdmin) or
+    // a role that still has users assigned to it, then inside one
+    // retry-safe transaction removes its RolePermissions rows before
+    // removing the role itself.
+    // =====================================================
     public async Task<bool> Handle(DeleteRoleCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deleting role: {RoleID}", request.RoleID);

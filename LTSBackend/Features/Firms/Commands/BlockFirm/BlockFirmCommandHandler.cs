@@ -5,9 +5,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Firms.Commands.BlockFirm;
 
-public class BlockFirmCommandHandler(AppDbContext _context, ILogger<BlockFirmCommandHandler> _logger)
-    : IRequestHandler<BlockFirmCommand, bool>
+public class BlockFirmCommandHandler(AppDbContext _context, ILogger<BlockFirmCommandHandler> _logger) : IRequestHandler<BlockFirmCommand, bool>
 {
+    // =====================================================
+    // HANDLE — suspends a firm workspace platform-wide
+    // Marks the firm blocked (with reason/timestamp/who), then revokes
+    // every active refresh token belonging to that firm's users so
+    // already-logged-in sessions are cut off immediately too, not just
+    // future login attempts.
+    // =====================================================
     public async Task<bool> Handle(BlockFirmCommand request, CancellationToken cancellationToken)
     {
         var firm = await _context.Firms.FirstOrDefaultAsync(x => x.FirmID == request.FirmID, cancellationToken);

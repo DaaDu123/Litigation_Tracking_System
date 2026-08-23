@@ -8,6 +8,12 @@ namespace LTSBackend.Features.Roles.Commands.CreateRole;
 
 public sealed class CreateRoleHandler(AppDbContext _context) : IRequestHandler<CreateRoleCommand, int>
 {
+    // =====================================================
+    // HANDLE — creates a brand-new, platform-wide role definition
+    // Checks the name is unique and every supplied PermissionID exists,
+    // then inside one retry-safe transaction creates the Role and its
+    // initial RolePermissions rows.
+    // =====================================================
     public async Task<int> Handle(CreateRoleCommand request, CancellationToken cancellationToken)
     {
         request = request with

@@ -16,6 +16,14 @@ public class ForgotPasswordHandler(AppDbContext _context, IEmailService _emailSe
 {
     private const int OtpExpiryMinutes = 5;
 
+    // =====================================================
+    // HANDLE — Anonymous "forgot my password" request
+    // Looks up the email; if a matching active user exists, invalidates
+    // any previous unused password-reset OTP and emails a fresh one
+    // (also doubling as this flow's "resend" call). ALWAYS returns the
+    // same generic response regardless of whether the email exists, so
+    // the endpoint can't be used to enumerate registered accounts.
+    // =====================================================
     public async Task<ForgotPasswordResponseDTO> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Forgot password requested for email: {Email}", request.Email);

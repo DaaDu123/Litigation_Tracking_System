@@ -8,6 +8,11 @@ namespace LTSBackend.Features.Departments.Commands.DeleteDepartment;
 
 public sealed class DeleteDepartmentHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<DeleteDepartmentHandler> _logger) : IRequestHandler<DeleteDepartmentCommand, bool>
 {
+    // =====================================================
+    // HANDLE — removes a department the firm no longer needs
+    // Same ownership check as Update (own firm's custom department only),
+    // plus an in-use check: cannot delete while cases still reference it.
+    // =====================================================
     public async Task<bool> Handle(DeleteDepartmentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deleting department: {DepartmentID}", request.DepartmentID);

@@ -7,27 +7,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.AuditLogs.Queries.GetAuditLogs;
 
-public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResult<AuditLogDTO>>
+public class GetAuditLogsHandler (AppDbContext _context, ICurrentUserService _currentUser, ILogger<GetAuditLogsHandler> _logger) : IRequestHandler<GetAuditLogsQuery, PagedResult<AuditLogDTO>>
 {
-    private readonly AppDbContext _context;
-    private readonly ICurrentUserService _currentUser;
-    private readonly ILogger<GetAuditLogsHandler> _logger;
+ 
 
-    public GetAuditLogsHandler(AppDbContext context, ICurrentUserService currentUser, ILogger<GetAuditLogsHandler> logger)
+    // =====================================================
+    // HANDLE — paged, filterable (search/action/date range) audit log list
+    // Tenant-scoped explicitly here (AuditLog has no FirmID column of its
+    // own, so scoping goes through the related User's FirmID) in addition
+    // to relying on any global query filter, as defence in depth — a
+    // FirmAdmin/Auditor must only ever see their own firm's audit trail;
+    // SuperAdmin sees every firm's, matching the system-wide audit log
+    // required by the SRS.
+    // =====================================================
+    public async Task<PagedResult<AuditLogDTO>> Handle(GetAuditLogsQuery request,CancellationToken cancellationToken)
     {
-        _context = context;
-        _currentUser = currentUser;
-        _logger = logger;
-    }
-
-    public async Task<PagedResult<AuditLogDTO>> Handle(
-        GetAuditLogsQuery request,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation(
-            "Fetching audit logs - Page: {PageNumber}, Size: {PageSize}",
-            request.PageNumber,
-            request.PageSize);
+        _logger.LogInformation("Fetching audit logs - Page: {PageNumber}, Size: {PageSize}",request.PageNumber,request.PageSize);
 
         var query = _context.AuditLogs
             .AsNoTracking()
@@ -49,10 +44,7 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
         {
             var search = request.Search.Trim();
 
-            query = query.Where(x =>
-                x.User != null &&
-                (x.User.FullName.Contains(search) ||
-                 x.User.Email.Contains(search)));
+            query = query.Where(x => x.User != null && (x.User.FullName.Contains(search) || x.User.Email.Contains(search)));
 
             _logger.LogInformation("Applied search filter: {Search}", search);
         }
@@ -60,8 +52,7 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
         // 2. Filter by action
         if (!string.IsNullOrWhiteSpace(request.Action))
         {
-            query = query.Where(x =>
-                x.Action == request.Action.Trim());
+            query = query.Where(x =>x.Action == request.Action.Trim());
 
             _logger.LogInformation("Applied action filter: {Action}", request.Action);
         }
@@ -69,16 +60,14 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
         // 3. Filter by date range
         if (request.FromDate.HasValue)
         {
-            query = query.Where(x =>
-                x.Timestamp >= request.FromDate.Value);
+            query = query.Where(x =>x.Timestamp >= request.FromDate.Value);
 
             _logger.LogInformation("Applied from date filter: {FromDate}", request.FromDate);
         }
 
         if (request.ToDate.HasValue)
         {
-            query = query.Where(x =>
-                x.Timestamp <= request.ToDate.Value);
+            query = query.Where(x =>x.Timestamp <= request.ToDate.Value);
 
             _logger.LogInformation("Applied to date filter: {ToDate}", request.ToDate);
         }
@@ -102,10 +91,7 @@ public class GetAuditLogsHandler : IRequestHandler<GetAuditLogsQuery, PagedResul
             })
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation(
-            "Fetched {Count} audit logs of {Total} total",
-            items.Count,
-            total);
+        _logger.LogInformation("Fetched {Count} audit logs of {Total} total",items.Count,total);
 
         return new PagedResult<AuditLogDTO>
         {

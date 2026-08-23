@@ -8,11 +8,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Firms.Commands.CreateFirm;
 
-public class CreateFirmCommandHandler(
-    AppDbContext _context,
-    IPasswordService _passwordService,
-    ILogger<CreateFirmCommandHandler> _logger) : IRequestHandler<CreateFirmCommand, int>
+public class CreateFirmCommandHandler(AppDbContext _context,IPasswordService _passwordService,ILogger<CreateFirmCommandHandler> _logger) : IRequestHandler<CreateFirmCommand, int>
 {
+    // =====================================================
+    // HANDLE — provisions a new firm workspace + its first FirmAdmin (UC-00)
+    // Validates the FirmCode and admin email are both unique platform-wide,
+    // then inside a single retry-safe transaction (see the
+    // CreateExecutionStrategy note below) creates the Firm row and
+    // bootstraps its first FirmAdmin user account, already active and
+    // ready to log in.
+    // =====================================================
     public async Task<int> Handle(CreateFirmCommand request, CancellationToken cancellationToken)
     {
         // 1. FirmCode must be unique

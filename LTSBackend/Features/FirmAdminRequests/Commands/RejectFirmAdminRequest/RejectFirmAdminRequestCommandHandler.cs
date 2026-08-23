@@ -10,6 +10,12 @@ namespace LTSBackend.Features.FirmAdminRequests.Commands.RejectFirmAdminRequest;
 public class RejectFirmAdminRequestCommandHandler(AppDbContext _context,IEmailService _emailService,IAuditService _auditService,
     ILogger<RejectFirmAdminRequestCommandHandler> _logger) : IRequestHandler<RejectFirmAdminRequestCommand, bool>
 {
+    // =====================================================
+    // HANDLE — declines a pending Firm Admin request
+    // Refuses if the request isn't still Pending. Marks it Rejected with
+    // an optional reason, writes an audit log entry, and emails the
+    // requester (best-effort).
+    // =====================================================
     public async Task<bool> Handle(RejectFirmAdminRequestCommand request, CancellationToken cancellationToken)
     {
         var firmAdminRequest = await _context.FirmAdminRequests.FirstOrDefaultAsync(x => x.RequestID == request.RequestID, cancellationToken);

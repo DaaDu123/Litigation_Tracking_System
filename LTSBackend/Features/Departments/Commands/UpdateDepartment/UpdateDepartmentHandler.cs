@@ -8,6 +8,13 @@ namespace LTSBackend.Features.Departments.Commands.UpdateDepartment;
 
 public sealed class UpdateDepartmentHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<UpdateDepartmentHandler> _logger) : IRequestHandler<UpdateDepartmentCommand, bool>
 {
+    // =====================================================
+    // HANDLE — edits an existing department
+    // Ownership check: a FirmAdmin may only edit their OWN firm's custom
+    // department — never a global one or another firm's (returns
+    // NotFound rather than Forbidden, so its existence isn't disclosed).
+    // Also re-checks name uniqueness before saving.
+    // =====================================================
     public async Task<bool> Handle(UpdateDepartmentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating department: {DepartmentID}", request.DepartmentID);
@@ -37,8 +44,7 @@ public sealed class UpdateDepartmentHandler(AppDbContext _context, ICurrentUserS
         }
 
         // 2. Ensure new name is unique (excluding self)
-        bool nameExists = await _context.Departments.AnyAsync(x => x.DepartmentID != request.DepartmentID &&
-             x.DepartmentName.ToLower() == request.DepartmentName.ToLower(),cancellationToken);
+        bool nameExists = await _context.Departments.AnyAsync(x => x.DepartmentID != request.DepartmentID && x.DepartmentName.ToLower() == request.DepartmentName.ToLower(),cancellationToken);
 
         if (nameExists)
         {

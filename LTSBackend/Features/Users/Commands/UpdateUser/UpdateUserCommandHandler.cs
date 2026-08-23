@@ -9,13 +9,24 @@ namespace LTSBackend.Features.Users.Commands.UpdateUser;
 
 public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileService, ILogger<UpdateUserCommandHandler> _logger) : IRequestHandler<UpdateUserCommand, bool>
 {
+    // =====================================================
+    // HANDLE — edits an existing user's details, including role
+    // Enforces: a user cannot change their own role; the acting user's
+    // role must pass RoleHierarchy.CanAssignRole for the target role; a
+    // FirmAdmin (or any non-SuperAdmin) may only edit users within their
+    // own firm; the new email must not already belong to another live
+    // user. Swaps the profile image only after the new one is
+    // successfully saved (old file deleted last, so a failed upload never
+    // leaves the user without a photo). If role or active-status changed,
+    // rotates the security stamp to invalidate any already-issued access
+    // token for this user.
+    // =====================================================
     public async Task<bool> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating user: {UserId}", request.UserID);
 
         // 1. Find user
-        var user = await _context.Users
-            .FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID, cancellationToken);
 
         if (user == null)
         {

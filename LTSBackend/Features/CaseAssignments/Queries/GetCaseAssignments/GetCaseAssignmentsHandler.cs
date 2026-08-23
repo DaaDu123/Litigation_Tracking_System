@@ -10,6 +10,14 @@ namespace LTSBackend.Features.CaseAssignments.Queries.GetCaseAssignments
 {
     public class GetCaseAssignmentsHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCaseAssignmentsQuery, List<CaseAssignmentDetailDTO>>
     {
+        // =====================================================
+        // HANDLE — lists a case's assignments, with visibility narrowed for non-full-visibility roles
+        // A user without full case-directory visibility (e.g. Associate/
+        // Moharrir/Intern) must actually be assigned to this case or gets
+        // a 404 (not 403, so the case's existence isn't disclosed). Also
+        // enforces firm isolation and resolves each assignment's
+        // "assigned by" name for display.
+        // =====================================================
         public async Task<List<CaseAssignmentDetailDTO>> Handle(GetCaseAssignmentsQuery request, CancellationToken cancellationToken)
         {
             if (_currentUser.UserID.HasValue)

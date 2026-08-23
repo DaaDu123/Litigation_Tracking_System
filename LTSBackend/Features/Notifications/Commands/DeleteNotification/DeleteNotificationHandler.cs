@@ -8,6 +8,11 @@ namespace LTSBackend.Features.Notifications.Commands.DeleteNotification;
 
 public class DeleteNotificationHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<DeleteNotificationCommand, bool>
 {
+    // =====================================================
+    // HANDLE — permanently removes one of the caller's own notifications
+    // Same IDOR guard as MarkAsReadHandler: a user may only delete their
+    // own notifications.
+    // =====================================================
     public async Task<bool> Handle(DeleteNotificationCommand request, CancellationToken cancellationToken)
     {
         var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.NotificationID == request.NotificationID, cancellationToken);

@@ -14,6 +14,14 @@ namespace LTSBackend.Features.CaseNotes.Queries.GetCaseNotes
     public class GetCaseNotesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService, IHttpContextAccessor _httpContextAccessor)
         : IRequestHandler<GetCaseNotesQuery, List<CaseNoteDetailDTO>>
     {
+        // =====================================================
+        // HANDLE — lists a case's notes, filtered for confidentiality and assignment
+        // Enforces the same "must be assigned or have full visibility"
+        // check as CreateCaseNoteHandler (returns an empty list rather than
+        // an error, so the case's existence isn't disclosed), firm
+        // isolation, and hides "Confidential"-type notes from anyone who
+        // isn't the author or Associate-Lawyer-and-above.
+        // =====================================================
         public async Task<List<CaseNoteDetailDTO>> Handle(GetCaseNotesQuery request, CancellationToken cancellationToken)
         {
             int currentUserId = GetCurrentUserId();

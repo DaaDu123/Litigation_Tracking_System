@@ -7,6 +7,11 @@ namespace LTSBackend.Features.FirmAdminRequests.Queries.GetFirmAdminRequests;
 
 public class GetFirmAdminRequestsQueryHandler(AppDbContext _context) : IRequestHandler<GetFirmAdminRequestsQuery, List<FirmAdminRequestDTO>>
 {
+    // =====================================================
+    // HANDLE — lists Firm Admin requests, optionally filtered by status
+    // Newest-first; resolves each reviewed request's reviewer name via a
+    // small follow-up query.
+    // =====================================================
     public async Task<List<FirmAdminRequestDTO>> Handle(GetFirmAdminRequestsQuery request, CancellationToken cancellationToken)
     {
         var query = _context.FirmAdminRequests.AsNoTracking();

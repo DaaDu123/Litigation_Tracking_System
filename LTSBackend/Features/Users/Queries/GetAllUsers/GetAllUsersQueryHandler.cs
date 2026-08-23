@@ -8,9 +8,14 @@ using Microsoft.EntityFrameworkCore;
 public class GetAllUsersQueryHandler(AppDbContext _context,ICurrentUserService _currentUser,
     ILogger<GetAllUsersQueryHandler> _logger) : IRequestHandler<GetAllUsersQuery, List<UserDTO>>
 {   
-    public async Task<List<UserDTO>> Handle(
-        GetAllUsersQuery request,
-        CancellationToken cancellationToken)
+    // =====================================================
+    // HANDLE — lists active + deactivated users within the caller's own firm
+    // Firm-scoped (SuperAdmin can't reach this endpoint at all — user
+    // directory is FirmAdmin's job, per route-level [Authorize]).
+    // Permanently deleted (IsDeleted) users are excluded — see
+    // GetDeletedUsersQueryHandler for those.
+    // =====================================================
+    public async Task<List<UserDTO>> Handle(GetAllUsersQuery request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching all users (active and deactivated - permanently deleted users are excluded)");
 

@@ -10,9 +10,16 @@ using System.Security.Claims;
 
 namespace LTSBackend.Features.Milestones.Commands.CreateMilestone
 {
-    public class CreateMilestoneHandler(AppDbContext _context, IAuditService _auditService,
-        ICurrentUserService _currentUser, IPermissionService _permissionService, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateMilestoneCommand, long>
+    public class CreateMilestoneHandler(AppDbContext _context, IAuditService _auditService, ICurrentUserService _currentUser, IPermissionService _permissionService,
+      IHttpContextAccessor _httpContextAccessor) : IRequestHandler<CreateMilestoneCommand, long>
     {
+        // =====================================================
+        // HANDLE — adds a new milestone against a case
+        // Verifies the case belongs to the caller's own firm, and — since
+        // Create is open to AssociateLawyer/Moharrir at the controller —
+        // that the caller has full case-directory visibility or is
+        // actually assigned to this case.
+        // =====================================================
         public async Task<long> Handle(CreateMilestoneCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Milestone.CaseID, cancellationToken);

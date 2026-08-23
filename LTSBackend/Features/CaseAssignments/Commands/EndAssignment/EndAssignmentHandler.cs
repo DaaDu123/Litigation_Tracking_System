@@ -13,17 +13,18 @@ namespace LTSBackend.Features.CaseAssignments.Commands.EndAssignment
     /// We use a soft end (EndDate) instead of hard delete to preserve historical accountability
     /// (SRS Section 5.8 Auditability: "Maintain accountability and ownership of cases").
     /// </summary>
-    public class EndAssignmentHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
-        ICurrentUserService _currentUser,
-        IHttpContextAccessor _httpContextAccessor) : IRequestHandler<EndAssignmentCommand, bool>
+    public class EndAssignmentHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,IHttpContextAccessor _httpContextAccessor) : IRequestHandler<EndAssignmentCommand, bool>
     {
+        // =====================================================
+        // HANDLE — soft-ends a case assignment (used by the reassign flow)
+        // Verifies the assignment belongs to the caller's own firm and
+        // hasn't already ended, then sets its EndDate (never hard-deletes,
+        // to preserve historical accountability) and writes an audit log
+        // entry.
+        // =====================================================
         public async Task<bool> Handle(EndAssignmentCommand request, CancellationToken cancellationToken)
         {
-            var assignment = await _context.CaseAssignments
-                .Include(a => a.Case)
-                .FirstOrDefaultAsync(a => a.AssignmentID == request.AssignmentID, cancellationToken);
+            var assignment = await _context.CaseAssignments.Include(a => a.Case).FirstOrDefaultAsync(a => a.AssignmentID == request.AssignmentID, cancellationToken);
 
             if (assignment == null || (assignment.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Assignment ID {request.AssignmentID} not found");

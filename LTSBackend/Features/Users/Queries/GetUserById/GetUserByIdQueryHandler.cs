@@ -7,25 +7,16 @@ using LTSBackend.Services.CurrentUser;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDTO?>
+public class GetUserByIdQueryHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<GetUserByIdQueryHandler> _logger) : IRequestHandler<GetUserByIdQuery, UserDTO?>
 {
-    private readonly AppDbContext _context;
-    private readonly ICurrentUserService _currentUser;
-    private readonly ILogger<GetUserByIdQueryHandler> _logger;
 
-    public GetUserByIdQueryHandler(
-        AppDbContext context,
-        ICurrentUserService currentUser,
-        ILogger<GetUserByIdQueryHandler> logger)
-    {
-        _context = context;
-        _currentUser = currentUser;
-        _logger = logger;
-    }
-
-    public async Task<UserDTO?> Handle(
-        GetUserByIdQuery request,
-        CancellationToken cancellationToken)
+    // =====================================================
+    // HANDLE — fetches a single active user's profile by ID
+    // Firm-scoped (can't fetch a user outside your own firm), and only
+    // ever returns an active, non-deleted user — 404 otherwise, which
+    // also backs UsersController.GetById / GetMyProfile.
+    // =====================================================
+    public async Task<UserDTO?> Handle(GetUserByIdQuery request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching user: {UserId}", request.UserID);
 

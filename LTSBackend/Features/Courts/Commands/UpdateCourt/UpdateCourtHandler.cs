@@ -8,6 +8,13 @@ namespace LTSBackend.Features.Courts.Commands.UpdateCourt;
 
 public sealed class UpdateCourtHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<UpdateCourtHandler> _logger) : IRequestHandler<UpdateCourtCommand, bool>
 {
+    // =====================================================
+    // HANDLE — edits an existing court
+    // Ownership check: a FirmAdmin may only edit their OWN firm's custom
+    // court — never a global one or another firm's (returns
+    // NotFound rather than Forbidden, so its existence isn't disclosed).
+    // Also re-checks name uniqueness before saving.
+    // =====================================================
     public async Task<bool> Handle(UpdateCourtCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating court: {CourtID}", request.CourtID);

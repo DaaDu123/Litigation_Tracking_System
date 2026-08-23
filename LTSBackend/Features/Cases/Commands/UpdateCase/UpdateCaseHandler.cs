@@ -11,6 +11,14 @@ namespace LTSBackend.Features.Cases.Commands.UpdateCase;
 
 public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor, ICurrentUserService _currentUser) : IRequestHandler<UpdateCaseCommand, bool>
 {
+    // =====================================================
+    // HANDLE — edits an existing case's core details
+    // Firm-scoped lookup (can't touch another firm's case). Every field
+    // is a partial/optional update — only fields actually supplied on the
+    // request are validated and applied (Court/Category/Stage/Legal
+    // Officer existence checks, case-number-uniqueness-within-firm check,
+    // etc.). Stamps ModifiedBy/ModifiedDate and writes an audit log entry.
+    // =====================================================
     public async Task<bool> Handle(UpdateCaseCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating case: {CaseID}", request.CaseID);
@@ -73,9 +81,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
         // 5. Validate Legal Officer if it is being changed
         if (request.CurrentLegalOfficerID.HasValue && request.CurrentLegalOfficerID > 0)
         {
-            bool officerExists = await _context.Users
-                .AsNoTracking()
-                .AnyAsync(x => x.UserID == request.CurrentLegalOfficerID &&x.IsActive && !x.IsDeleted,cancellationToken);
+            bool officerExists = await _context.Users.AsNoTracking().AnyAsync(x => x.UserID == request.CurrentLegalOfficerID &&x.IsActive && !x.IsDeleted,cancellationToken);
 
             if (!officerExists)
             {
@@ -94,8 +100,7 @@ public class UpdateCaseHandler(AppDbContext _context, IAuditService _auditServic
                 .AsNoTracking()
                 .AnyAsync(x => x.CaseNumber == request.CaseNumber &&
                                x.CaseID != request.CaseID &&
-                               x.FirmID == caseToUpdate.FirmID,
-                    cancellationToken);
+                               x.FirmID == caseToUpdate.FirmID,cancellationToken);
 
             if (duplicateExists)
             {

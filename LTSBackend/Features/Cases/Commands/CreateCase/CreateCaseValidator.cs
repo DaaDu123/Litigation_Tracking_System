@@ -4,6 +4,10 @@ namespace LTSBackend.Features.Cases.Commands.CreateCase;
 
 public class CreateCaseValidator : AbstractValidator<CreateCaseCommand>
 {
+    // Requires the mandatory case fields (number/title/priority/subject
+    // matter/dates), a resolvable Court/Category (either an ID or a typed
+    // name), and — importantly — Expected Disposal Date must be today or
+    // later (never a past date) and after the Registration Date.
     public CreateCaseValidator()
     {
         RuleFor(x => x.CaseNumber)

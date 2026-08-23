@@ -7,13 +7,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Firms.Queries.ExportFirmData;
 
-public class ExportFirmDataQueryHandler(AppDbContext _context, ILogger<ExportFirmDataQueryHandler> _logger)
-    : IRequestHandler<ExportFirmDataQuery, byte[]>
+public class ExportFirmDataQueryHandler(AppDbContext _context, ILogger<ExportFirmDataQueryHandler> _logger) : IRequestHandler<ExportFirmDataQuery, byte[]>
 {
+    // =====================================================
+    // HANDLE — builds a downloadable zip of a firm's data (users/cases/parties CSVs)
+    // Used as part of the firm-offboarding flow: export the firm's data
+    // before blocking/removing its workspace.
+    // =====================================================
     public async Task<byte[]> Handle(ExportFirmDataQuery request, CancellationToken cancellationToken)
     {
-        var firm = await _context.Firms.AsNoTracking()
-            .FirstOrDefaultAsync(f => f.FirmID == request.FirmID, cancellationToken);
+        var firm = await _context.Firms.AsNoTracking().FirstOrDefaultAsync(f => f.FirmID == request.FirmID, cancellationToken);
         if (firm == null)
             throw new NotFoundException("Firm not found.");
 
@@ -46,6 +49,9 @@ public class ExportFirmDataQueryHandler(AppDbContext _context, ILogger<ExportFir
         return memoryStream.ToArray();
     }
 
+    // Writes one CSV file entry into the zip archive from a list of
+    // anonymous-typed rows, using reflection to derive the header row from
+    // the first row's properties.
     private static async Task WriteCsvEntryAsync(ZipArchive archive, string fileName, List<object> rows)
     {
         var entry = archive.CreateEntry(fileName, CompressionLevel.Fastest);
@@ -67,18 +73,6 @@ public class ExportFirmDataQueryHandler(AppDbContext _context, ILogger<ExportFir
         }
     }
 
-    // SECURITY FIX (CSV / Excel Formula Injection): several of the
-    // exported columns (FullName, Department, Designation, PartyName,
-    // Organization) are user-controlled free text. If any such value
-    // starts with '=', '+', '-', '@', a tab, or a carriage return, Excel
-    // (and most other spreadsheet apps) will interpret the cell as a
-    // formula the moment the exported file is opened - a value like
-    // "=cmd|'/c calc'!A0" or a DDE/webhook-exfiltration formula would
-    // execute on whoever's machine opens this export (typically the
-    // SuperAdmin handling the export request). Prefixing such values with
-    // a leading apostrophe forces spreadsheet apps to treat the cell as
-    // plain text, neutralizing the formula while keeping the visible
-    // value unchanged for a human reading the CSV directly.
     private static readonly char[] FormulaTriggerChars = { '=', '+', '-', '@', '\t', '\r' };
 
     private static string CsvEscape(string value)

@@ -15,11 +15,15 @@ namespace LTSBackend.Features.CaseNotes.Commands.UpdateNote
     public class UpdateCaseNoteHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
         IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateCaseNoteCommand, bool>
     {
+        // =====================================================
+        // HANDLE — edits an existing case note
+        // Enforces firm isolation, then only the note's own author or a
+        // senior role (SuperAdmin/FirmAdmin/Partner) may edit it — protects
+        // confidential internal notes from being altered by unrelated staff.
+        // =====================================================
         public async Task<bool> Handle(UpdateCaseNoteCommand request, CancellationToken cancellationToken)
         {
-            var note = await _context.CaseNotes
-                .Include(n => n.Case)
-                .FirstOrDefaultAsync(n => n.NoteID == request.Note.NoteID, cancellationToken);
+            var note = await _context.CaseNotes.Include(n => n.Case).FirstOrDefaultAsync(n => n.NoteID == request.Note.NoteID, cancellationToken);
 
             if (note == null || (note.Case.FirmID != _currentUser.FirmID))
                 throw new NotFoundException($"Note ID {request.Note.NoteID} not found");

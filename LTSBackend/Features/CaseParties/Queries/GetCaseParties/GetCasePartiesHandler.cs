@@ -9,16 +9,16 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCaseParties
 {
     public class GetCasePartiesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCasePartiesQuery, List<CasePartyDetailDTO>>
     {
+        // =====================================================
+        // HANDLE — lists a case's parties, scoped to who's allowed to see it
+        // Only SuperAdmin/FirmAdmin/Partner (full case-directory
+        // visibility) or a user actually assigned to this case can see
+        // its parties — returns an empty list (not an error) otherwise, so
+        // the case's existence isn't disclosed. Also enforces firm
+        // isolation.
+        // =====================================================
         public async Task<List<CasePartyDetailDTO>> Handle(GetCasePartiesQuery request, CancellationToken cancellationToken)
         {
-            // SECURITY FIX (IDOR / broken access control): this previously only
-            // checked firm (tenant) scoping, which let ANY authenticated user in
-            // the firm - including AssociateLawyer, Moharrir, and
-            // InternParalegal - read party details for a case they are not
-            // assigned to. Per the roles spec ("Cannot: Access unassigned
-            // cases"), only SuperAdmin/FirmAdmin/Partner (full case-directory
-            // visibility) or a user actually assigned to THIS case may see it -
-            // mirrors the check already done in GetCaseAssignmentsHandler.
             if (_currentUser.UserID.HasValue)
             {
                 bool hasFullVisibility = await _permissionService.HasFullCaseDirectoryVisibilityAsync(_currentUser.UserID.Value, cancellationToken);
@@ -33,9 +33,7 @@ namespace LTSBackend.Features.CaseParties.Queries.GetCaseParties
                 }
             }
 
-            var query = _context.CaseParties
-                .AsNoTracking()
-                .Where(p => p.CaseID == request.CaseID);
+            var query = _context.CaseParties.AsNoTracking().Where(p => p.CaseID == request.CaseID);
 
             // Multi-tenant isolation
                 query = query.Where(p => p.Case.FirmID == _currentUser.FirmID);

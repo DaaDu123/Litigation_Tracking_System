@@ -7,6 +7,12 @@ namespace LTSBackend.Features.CaseStages.Queries.GetAllCaseStages;
 
 public sealed class GetAllCaseStagesHandler(AppDbContext _context, ILogger<GetAllCaseStagesHandler> _logger) : IRequestHandler<GetAllCaseStagesQuery, List<CaseStageDTO>>
 {
+    // =====================================================
+    // HANDLE — lists stages for dropdowns / admin screens
+    // Optionally filtered by search text and by active-only. Visibility
+    // (global + own firm) is enforced by the entity's EF Core
+    // HasQueryFilter, not by this handler.
+    // =====================================================
     public async Task<List<CaseStageDTO>> Handle(GetAllCaseStagesQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching all case stages (SearchText={SearchText}, ActiveOnly={ActiveOnly})", request.SearchText, request.ActiveOnly);
@@ -19,9 +25,7 @@ public sealed class GetAllCaseStagesHandler(AppDbContext _context, ILogger<GetAl
         if (!string.IsNullOrWhiteSpace(request.SearchText))
         {
             var search = request.SearchText.Trim().ToLower();
-            query = query.Where(x =>
-                x.StageName.ToLower().Contains(search) ||
-                (x.Description != null && x.Description.ToLower().Contains(search)));
+            query = query.Where(x =>x.StageName.ToLower().Contains(search) || (x.Description != null && x.Description.ToLower().Contains(search)));
         }
 
         var stages = await query.OrderBy(x => x.StageName)

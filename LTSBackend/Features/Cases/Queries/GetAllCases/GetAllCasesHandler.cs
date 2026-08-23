@@ -11,11 +11,18 @@ namespace LTSBackend.Features.Cases.Queries.GetAllCases;
 
 public class GetAllCasesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService, ILogger<GetAllCasesHandler> _logger) : IRequestHandler<GetAllCasesQuery, PagedResult<CaseDTO>>
 {
+    // =====================================================
+    // HANDLE — paged, filterable, role-scoped case list
+    // Always firm-scoped. AssociateLawyer/Moharrir/InternParalegal (no
+    // full case-directory visibility) are further narrowed to only cases
+    // they're actively assigned to, applied at the query level (not
+    // filtered in memory afterwards) so pagination/counts stay correct.
+    // Supports search-text, court, status, and priority filters, and
+    // excludes archived cases by default.
+    // =====================================================
     public async Task<PagedResult<CaseDTO>> Handle(GetAllCasesQuery request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Fetching cases - Page: {PageNumber}, Size: {PageSize}",
-            request.PageNumber,
-            request.PageSize);
+        _logger.LogInformation("Fetching cases - Page: {PageNumber}, Size: {PageSize}",request.PageNumber,request.PageSize);
 
         // 1. Base query with relations
         var query = _context.Cases

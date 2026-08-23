@@ -15,13 +15,17 @@ namespace LTSBackend.Features.CaseAssignments.Commands.AssignCase
     /// FR-06 "System shall allow assignment of cases to legal officers and counsel"
     /// Also triggers a Notification (SRS: "System sends notification")
     /// </summary>
-    public class AssignCaseHandler(
-        AppDbContext _context,
-        IAuditService _auditService,
-        ICurrentUserService _currentUser,
-        IHttpContextAccessor _httpContextAccessor,
-        ILogger<AssignCaseHandler> _logger) : IRequestHandler<AssignCaseCommand, long>
+    public class AssignCaseHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,IHttpContextAccessor _httpContextAccessor,ILogger<AssignCaseHandler> _logger) : IRequestHandler<AssignCaseCommand, long>
     {
+        // =====================================================
+        // HANDLE — assigns a lawyer/counsel to a case (SRS UC-04)
+        // Validates the case and the user-being-assigned both belong to
+        // the caller's own firm, blocks a duplicate active assignment of
+        // the same user+type on the same case, creates the assignment,
+        // syncs Case.CurrentLegalOfficerID if this is the lead counsel,
+        // sends the assigned user a notification, and writes an audit
+        // log entry.
+        // =====================================================
         public async Task<long> Handle(AssignCaseCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Assignment.CaseID, cancellationToken);
@@ -82,8 +86,7 @@ namespace LTSBackend.Features.CaseAssignments.Commands.AssignCase
                 CreatedDate = DateTime.UtcNow
             });
 
-            _context.AuditLogs.Add(_auditService.Create(currentUserId,
-                $"Case Assigned: UserID {request.Assignment.UserID} to Case {request.Assignment.CaseID} as {request.Assignment.AssignmentType}"));
+            _context.AuditLogs.Add(_auditService.Create(currentUserId,$"Case Assigned: UserID {request.Assignment.UserID} to Case {request.Assignment.CaseID} as {request.Assignment.AssignmentType}"));
 
             await _context.SaveChangesAsync(cancellationToken);
 

@@ -9,32 +9,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Auth.ChangePassword;
 
-public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool>
+public class ChangePasswordHandler (AppDbContext _context, IPasswordService _passwordService, IAuditService _auditService, ILogger<ChangePasswordHandler> _logger) : IRequestHandler<ChangePasswordCommand, bool>
 {
-    private readonly AppDbContext _context;
-    private readonly IPasswordService _passwordService;
-    private readonly IAuditService _auditService;
-    private readonly ILogger<ChangePasswordHandler> _logger;
 
-    public ChangePasswordHandler(AppDbContext context, IPasswordService passwordService, IAuditService auditService, ILogger<ChangePasswordHandler> logger)
-    {
-        _context = context;
-        _passwordService = passwordService;
-        _auditService = auditService;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(
-        ChangePasswordCommand request,
-        CancellationToken cancellationToken)
+    // =====================================================
+    // HANDLE — Any authenticated user changing their own password
+    // Verifies the old password, hashes and saves the new one, then
+    // rotates the user's security stamp and revokes every active
+    // refresh token so all other logged-in devices/sessions are signed
+    // out. Writes an audit log entry.
+    // =====================================================
+    public async Task<bool> Handle(ChangePasswordCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Password change attempt for user: {UserId}", request.UserID);
 
         // 1. Find user
-        var user = await _context.Users
-            .FirstOrDefaultAsync(
-                x => x.UserID == request.UserID,
-                cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserID == request.UserID,cancellationToken);
 
         if (user == null)
         {
@@ -43,15 +33,12 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool
         }
 
         // 2. Verify old password
-        bool isOldPasswordValid = _passwordService.VerifyPassword(
-            request.OldPassword,
-            user.PasswordHash);
+        bool isOldPasswordValid = _passwordService.VerifyPassword(request.OldPassword,user.PasswordHash);
 
         if (!isOldPasswordValid)
         {
             _logger.LogWarning("Password change failed: Invalid old password for user: {UserId}", request.UserID);
-            throw new ValidationException(
-                new List<string> { "Old password is incorrect." });
+            throw new ValidationException(new List<string> { "Old password is incorrect." });
         }
 
         // 3. Update password
@@ -69,14 +56,10 @@ public class ChangePasswordHandler : IRequestHandler<ChangePasswordCommand, bool
             token.IsRevoked = true;
         }
 
-        _logger.LogInformation(
-            "Rotated security stamp and revoked {Count} active session(s) for user {UserId} after password change",
-            activeTokens.Count,
-            user.UserID);
+        _logger.LogInformation("Rotated security stamp and revoked {Count} active session(s) for user {UserId} after password change",activeTokens.Count,user.UserID);
 
         // 4. Create audit log
-        _context.AuditLogs.Add(
-            _auditService.Create(user.UserID, "Password Changed"));
+        _context.AuditLogs.Add(_auditService.Create(user.UserID, "Password Changed"));
 
         // 5. Save changes
         await _context.SaveChangesAsync(cancellationToken);

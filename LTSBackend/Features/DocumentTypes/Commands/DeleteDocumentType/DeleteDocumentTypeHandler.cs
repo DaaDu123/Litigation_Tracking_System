@@ -8,6 +8,11 @@ namespace LTSBackend.Features.DocumentTypes.Commands.DeleteDocumentType;
 
 public sealed class DeleteDocumentTypeHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<DeleteDocumentTypeHandler> _logger) : IRequestHandler<DeleteDocumentTypeCommand, bool>
 {
+    // =====================================================
+    // HANDLE — removes a document type the firm no longer needs
+    // Same ownership check as Update (own firm's custom document type only),
+    // plus an in-use check: cannot delete while cases still reference it.
+    // =====================================================
     public async Task<bool> Handle(DeleteDocumentTypeCommand request, CancellationToken cancellationToken)
     {
         var type = await _context.DocumentTypes.FirstOrDefaultAsync(x => x.DocumentTypeID == request.DocumentTypeID, cancellationToken);

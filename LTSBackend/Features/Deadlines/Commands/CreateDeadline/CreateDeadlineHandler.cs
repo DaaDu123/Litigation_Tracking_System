@@ -10,10 +10,18 @@ using System.Security.Claims;
 
 namespace LTSBackend.Features.Deadlines.Commands.CreateDeadline
 {
-    public class CreateDeadlineHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,
-        IPermissionService _permissionService,
+    public class CreateDeadlineHandler(AppDbContext _context,IAuditService _auditService,ICurrentUserService _currentUser,IPermissionService _permissionService,
         IHttpContextAccessor _httpContextAccessor,ILogger<CreateDeadlineHandler> _logger) : IRequestHandler<CreateDeadlineCommand, long>
     {
+        // =====================================================
+        // HANDLE — adds a new deadline against a case
+        // Verifies the case belongs to the caller's own firm, and —
+        // since Create is open to AssociateLawyer/Moharrir at the
+        // controller — that the caller has full case-directory
+        // visibility or is actually assigned to this case. Saves the
+        // deadline with the caller's own chosen ReminderDays (see
+        // ReminderService for how that's used).
+        // =====================================================
         public async Task<long> Handle(CreateDeadlineCommand request, CancellationToken cancellationToken)
         {
             var caseEntity = await _context.Cases.FirstOrDefaultAsync(c => c.CaseID == request.Deadline.CaseID, cancellationToken);
@@ -47,8 +55,7 @@ namespace LTSBackend.Features.Deadlines.Commands.CreateDeadline
             _context.Deadlines.Add(deadline);
 
             int currentUserId = GetCurrentUserId();
-            _context.AuditLogs.Add(_auditService.Create(currentUserId,
-                $"Deadline Created: {deadline.DeadlineType} due {deadline.DueDate:d} for Case {request.Deadline.CaseID}"));
+            _context.AuditLogs.Add(_auditService.Create(currentUserId, $"Deadline Created: {deadline.DeadlineType} due {deadline.DueDate:d} for Case {request.Deadline.CaseID}"));
 
             await _context.SaveChangesAsync(cancellationToken);
 

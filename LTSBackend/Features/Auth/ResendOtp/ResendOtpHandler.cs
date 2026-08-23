@@ -12,6 +12,13 @@ namespace LTSBackend.Features.Auth.ResendOtp;
 
 public class ResendOtpHandler(AppDbContext _context, IEmailService _emailService, ILogger<ResendOtpHandler> _logger) : IRequestHandler<ResendOtpCommand, ResendOtpResponseDTO>
 {
+    // =====================================================
+    // HANDLE — Anonymous, Registration-flow OTP resend only
+    // Invalidates any previous unused Registration OTP for the email
+    // and emails a fresh one. Scoped strictly to Purpose ==
+    // Registration so it never touches a separately in-flight
+    // password-reset OTP for the same email.
+    // =====================================================
     public async Task<ResendOtpResponseDTO> Handle(ResendOtpCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Resend OTP requested for email: {Email}", request.Email);

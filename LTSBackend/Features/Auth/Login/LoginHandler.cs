@@ -19,6 +19,15 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
 
     private static readonly string DummyPasswordHash = BCrypt.Net.BCrypt.HashPassword("dummy-password-for-timing-normalization");
 
+    // =====================================================
+    // HANDLE — Anonymous login attempt
+    // Validates email/password with account-lockout protection (locks the
+    // account after MaxFailedAttempts, using a dummy password verify on a
+    // not-found email so timing doesn't reveal which emails exist),
+    // rejects deleted/unverified accounts and blocked/removed firm
+    // workspaces, then issues an access + refresh token pair, records the
+    // login in LoginHistory, and writes an audit log entry.
+    // =====================================================
     public async Task<LoginResponseDTO> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Login attempt for email: {Email}", request.Email);
@@ -48,8 +57,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
             {
                 var remaining = user.LockoutEndUtc.Value - DateTime.UtcNow;
                 _logger.LogWarning("Login blocked: user {UserId} is locked out for {Minutes} more minute(s)", user.UserID, Math.Ceiling(remaining.TotalMinutes));
-                throw new UnauthorizedException(
-                    $"Too many failed login attempts. Please try again in {FormatRemaining(remaining)}.");
+                throw new UnauthorizedException($"Too many failed login attempts. Please try again in {FormatRemaining(remaining)}.");
             }
 
             // Lockout window has passed - clear it and reset the counter
@@ -70,8 +78,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
                 user.FailedLoginAttempts = 0; // next window starts clean once LockoutEndUtc passes
                 _logger.LogWarning("User {UserId} locked out for {Hours}h after {Count} failed attempts", user.UserID, LockoutDurationHours, MaxFailedAttempts);
                 await _context.SaveChangesAsync(cancellationToken);
-                throw new UnauthorizedException(
-                    $"Too many failed login attempts. Please try again in {LockoutDurationHours} hours.");
+                throw new UnauthorizedException($"Too many failed login attempts. Please try again in {LockoutDurationHours} hours.");
             }
             await _context.SaveChangesAsync(cancellationToken);
             _logger.LogWarning("Login failed: Invalid password for user: {UserId}", user.UserID);

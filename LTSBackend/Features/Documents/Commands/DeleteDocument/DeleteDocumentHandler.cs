@@ -9,7 +9,13 @@ namespace LTSBackend.Features.Documents.Commands.DeleteDocument;
 
 public class DeleteDocumentHandler(AppDbContext _context, IFileService _fileService, IAuditService _auditService, ILogger<DeleteDocumentHandler> _logger) : IRequestHandler<DeleteDocumentCommand, bool>
 {
-    // Deletes a document's permissions, DB row, and file on disk (Partner/FirmAdmin only).
+    // =====================================================
+    // HANDLE — hard-deletes a document, its permissions, and its file
+    // Removes DocumentPermissions rows first (FK-safe order), then the DB
+    // row, then the file on secure disk storage — a failed file delete is
+    // logged but doesn't fail the request, since the DB record is already
+    // gone. Writes an audit log entry. Not reversible.
+    // =====================================================
     public async Task<bool> Handle(DeleteDocumentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Document delete attempt - ID: {DocumentId}, User: {UserId}", request.DocumentID, request.UserID);

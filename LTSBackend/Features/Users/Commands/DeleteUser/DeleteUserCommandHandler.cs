@@ -9,6 +9,15 @@ namespace LTSBackend.Features.Users.Commands.DeleteUser;
 
 public class DeleteUserCommandHandler(AppDbContext _context, ILogger<DeleteUserCommandHandler> _logger) : IRequestHandler<DeleteUserCommand, bool>
 {
+    // =====================================================
+    // HANDLE — soft-deletes/deactivates a user (reversible via Activate)
+    // Refuses to deactivate yourself, and enforces role hierarchy (can
+    // only deactivate a strictly lower-privileged role) plus own-firm
+    // scoping (SuperAdmin bypasses, since FirmID is null for them). Sets
+    // IsActive = false, rotates the security stamp, and revokes every
+    // active refresh token so the user is signed out everywhere
+    // immediately, not just blocked from future logins.
+    // =====================================================
     public async Task<bool> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Deactivating user (reversible): {UserId}", request.UserID);

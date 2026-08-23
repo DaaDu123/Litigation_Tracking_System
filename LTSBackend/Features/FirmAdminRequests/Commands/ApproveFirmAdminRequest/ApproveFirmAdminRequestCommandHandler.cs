@@ -12,6 +12,17 @@ namespace LTSBackend.Features.FirmAdminRequests.Commands.ApproveFirmAdminRequest
 public class ApproveFirmAdminRequestCommandHandler(AppDbContext _context,IEmailService _emailService,IAuditService _auditService,
     ILogger<ApproveFirmAdminRequestCommandHandler> _logger) : IRequestHandler<ApproveFirmAdminRequestCommand, int>
 {
+    // =====================================================
+    // HANDLE — accepts a pending Firm Admin request, creates firm + admin
+    // Refuses if the request isn't still Pending, re-checks FirmCode/
+    // admin-email uniqueness (something else may have taken it since
+    // submission), then — in one retry-safe transaction — creates the
+    // Firm and its FirmAdmin user (reusing the password hash captured at
+    // submission time, never re-touching the plaintext), marks the
+    // request Approved, and writes an audit log entry. Emails the
+    // requester on success (best-effort — a failed email doesn't roll
+    // back the approval).
+    // =====================================================
     public async Task<int> Handle(ApproveFirmAdminRequestCommand request, CancellationToken cancellationToken)
     {
         var firmAdminRequest = await _context.FirmAdminRequests.FirstOrDefaultAsync(x => x.RequestID == request.RequestID, cancellationToken);

@@ -11,15 +11,18 @@ namespace LTSBackend.Features.Auth.Logout;
 
 public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpContextAccessor, IAuditService _auditService, IJwtService _jwtService, ILogger<LogoutHandler> _logger) : IRequestHandler<LogoutCommand, bool>
 {
-    public async Task<bool> Handle(
-        LogoutCommand request,
-        CancellationToken cancellationToken)
+    // =====================================================
+    // HANDLE — Any authenticated user logging out
+    // Reads the refresh-token cookie, revokes that stored token,
+    // closes out the user's open LoginHistory row, writes an audit log
+    // entry, and clears the refresh-token cookie from the response.
+    // =====================================================
+    public async Task<bool> Handle(LogoutCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Logout attempt");
 
         // 1. Read refresh token from cookie
-        var refreshToken = _httpContextAccessor.HttpContext?
-            .Request.Cookies["refreshToken"];
+        var refreshToken = _httpContextAccessor.HttpContext? .Request.Cookies["refreshToken"];
 
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
@@ -33,11 +36,7 @@ public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpCont
         // value before looking it up, matching RefreshTokenHandler.
         var tokenHash = _jwtService.HashRefreshToken(refreshToken);
 
-        var token = await _context.RefreshTokens
-            .Include(x => x.User)
-            .FirstOrDefaultAsync(
-                x => x.Token == tokenHash,
-                cancellationToken);
+        var token = await _context.RefreshTokens.Include(x => x.User).FirstOrDefaultAsync(x => x.Token == tokenHash,cancellationToken);
 
         if (token == null)
         {
@@ -51,9 +50,7 @@ public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpCont
 
         // 4. Update login history
         var loginHistory = await _context.LoginHistories
-            .Where(x =>
-                x.UserID == token.UserID &&
-                !x.IsLoggedOut)
+            .Where(x => x.UserID == token.UserID && !x.IsLoggedOut)
             .OrderByDescending(x => x.LoginTime)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -66,8 +63,7 @@ public class LogoutHandler(AppDbContext _context, IHttpContextAccessor _httpCont
         }
 
         // 5. Create audit log
-        _context.AuditLogs.Add(
-            _auditService.Create(token.UserID, "User Logout"));
+        _context.AuditLogs.Add(_auditService.Create(token.UserID, "User Logout"));
 
         // 6. Save all changes
         await _context.SaveChangesAsync(cancellationToken);

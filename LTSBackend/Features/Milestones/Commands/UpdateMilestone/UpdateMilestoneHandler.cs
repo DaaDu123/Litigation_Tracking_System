@@ -12,6 +12,10 @@ namespace LTSBackend.Features.Milestones.Commands.UpdateMilestone
     public class UpdateMilestoneHandler(AppDbContext _context, IAuditService _auditService,
         ICurrentUserService _currentUser, IPermissionService _permissionService, IHttpContextAccessor _httpContextAccessor) : IRequestHandler<UpdateMilestoneCommand, bool>
     {
+        // =====================================================
+        // HANDLE — edits an existing milestone
+        // Same visibility rule as Create/Complete.
+        // =====================================================
         public async Task<bool> Handle(UpdateMilestoneCommand request, CancellationToken cancellationToken)
         {
             var milestone = await _context.CaseMilestones

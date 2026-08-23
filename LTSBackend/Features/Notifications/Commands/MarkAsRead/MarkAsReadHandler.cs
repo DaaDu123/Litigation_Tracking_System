@@ -8,6 +8,12 @@ namespace LTSBackend.Features.Notifications.Commands.MarkAsRead;
 
 public class MarkAsReadHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<MarkAsReadCommand, bool>
 {
+    // =====================================================
+    // HANDLE — marks a single notification as read
+    // IDOR guard: only the notification's own addressee can mark it read
+    // — 404, not 403, so a foreign NotificationID's existence isn't
+    // disclosed.
+    // =====================================================
     public async Task<bool> Handle(MarkAsReadCommand request, CancellationToken cancellationToken)
     {
         var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.NotificationID == request.NotificationID, cancellationToken);

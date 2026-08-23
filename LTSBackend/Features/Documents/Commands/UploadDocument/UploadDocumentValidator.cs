@@ -3,6 +3,10 @@ using LTSBackend.Comman.Security;
 
 namespace LTSBackend.Features.Documents.Commands.UploadDocument;
 
+// Requires a valid CaseID/DocumentTypeID, a non-empty document name, and a
+// file that is present, non-empty, under 50MB, has an allowed extension,
+// AND whose actual byte signature matches that extension (blocks a
+// renamed/mislabeled file, e.g. a .exe saved as .pdf).
 public class UploadDocumentValidator : AbstractValidator<UploadDocumentCommand>
 {
     // Defines the validation rules for an upload request (case, type, name, file).

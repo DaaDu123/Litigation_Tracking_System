@@ -28,6 +28,15 @@ namespace LTSBackend.Features.Hearings.Commands.CreateHearing
             _httpContextAccessor = httpContextAccessor;
         }
 
+        // =====================================================
+        // HANDLE — schedules a new hearing against a case
+        // Verifies the case belongs to the caller's own firm, and — since
+        // Create is open to AssociateLawyer/Moharrir at the controller —
+        // that the caller has full case-directory visibility or is
+        // actually assigned to this case. Also validates the court
+        // exists. Past-date scheduling is already rejected by
+        // CreateHearingValidator before this ever runs.
+        // =====================================================
         public async Task<long> Handle(CreateHearingCommand request, CancellationToken cancellationToken)
         {
             // Validate case exists AND belongs to the acting user's firm

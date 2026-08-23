@@ -9,6 +9,13 @@ namespace LTSBackend.Features.Courts.Commands.CreateCourt;
 
 public sealed class CreateCourtHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<CreateCourtHandler> _logger) : IRequestHandler<CreateCourtCommand, int>
 {
+    // =====================================================
+    // HANDLE — creates a new court
+    // Trims input, checks the name is unique among what the caller can
+    // see (global courts + their own firm's), then saves it. FirmID is
+    // set to the caller's own firm for a FirmAdmin, or left null (global,
+    // visible to every firm) for a SuperAdmin.
+    // =====================================================
     public async Task<int> Handle(CreateCourtCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating court: {CourtName}", request.CourtName);

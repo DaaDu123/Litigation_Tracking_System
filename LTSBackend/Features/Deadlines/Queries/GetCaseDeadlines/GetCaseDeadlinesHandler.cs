@@ -9,6 +9,14 @@ namespace LTSBackend.Features.Deadlines.Queries.GetCaseDeadlines
 {
     public class GetCaseDeadlinesHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCaseDeadlinesQuery, List<DeadlineDetailDTO>>
     {
+        // =====================================================
+        // HANDLE — lists a case's deadlines, scoped to who's allowed to see it
+        // Same assignment-or-full-visibility rule as
+        // GetCaseAssignmentsHandler (empty list, not an error, if denied),
+        // plus firm isolation. Optionally filtered to only
+        // completed/pending, and computes DaysRemaining/IsOverdue per
+        // deadline for display.
+        // =====================================================
         public async Task<List<DeadlineDetailDTO>> Handle(GetCaseDeadlinesQuery request, CancellationToken cancellationToken)
         {
             // SECURITY FIX (IDOR): firm scoping alone let any firm user - including

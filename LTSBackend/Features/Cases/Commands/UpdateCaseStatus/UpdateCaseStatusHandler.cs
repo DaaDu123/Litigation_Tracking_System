@@ -11,6 +11,15 @@ namespace LTSBackend.Features.Cases.Commands.UpdateCaseStatus;
 
 public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _auditService, ILogger<UpdateCaseStatusHandler> _logger, IHttpContextAccessor _httpContextAccessor, ICurrentUserService _currentUser) : IRequestHandler<UpdateCaseStatusCommand, bool>
 {
+    // =====================================================
+    // HANDLE — changes a case's status and records the transition (FR-05)
+    // Firm-scoped lookup, rejects setting the same status again, and syncs
+    // Case.IsClosed/ClosureDate with the new status's IsClosed flag (so
+    // vw_ActiveCases/vw_ClosedCases stay accurate) — clearing ClosureDate
+    // again if the case is re-opened. Writes a CaseStatusHistory row
+    // (old status, new status, who changed it, remarks) and an audit log
+    // entry.
+    // =====================================================
     public async Task<bool> Handle(UpdateCaseStatusCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating case status: {CaseID}", request.CaseID);
@@ -29,9 +38,7 @@ public class UpdateCaseStatusHandler(AppDbContext _context, IAuditService _audit
         }
 
         // 2. Verify that the new status exists
-        var newStatus = await _context.CaseStatuses
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.StatusID == request.NewStatusID, cancellationToken);
+        var newStatus = await _context.CaseStatuses.AsNoTracking().FirstOrDefaultAsync(x => x.StatusID == request.NewStatusID, cancellationToken);
 
         if (newStatus == null)
         {

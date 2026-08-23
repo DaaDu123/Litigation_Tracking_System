@@ -7,6 +7,14 @@ namespace LTSBackend.Features.Users.Commands.ReleaseUserEmail;
 
 public class ReleaseUserEmailCommandHandler(AppDbContext _context, ILogger<ReleaseUserEmailCommandHandler> _logger) : IRequestHandler<ReleaseUserEmailCommand, bool>
 {
+    // =====================================================
+    // HANDLE — SuperAdmin releases a deleted user's email for cross-firm reuse
+    // Only a soft-deleted, not-yet-released record can be released.
+    // Doesn't touch FirmID (kept for audit history) or restore the
+    // account — it purely flips IsReleasedForReuse so a DIFFERENT firm's
+    // CreateUser call can claim this same email/row going forward (see
+    // CreateUserCommandHandler's reuse-ownership check).
+    // =====================================================
     public async Task<bool> Handle(ReleaseUserEmailCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Release-for-reuse request for user: {UserId}", request.UserID);

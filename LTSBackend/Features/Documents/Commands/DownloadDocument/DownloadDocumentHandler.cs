@@ -10,7 +10,13 @@ namespace LTSBackend.Features.Documents.Commands.DownloadDocument;
 public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionService _permissionService, IFileService _fileService,
     ILogger<DownloadDocumentHandler> _logger) : IRequestHandler<DownloadDocumentCommand, DocumentDownloadDTO>
 {
-    // Checks download permission, reads the file from secure storage, and returns it.
+    // =====================================================
+    // HANDLE — checks download permission and streams the file back
+    // Calls CanUserAccessDocumentAsync (which is where a Restricted-mode
+    // Moharrir gets blocked even if they can see the document in a list),
+    // then reads the raw bytes from secure disk storage and returns them
+    // with a resolved content type.
+    // =====================================================
     public async Task<DocumentDownloadDTO> Handle(DownloadDocumentCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Document download request - ID: {DocumentId}, User: {UserId}",request.DocumentID,request.UserID);
@@ -20,8 +26,7 @@ public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionS
         if (!canDownload)
         {
             _logger.LogWarning("User {UserId} denied download access to document {DocumentId}", request.UserID, request.DocumentID);
-            throw new UnauthorizedException("You don't have permission to download this document. " +
-                "If you are a restricted Moharrir, contact your administrator to grant access.");
+            throw new UnauthorizedException("You don't have permission to download this document. " + "If you are a restricted Moharrir, contact your administrator to grant access.");
         }
 
         var document = await _context.Documents.AsNoTracking().FirstOrDefaultAsync(x => x.DocumentID == request.DocumentID, cancellationToken);
@@ -36,9 +41,7 @@ public class DownloadDocumentHandler(AppDbContext _context, IDocumentPermissionS
         try
         {
             fileBytes = await _fileService.ReadSecureFileAsync(document.FilePath);
-            _logger.LogInformation("Document file read successfully: {DocumentId}, Size: {Size} bytes",
-                request.DocumentID,
-                fileBytes.Length);
+            _logger.LogInformation("Document file read successfully: {DocumentId}, Size: {Size} bytes",request.DocumentID,fileBytes.Length);
         }
         catch (FileNotFoundException ex)
         {

@@ -11,6 +11,13 @@ namespace LTSBackend.Features.Cases.Queries.GetCaseStatusHistory;
 public class GetCaseStatusHistoryHandler(AppDbContext _context,ICurrentUserService _currentUser,IPermissionService _permissionService,
     ILogger<GetCaseStatusHistoryHandler> _logger): IRequestHandler<GetCaseStatusHistoryQuery, List<CaseStatusHistoryDTO>>
 {
+    // =====================================================
+    // HANDLE — read side of FR-05, returns a case's status timeline
+    // Same firm + assignment visibility rule as GetCaseByIdHandler, then
+    // returns every CaseStatusHistory row (old status, new status, who
+    // changed it, when, remarks) newest-first, with status/user names
+    // resolved for display.
+    // =====================================================
     public async Task<List<CaseStatusHistoryDTO>> Handle(GetCaseStatusHistoryQuery request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Fetching status history for case: {CaseID}", request.CaseID);

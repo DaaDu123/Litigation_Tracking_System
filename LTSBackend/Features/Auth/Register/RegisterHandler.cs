@@ -13,6 +13,14 @@ namespace LTSBackend.Features.Auth.Register;
 
 public class RegisterHandler(AppDbContext _context, IPasswordService _passwordService, IEmailService _emailService, IAuditService _auditService, ILogger<RegisterHandler> _logger) : IRequestHandler<RegisterCommand, RegisterResponseDTO>
 {
+    // =====================================================
+    // HANDLE — Anonymous self-registration
+    // Validates the email is unused and the firm code is a real,
+    // active/unblocked firm, creates the account as InternParalegal
+    // (the default lowest-privilege role) with IsActive = false until the
+    // email is verified, then generates and emails a 6-digit Registration
+    // OTP.
+    // =====================================================
     public async Task<RegisterResponseDTO> Handle(RegisterCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting registration for email: {Email}", request.Email);

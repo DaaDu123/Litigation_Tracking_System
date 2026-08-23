@@ -7,13 +7,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Dashboard.Queries.GetFirmDashboard;
 
-public class GetFirmDashboardHandler(
-    AppDbContext _context,
-    ICurrentUserService _currentUser,
-    IPermissionService _permissionService,
-    ILogger<GetFirmDashboardHandler> _logger)
-    : IRequestHandler<GetFirmDashboardQuery, FirmDashboardDTO>
+public class GetFirmDashboardHandler(AppDbContext _context,ICurrentUserService _currentUser,IPermissionService _permissionService,
+    ILogger<GetFirmDashboardHandler> _logger) : IRequestHandler<GetFirmDashboardQuery, FirmDashboardDTO>
 {
+    // =====================================================
+    // HANDLE — firm-scoped statistics for every non-SuperAdmin role
+    // Applies the same visibility rule as GetAllCasesHandler: FirmAdmin
+    // and Partner see stats across the whole firm's case directory;
+    // AssociateLawyer/Moharrir/InternParalegal only see stats for cases
+    // they're actively assigned to — the dashboard must never imply
+    // visibility a role doesn't actually have.
+    // =====================================================
     public async Task<FirmDashboardDTO> Handle(GetFirmDashboardQuery request, CancellationToken cancellationToken)
     {
         var userId = _currentUser.UserID;
@@ -77,9 +81,7 @@ public class GetFirmDashboardHandler(
                 : null
         };
 
-        _logger.LogInformation(
-            "Firm dashboard fetched for user {UserId} - Scope: {Scope}, TotalCases: {TotalCases}",
-            userId, dto.Scope, dto.TotalCases);
+        _logger.LogInformation("Firm dashboard fetched for user {UserId} - Scope: {Scope}, TotalCases: {TotalCases}",userId, dto.Scope, dto.TotalCases);
 
         return dto;
     }

@@ -7,25 +7,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Profile.Commands;
 
-public class UpdateMyProfileHandler : IRequestHandler<UpdateMyProfileCommand, bool>
+public class UpdateMyProfileHandler(AppDbContext _context, IFileService _fileService, ILogger<UpdateMyProfileHandler> _logger) : IRequestHandler<UpdateMyProfileCommand, bool>
 {
-    private readonly AppDbContext _context;
-    private readonly IFileService _fileService;
-    private readonly ILogger<UpdateMyProfileHandler> _logger;
 
-    public UpdateMyProfileHandler(
-        AppDbContext context,
-        IFileService fileService,
-        ILogger<UpdateMyProfileHandler> logger)
-    {
-        _context = context;
-        _fileService = fileService;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(
-        UpdateMyProfileCommand request,
-        CancellationToken cancellationToken)
+    // =====================================================
+    // HANDLE — lets a user edit their own profile (name/phone/department/photo)
+    // Always operates on request.UserID, which the controller stamps from
+    // the caller's own JWT claim — never role, per SRS FR-19 ("Users
+    // cannot change their own role"). Replaces the profile image on disk
+    // (deleting the old one) if a new one is supplied.
+    // =====================================================
+    public async Task<bool> Handle(UpdateMyProfileCommand request,CancellationToken cancellationToken)
     {
         _logger.LogInformation("Updating profile for user: {UserId}", request.UserID);
 

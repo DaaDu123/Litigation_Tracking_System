@@ -14,7 +14,10 @@ namespace LTSBackend.Features.LoginHistory.GetMyLoginHistory;
 /// </summary>
 public class GetMyLoginHistoryHandler(AppDbContext context) : IRequestHandler<GetMyLoginHistoryQuery, List<MyLoginHistoryDTO>>
 {
-    // Fetches every login record for the given (always self) user, newest first.
+    // =====================================================
+    // HANDLE — fetches every login record for the given (always self) user
+    // Newest first.
+    // =====================================================
     public async Task<List<MyLoginHistoryDTO>> Handle(GetMyLoginHistoryQuery request, CancellationToken cancellationToken)
     {
         return await context.LoginHistories

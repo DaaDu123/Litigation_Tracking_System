@@ -11,6 +11,15 @@ namespace LTSBackend.Features.Auth.RefreshToken;
 
 public class RefreshTokenHandler(AppDbContext _context, IJwtService _jwtService, IHttpContextAccessor _httpContextAccessor, IAuditService _auditService, ILogger<RefreshTokenHandler> _logger) : IRequestHandler<RefreshTokenCommand, RefreshTokenResponseDTO>
 {
+    // =====================================================
+    // HANDLE — Anonymous (relies on the refresh-token cookie)
+    // Validates the stored (hashed) refresh token — rejecting it if
+    // revoked, expired, or its user is inactive/deleted — then rotates
+    // it (old one revoked, new one issued) and returns a fresh access
+    // token. SECURITY: reuse of an already-revoked token is treated as
+    // a possible theft signal and revokes ALL of that user's active
+    // sessions.
+    // =====================================================
     public async Task<RefreshTokenResponseDTO> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Token refresh attempt");

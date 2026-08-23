@@ -8,6 +8,11 @@ namespace LTSBackend.Features.CaseCategories.Commands.DeleteCaseCategory;
 
 public sealed class DeleteCaseCategoryHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<DeleteCaseCategoryHandler> _logger) : IRequestHandler<DeleteCaseCategoryCommand, bool>
 {
+    // =====================================================
+    // HANDLE — removes a case category the firm no longer needs
+    // Same ownership check as Update (own firm's custom case category only),
+    // plus an in-use check: cannot delete while cases still reference it.
+    // =====================================================
     public async Task<bool> Handle(DeleteCaseCategoryCommand request, CancellationToken cancellationToken)
     {
         var category = await _context.CaseCategories.FirstOrDefaultAsync(x => x.CategoryID == request.CategoryID, cancellationToken);

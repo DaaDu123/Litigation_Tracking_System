@@ -24,14 +24,20 @@ public class AssignPermissionsHandler : IRequestHandler<AssignPermissionsCommand
         _logger = logger;
     }
 
-    public async Task<bool> Handle(
-        AssignPermissionsCommand request,
-        CancellationToken cancellationToken)
+    // =====================================================
+    // HANDLE — replaces a role's entire permission set platform-wide
+    // Refuses to touch a protected system role (SuperAdmin/FirmAdmin —
+    // their permissions aren't editable through this endpoint), validates
+    // every supplied PermissionID actually exists, then inside one
+    // retry-safe transaction removes all of the role's current
+    // RolePermissions rows and inserts the new set. See the class-level
+    // note on RolesController/PermissionsController for why this whole
+    // operation is intentionally SuperAdmin-only (Role/RolePermission are
+    // global, non-tenant-scoped tables).
+    // =====================================================
+    public async Task<bool> Handle(AssignPermissionsCommand request,CancellationToken cancellationToken)
     {
-        _logger.LogInformation(
-            "Assigning {Count} permissions to role: {RoleID}",
-            request.PermissionIds.Count,
-            request.RoleID);
+        _logger.LogInformation("Assigning {Count} permissions to role: {RoleID}",request.PermissionIds.Count,request.RoleID);
 
         // 1. Normalize permission IDs (deduplicate)
         var permissionIds = request.PermissionIds

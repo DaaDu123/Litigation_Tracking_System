@@ -11,6 +11,16 @@ namespace LTSBackend.Features.Cases.Commands.CreateCase;
 
 public class CreateCaseHandler(AppDbContext _context, IAuditService _auditService, ILogger<CreateCaseHandler> _logger, IHttpContextAccessor _httpContextAccessor, ICurrentUserService _currentUser) : IRequestHandler<CreateCaseCommand, long>
 {
+    // =====================================================
+    // HANDLE — registers a brand-new litigation case (SRS UC-01)
+    // Resolves/creates the Court, Category, and Department from either a
+    // picked ID or a typed name (type-or-select form fields), validates
+    // case-number uniqueness within the firm, defaults Status="New" and
+    // Stage="Filing", generates a unique InternalReferenceNo, then saves
+    // the case plus its initial CaseStatusHistory row and an audit log
+    // entry. Date-sanity (e.g. Expected Disposal Date not in the past) is
+    // already enforced by CreateCaseValidator before this ever runs.
+    // =====================================================
     public async Task<long> Handle(CreateCaseCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating new case: {CaseNumber}", request.CaseNumber);
@@ -26,9 +36,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         int firmId = _currentUser.FirmID.Value;
 
         // 1. Case Number uniqueness check (firm-scoped)
-        bool caseExists = await _context.Cases
-            .AsNoTracking()
-            .AnyAsync(x => x.CaseNumber == request.CaseNumber && x.FirmID == firmId, cancellationToken);
+        bool caseExists = await _context.Cases.AsNoTracking().AnyAsync(x => x.CaseNumber == request.CaseNumber && x.FirmID == firmId, cancellationToken);
 
         if (caseExists)
         {
@@ -162,6 +170,9 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         return userId;
     }
 
+    // Generates a random, collision-checked InternalReferenceNo (retries a
+    // few times, then falls back to a GUID-based value if every attempt
+    // collides — astronomically unlikely, but keeps the method total).
     private async Task<string> GenerateUniqueInternalReferenceNoAsync(CancellationToken cancellationToken)
     {
         const int maxAttempts = 5;
@@ -180,6 +191,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         return $"CASE-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}"[..24];
     }
 
+    // Builds one candidate reference number: CASE-yyyyMMdd-XXXX.
     private static string GenerateInternalReferenceNo()
     {
         var now = DateTime.UtcNow;
@@ -187,6 +199,7 @@ public class CreateCaseHandler(AppDbContext _context, IAuditService _auditServic
         return $"CASE-{now:yyyyMMdd}-{randomPart}";
     }
 
+    // Generates a short random alphanumeric suffix for the reference number.
     private static string GenerateRandomString(int length)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

@@ -21,7 +21,12 @@ namespace LTSBackend.Features.LoginHistory.GetAllLoginHistory;
 /// </summary>
 public class GetAllLoginHistoryHandler(AppDbContext context) : IRequestHandler<GetAllLoginHistoryQuery, PagedResult<LoginHistoryDTO>>
 {
-    // Builds and executes the filtered, paged login-history query.
+    // =====================================================
+    // HANDLE — paged, filterable login-history list (search/date range/status)
+    // Tenant isolation is enforced centrally by AppDbContext's global
+    // query filter on LoginHistory, not by this handler — see the
+    // class-level note above.
+    // =====================================================
     public async Task<PagedResult<LoginHistoryDTO>> Handle(GetAllLoginHistoryQuery request, CancellationToken cancellationToken)
     {
         var query = context.LoginHistories.AsNoTracking().Include(x => x.User).AsQueryable();

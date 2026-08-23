@@ -11,6 +11,11 @@ namespace LTSBackend.Features.Hearings.Commands.DeleteHearing
 {
     public class DeleteHearingCommandHandler(AppDbContext _context, ICurrentUserService _currentUser) : IRequestHandler<DeleteHearingCommand, bool>
     {
+        // =====================================================
+        // HANDLE — permanently removes a hearing and its attendance records
+        // Firm-scoped lookup, then deletes child HearingAttendance rows
+        // first (FK-safe order) before removing the hearing itself.
+        // =====================================================
         public async Task<bool> Handle(DeleteHearingCommand request, CancellationToken cancellationToken)
         {
             var hearing = await _context.Hearings.Include(h => h.Case).FirstOrDefaultAsync(h => h.HearingID == request.HearingId, cancellationToken);

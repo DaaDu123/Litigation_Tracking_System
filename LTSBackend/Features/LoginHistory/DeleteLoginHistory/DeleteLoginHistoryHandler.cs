@@ -25,8 +25,11 @@ namespace LTSBackend.Features.LoginHistory.DeleteLoginHistory;
 /// </summary>
 public class DeleteLoginHistoryHandler(AppDbContext context): IRequestHandler<DeleteLoginHistoryCommand, bool>
 {
-    // Deletes one login history record, or throws NotFoundException if it
-    // doesn't exist (or, thanks to the tenant filter, doesn't belong to the caller's firm).
+    // =====================================================
+    // HANDLE — deletes one login history record by ID
+    // Throws NotFoundException if it doesn't exist (or, thanks to the
+    // tenant query filter, doesn't belong to the caller's firm).
+    // =====================================================
     public async Task<bool> Handle(DeleteLoginHistoryCommand request,CancellationToken cancellationToken)
     {
         var history = await context.LoginHistories.FirstOrDefaultAsync(x => x.LoginID == request.LoginID, cancellationToken);

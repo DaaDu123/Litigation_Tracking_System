@@ -22,6 +22,11 @@ namespace LTSBackend.Features.Hearings.Commands.UpdateHearing
             _permissionService = permissionService;
         }
 
+        // =====================================================
+        // HANDLE — edits an existing hearing's details
+        // Same visibility rule as Create: firm isolation plus either full
+        // case-directory visibility or actual assignment to the case.
+        // =====================================================
         public async Task<bool> Handle(UpdateHearingCommand request, CancellationToken cancellationToken)
         {
             var hearing = await _context.Hearings

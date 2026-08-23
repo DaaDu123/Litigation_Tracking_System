@@ -8,6 +8,13 @@ namespace LTSBackend.Features.CaseCategories.Commands.UpdateCaseCategory;
 
 public sealed class UpdateCaseCategoryHandler(AppDbContext _context, ICurrentUserService _currentUser, ILogger<UpdateCaseCategoryHandler> _logger) : IRequestHandler<UpdateCaseCategoryCommand, bool>
 {
+    // =====================================================
+    // HANDLE — edits an existing case category
+    // Ownership check: a FirmAdmin may only edit their OWN firm's custom
+    // case category — never a global one or another firm's (returns
+    // NotFound rather than Forbidden, so its existence isn't disclosed).
+    // Also re-checks name uniqueness before saving.
+    // =====================================================
     public async Task<bool> Handle(UpdateCaseCategoryCommand request, CancellationToken cancellationToken)
     {
         request = request with { CategoryName = request.CategoryName.Trim(), Description = request.Description?.Trim() };
