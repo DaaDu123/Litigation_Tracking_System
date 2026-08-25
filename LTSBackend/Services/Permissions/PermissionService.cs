@@ -102,7 +102,11 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
             }
 
             // 4. Otherwise check the role's granted permissions.
-            bool hasPermission = user.Role.RolePermissions.Any(rp => rp.Permission.PermissionName == permission);
+            // Guard against rp.Permission being null (e.g. an orphaned
+            // RolePermission row) instead of letting a NullReferenceException
+            // bubble up - this also clears the CS8602 nullable warning, since
+            // RolePermission.Permission is a nullable navigation property.
+            bool hasPermission = user.Role.RolePermissions.Any(rp => rp.Permission != null && rp.Permission.PermissionName == permission);
 
             _logger.LogDebug("Permission check for user {UserId} on {Permission}: {Result}", userId, permission, hasPermission);
 
@@ -146,8 +150,13 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
             }
 
             // Otherwise, the role's granted permissions.
+            // Same null-guard as HasPermissionAsync above - skip any
+            // RolePermission row whose Permission navigation is null rather
+            // than risk a NullReferenceException (and clear the CS8602
+            // nullable warning).
             var permissions = user.Role.RolePermissions
-                .Select(x => x.Permission.PermissionName)
+                .Where(x => x.Permission != null)
+                .Select(x => x.Permission!.PermissionName)
                 .Distinct()
                 .OrderBy(x => x)
                 .ToList();

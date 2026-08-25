@@ -94,7 +94,10 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
 
         // 5. Check if account is active
         // IsActive here means one thing only now: "email not yet
-        // verified" (see RegisterHandler/VerifyOtpHandler). Failed-
+        // verified" (relevant for any pre-existing accounts still in this
+        // state from before the self-registration flow was removed - new
+        // users now come in pre-activated via UserJoinRequest approval or
+        // Firm/Super Admin creation). Failed-
         // login lockout is handled entirely via LockoutEndUtc above and
         // never touches this field anymore, so this message is now
         // accurate every time it's shown.

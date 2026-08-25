@@ -193,6 +193,20 @@
             public static string Reject(int id) => $"{Root}/{id}/reject";
         }
 
+        public static class UserJoinRequests
+        {
+            private const string Root = Base + "/userjoinrequests";
+            public const string Base_ = Root;
+            public const string Firms = Root + "/firms";
+            public static string WithStatus(string? status)
+            {
+                return string.IsNullOrWhiteSpace(status) ? Root : $"{Root}?status={status}";
+            }
+
+            public static string Approve(int id) => $"{Root}/{id}/approve";
+            public static string Reject(int id) => $"{Root}/{id}/reject";
+        }
+
         public static class Permissions
         {
             private const string Root = Base + "/permissions";

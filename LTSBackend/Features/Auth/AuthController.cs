@@ -4,7 +4,6 @@ using LTSBackend.Features.Auth.ForgotPassword;
 using LTSBackend.Features.Auth.Login;
 using LTSBackend.Features.Auth.Logout;
 using LTSBackend.Features.Auth.RefreshToken;
-using LTSBackend.Features.Auth.Register;
 using LTSBackend.Features.Auth.ResendOtp;
 using LTSBackend.Features.Auth.ResetPassword;
 using LTSBackend.Features.Auth.VerifyOtp;
@@ -27,24 +26,6 @@ public class AuthController : ControllerBase
     {
         _mediator = mediator;
         _logger = logger;
-    }
-
-    // =====================================================
-    // REGISTER — Anonymous
-    // Self-registration entry point: creates an unverified account and
-    // triggers an OTP email so the user can verify ownership of the email
-    // address before they can log in.
-    // SECURITY: rate limited ("auth-moderate", see Program.cs) — open
-    // self-registration is otherwise a spam/enumeration vector.
-    // =====================================================
-    [HttpPost("register")]
-    [AllowAnonymous]
-    [EnableRateLimiting("auth-moderate")]
-    public async Task<IActionResult> Register([FromBody] RegisterCommand command)
-    {
-        _logger.LogInformation("Registration request for email: {Email}", command.Email);
-        var result = await _mediator.Send(command);
-        return Ok(ApiResponse<RegisterResponseDTO>.SuccessResponse(result, result.Message));
     }
 
     // =====================================================

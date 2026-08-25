@@ -2539,6 +2539,76 @@ namespace LTSBackend.Migrations
                     b.ToTable("FirmAdminRequests");
                 });
 
+            modelBuilder.Entity("LTSBackend.Models.Security.UserJoinRequest", b =>
+                {
+                    b.Property<int>("RequestID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestID"));
+
+                    b.Property<int?>("CreatedUserID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Department")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("FirmID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RequestedRoleID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.HasKey("RequestID");
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("FirmID");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("UserJoinRequests");
+                });
+
             modelBuilder.Entity("LTSBackend.Models.Audit.AuditLog", b =>
                 {
                     b.HasOne("LTSBackend.Models.Security.User", "User")
@@ -2921,6 +2991,17 @@ namespace LTSBackend.Migrations
                     b.Navigation("Firm");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("LTSBackend.Models.Security.UserJoinRequest", b =>
+                {
+                    b.HasOne("LTSBackend.Models.Security.Firm", "Firm")
+                        .WithMany()
+                        .HasForeignKey("FirmID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Firm");
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.UserOtp", b =>

@@ -27,4 +27,22 @@ public static class RoleHierarchy
         // Partner, Associate Lawyer, Moharrir, Intern/Paralegal" states.
         return (int)targetRole > (int)actingUserRole;
     }
+
+    // =====================================================
+    // IS JOINABLE ROLE — used by the public UserJoinRequests flow
+    // A person requesting to join an EXISTING firm (no acting user yet,
+    // hence no CanAssignRole check is possible) may only ever request
+    // Partner, AssociateLawyer, Moharrir, or InternParalegal - never
+    // FirmAdmin (that's the separate FirmAdminRequests -> SuperAdmin
+    // workflow) and never SuperAdmin (platform-only, never self-service).
+    // =====================================================
+    public static bool IsJoinableRole(int roleId)
+    {
+        if (!System.Enum.IsDefined(typeof(UserRole), roleId))
+            return false;
+
+        var role = (UserRole)roleId;
+
+        return role is UserRole.Partner or UserRole.AssociateLawyer or UserRole.Moharrir or UserRole.InternParalegal;
+    }
 }

@@ -11,6 +11,7 @@ using LTSFrontend.Features.Deadlines.Services;
 using LTSFrontend.Features.Documents.Services;
 using LTSFrontend.Features.Firms.Services;
 using LTSFrontend.Features.FirmAdminRequests.Services;
+using LTSFrontend.Features.UserJoinRequests.Services;
 using LTSFrontend.Features.Hearings.Services;
 using LTSFrontend.Features.LoginHistory.Services;
 using LTSFrontend.Features.Milestones.Services;
@@ -90,6 +91,7 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<ILoginHistoryService, LoginHistoryService>();
             services.AddScoped<IFirmService, FirmService>();
             services.AddScoped<IFirmAdminRequestService, FirmAdminRequestService>();
+            services.AddScoped<IUserJoinRequestService, UserJoinRequestService>();
             services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IProfileService, ProfileService>();

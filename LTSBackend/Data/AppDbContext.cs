@@ -70,6 +70,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Firm> Firms { get; set; } = null!;
     public DbSet<FirmAdminRequest> FirmAdminRequests { get; set; } = null!;
+    public DbSet<UserJoinRequest> UserJoinRequests { get; set; } = null!;
     public DbSet<Role> Roles { get; set; } = null!;
     public DbSet<Permission> Permissions { get; set; } = null!;
     public DbSet<NotificationType> NotificationTypes { get; set; } = null!;
@@ -160,6 +161,28 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.FirmCode);
             entity.HasIndex(e => e.AdminEmail);
             entity.HasIndex(e => e.Status);
+        });
+
+        // USER JOIN REQUEST ENTITY CONFIGURATION
+        // (public "request to join an existing firm" as Partner/Associate/
+        // Moharrir/Intern -> that firm's FirmAdmin approval). Tenant-scoped
+        // via the same query-filter pattern as User below: an authenticated
+        // FirmAdmin only ever sees requests aimed at their own FirmID,
+        // while an anonymous submitter (BypassTenantFilter == true, since
+        // IsAuthenticatedRequest is false) can still hit the uniqueness
+        // checks in SubmitUserJoinRequestCommandHandler across every firm.
+        modelBuilder.Entity<UserJoinRequest>(entity =>
+        {
+            entity.HasKey(e => e.RequestID);
+            entity.Property(e => e.FullName).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Pending");
+            entity.HasOne(e => e.Firm).WithMany().HasForeignKey(e => e.FirmID).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.FirmID);
+            entity.HasIndex(e => e.Email);
+            entity.HasIndex(e => e.Status);
+            entity.HasQueryFilter(e => BypassTenantFilter || e.FirmID == RequestFirmId);
         });
 
         // ROLE ENTITY CONFIGURATION
@@ -952,6 +975,16 @@ public class AppDbContext : DbContext
                 NotificationTypeID = 6,
                 TypeName = "FirmAdminRequest",
                 Description = "Sent to every Super Admin when someone requests to become a Firm Admin",
+                IsEmail = true,
+                IsSMS = false,
+                IsInApp = true,
+                IsActive = true
+            },
+            new NotificationType
+            {
+                NotificationTypeID = 7,
+                TypeName = "UserJoinRequest",
+                Description = "Sent to a firm's Firm Admin(s) when someone requests to join that firm as Partner/Associate/Moharrir/Intern",
                 IsEmail = true,
                 IsSMS = false,
                 IsInApp = true,
