@@ -989,6 +989,16 @@ public class AppDbContext : DbContext
                 IsSMS = false,
                 IsInApp = true,
                 IsActive = true
+            },
+            new NotificationType
+            {
+                NotificationTypeID = 8,
+                TypeName = "CompleteProfile",
+                Description = "Sent to a newly quick-added user (Email + Temp Password only), prompting them to complete their profile",
+                IsEmail = true,
+                IsSMS = false,
+                IsInApp = true,
+                IsActive = true
             }
         );
     }

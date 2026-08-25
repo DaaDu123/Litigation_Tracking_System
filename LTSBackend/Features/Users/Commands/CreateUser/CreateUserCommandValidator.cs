@@ -12,6 +12,8 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
     // renamed/mislabeled file).
     public CreateUserCommandValidator()
     {
+        // Full Name is a required field in the Add User form — the
+        // backend no longer guesses/derives it.
         RuleFor(x => x.FullName)
             .NotEmpty()
             .WithMessage("Full name is required")
@@ -51,13 +53,15 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
             .MaximumLength(100)
             .WithMessage("Department cannot exceed 100 characters");
 
+        // Optional on create — omitted means "default to Intern/Paralegal"
+        // (handled in CreateUserCommandHandler). If a role IS supplied it
+        // must still be a real, valid role ID.
         RuleFor(x => x.RoleID)
-            .NotNull()
-            .WithMessage("Role is required")
             .GreaterThan(0)
             .WithMessage("Valid role is required")
             .Must(roleId => roleId.HasValue && Enum.IsDefined(typeof(UserRole), roleId.Value))
-            .WithMessage("Invalid role");
+            .WithMessage("Invalid role")
+            .When(x => x.RoleID.HasValue);
 
         RuleFor(x => x.ProfileImage)
             .Must(file =>

@@ -2,6 +2,7 @@ using LTSBackend.Comman.Enum;
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Comman.Middleware;
 using LTSBackend.Data;
+using LTSBackend.Models.Cases;
 using LTSBackend.Models.Security;
 using LTSBackend.Services;
 using LTSBackend.Services.ProfileService;
@@ -87,38 +88,37 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             isReuse = true;
         }
 
-        // 2. Verify that the Role is valid and exists
-        if (!request.RoleID.HasValue || request.RoleID <= 0)
+        // 2. Default the role when the caller didn't supply one (the
+        // "quick add" flow only collects Email + Temp Password) — every
+        // new user starts as Intern/Paralegal, the lowest-privilege role,
+        // and the Firm Admin can promote them later from User Management.
+        int roleId = request.RoleID is > 0 ? request.RoleID.Value : (int)UserRole.InternParalegal;
+
+        if (!System.Enum.IsDefined(typeof(UserRole), roleId))
         {
-            _logger.LogWarning("User creation failed: Invalid RoleID");
-            throw new ValidationException(["A valid Role is required"]);
+            _logger.LogWarning("User creation failed: Invalid RoleID: {RoleID}", roleId);
+            throw new ValidationException([$"Invalid role. Role ID {roleId} does not exist"]);
         }
 
-        if (!System.Enum.IsDefined(typeof(UserRole), request.RoleID.Value))
-        {
-            _logger.LogWarning("User creation failed: Invalid RoleID: {RoleID}", request.RoleID);
-            throw new ValidationException([$"Invalid role. Role ID {request.RoleID} does not exist"]);
-        }
-
-        bool roleExists = await _context.Roles.AsNoTracking().AnyAsync(x => x.RoleID == request.RoleID, cancellationToken);
+        bool roleExists = await _context.Roles.AsNoTracking().AnyAsync(x => x.RoleID == roleId, cancellationToken);
 
         if (!roleExists)
         {
-            _logger.LogWarning("User creation failed: Role not found: {RoleID}", request.RoleID);
-            throw new NotFoundException($"Role ID {request.RoleID} not found");
+            _logger.LogWarning("User creation failed: Role not found: {RoleID}", roleId);
+            throw new NotFoundException($"Role ID {roleId} not found");
         }
 
         // 2b. Enforce role hierarchy — the acting user cannot
         // assign a role above their own or assign SuperAdmin
         var actingRole = actingUser.GetRole();
-        if (actingRole == null || !RoleHierarchy.CanAssignRole(actingRole.Value, request.RoleID.Value))
+        if (actingRole == null || !RoleHierarchy.CanAssignRole(actingRole.Value, roleId))
         {
-            _logger.LogWarning("User {ActingUserId} with role {ActingRole} attempted to assign disallowed role {TargetRoleId}", request.ActingUserID, actingRole, request.RoleID);
+            _logger.LogWarning("User {ActingUserId} with role {ActingRole} attempted to assign disallowed role {TargetRoleId}", request.ActingUserID, actingRole, roleId);
             throw new ValidationException(["You are not authorized to assign this role."]);
         }
 
         // 3. Get role details
-        var role = await _context.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.RoleID == request.RoleID, cancellationToken);
+        var role = await _context.Roles.AsNoTracking().FirstOrDefaultAsync(x => x.RoleID == roleId, cancellationToken);
 
         _logger.LogInformation("Role fetched: {RoleName}", role?.RoleName);
 
@@ -180,7 +180,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             userToRestore.Department = request.Department;
             userToRestore.Designation = null;
             userToRestore.ProfileImage = profileImagePath;
-            userToRestore.RoleID = request.RoleID.Value;
+            userToRestore.RoleID = roleId;
             userToRestore.FirmID = actingUser.FirmID;
             userToRestore.IsExternal = false;
             userToRestore.IsActive = true;
@@ -211,7 +211,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
                 Department = request.Department,
                 Designation = null,
                 ProfileImage = profileImagePath,
-                RoleID = request.RoleID.Value,
+                RoleID = roleId,
                 FirmID = actingUser.FirmID,
                 IsExternal = false,
                 IsActive = true,
@@ -248,6 +248,22 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             // tracked entity — no need for a second round-trip.
             resultUserId = newUser.UserID;
         }
+
+        // 10. Queue the "Complete Your Profile" notification (in-app +
+        // email, dispatched by NotificationEmailDispatcherService) so a
+        // user created via the quick-add flow (Email + Temp Password
+        // only) is prompted to fill in their name/phone/department/etc.
+        // Needs resultUserId, so this is a second, tiny SaveChanges.
+        _context.Notifications.Add(new Notification
+        {
+            NotificationTypeID = 8, // CompleteProfile (seeded in AppDbContext)
+            UserID = resultUserId,
+            Subject = "Complete Your Profile",
+            Message = "Your account has been created. Please sign in and complete your profile " + "(name, phone, department, and other details) to get started.",
+            Priority = "Medium",
+            CreatedDate = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("User {Action} successfully with ID: {UserID} and Role: {RoleName}", isReuse ? "restored/reused" : "created", resultUserId, role?.RoleName);
 

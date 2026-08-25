@@ -13,6 +13,8 @@ namespace LTSFrontend.Features.Users.DTOs
     {
         public int? UserID { get; set; } // set when editing
 
+        // Required in both Create and Edit — the Add User form collects
+        // it directly from the Firm Admin; the backend no longer guesses it.
         [Required(ErrorMessage = "Full name is required.")]
         [StringLength(150, ErrorMessage = "Full name cannot exceed 150 characters.")]
         public string FullName { get; set; } = string.Empty;

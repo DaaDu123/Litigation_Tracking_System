@@ -18,7 +18,7 @@
             <div>
                 <h5 class="lts-modal-title">@(IsEditMode ? "Edit User" : "Add New User")</h5>
                 <p class="lts-modal-subtitle mb-0">
-                    @(IsEditMode ? "Update this user's details, role, or status." : "Create a user account within your firm's workspace.")
+                    @(IsEditMode ? "Update this user's details, role, or status." : "Just email and a temporary password — they'll complete the rest of their profile after logging in.")
                 </p>
             </div>
         </div>
@@ -35,61 +35,78 @@
             <EditForm Model="_form" OnValidSubmit="HandleSubmitAsync">
                 <DataAnnotationsValidator />
 
-                <div class="lts-form-group">
-                    <label class="lts-form-label">Profile Photo</label>
-                    <FileUploadInput CurrentImageUrl="@_currentImageUrl" Disabled="@_isSaving" FileSelected="OnFileSelected" />
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="lts-form-group">
-                            <label class="lts-form-label">Full Name <span class="required">*</span></label>
-                            <InputText @bind-Value="_form.FullName" class="lts-form-control" maxlength="150" disabled="@_isSaving" />
-                            <ValidationMessage For="() => _form.FullName" class="lts-form-error" />
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="lts-form-group">
-                            <label class="lts-form-label">Email <span class="required">*</span></label>
-                            <InputText @bind-Value="_form.Email" type="email" class="lts-form-control" maxlength="150" disabled="@(_isSaving || IsEditMode)" />
-                            <ValidationMessage For="() => _form.Email" class="lts-form-error" />
-                            @if (IsEditMode)
-                            {
-                                <div class="lts-form-hint">Email cannot be changed here.</div>
-                            }
-                        </div>
-                    </div>
-                </div>
-
                 @if (!IsEditMode)
                 {
                     <div class="lts-form-group">
-                        <label class="lts-form-label">Password <span class="required">*</span></label>
+                        <label class="lts-form-label">Full Name <span class="required">*</span></label>
+                        <InputText @bind-Value="_form.FullName" class="lts-form-control" maxlength="150" disabled="@_isSaving" autofocus />
+                        <ValidationMessage For="() => _form.FullName" class="lts-form-error" />
+                    </div>
+
+                    <div class="lts-form-group">
+                        <label class="lts-form-label">Email <span class="required">*</span></label>
+                        <InputText @bind-Value="_form.Email" type="email" class="lts-form-control" maxlength="150" disabled="@_isSaving" />
+                        <ValidationMessage For="() => _form.Email" class="lts-form-error" />
+                    </div>
+
+                    <div class="lts-form-group">
+                        <label class="lts-form-label">Temporary Password <span class="required">*</span></label>
                         <InputText @bind-Value="_form.Password" type="password" class="lts-form-control"
                                    placeholder="At least 8 characters, mixed case, number & symbol" disabled="@_isSaving" />
                         <ValidationMessage For="() => _form.Password" class="lts-form-error" />
+                        <div class="lts-form-hint">The user logs in with this password the first time, then sets their own.</div>
+                    </div>
+
+                    <div class="lts-form-hint" style="display:flex; gap:0.5rem; align-items:flex-start; margin-bottom:0.5rem;">
+                        <i class="bi bi-info-circle"></i>
+                        <span>
+                            The user is added as <strong>Intern / Paralegal</strong> by default and will be asked to
+                            complete their profile after signing in. Only a <strong>Firm Admin</strong> can change
+                            their role later, from User Management — the user cannot change it themselves.
+                        </span>
                     </div>
                 }
+                else
+                {
+                    <div class="lts-form-group">
+                        <label class="lts-form-label">Profile Photo</label>
+                        <FileUploadInput CurrentImageUrl="@_currentImageUrl" Disabled="@_isSaving" FileSelected="OnFileSelected" />
+                    </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="lts-form-group">
-                            <label class="lts-form-label">Role <span class="required">*</span></label>
-                            <select class="lts-form-control" @bind="_form.RoleID" disabled="@_isSaving">
-                                <option value="">-- Select Role --</option>
-                                @foreach (var role in _roleOptions)
-                                {
-                                    <option value="@role.Id">@role.Name</option>
-                                }
-                            </select>
-                            @if (_showRoleValidation && _form.RoleID is null or <= 0)
-                            {
-                                <div class="lts-form-error">Please select a role.</div>
-                            }
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="lts-form-group">
+                                <label class="lts-form-label">Full Name <span class="required">*</span></label>
+                                <InputText @bind-Value="_form.FullName" class="lts-form-control" maxlength="150" disabled="@_isSaving" />
+                                <ValidationMessage For="() => _form.FullName" class="lts-form-error" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="lts-form-group">
+                                <label class="lts-form-label">Email</label>
+                                <InputText @bind-Value="_form.Email" type="email" class="lts-form-control" maxlength="150" disabled="true" />
+                                <div class="lts-form-hint">Email cannot be changed here.</div>
+                            </div>
                         </div>
                     </div>
-                    @if (IsEditMode)
-                    {
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="lts-form-group">
+                                <label class="lts-form-label">Role <span class="required">*</span></label>
+                                <select class="lts-form-control" @bind="_form.RoleID" disabled="@_isSaving">
+                                    <option value="">-- Select Role --</option>
+                                    @foreach (var role in _roleOptions)
+                                    {
+                                        <option value="@role.Id">@role.Name</option>
+                                    }
+                                </select>
+                                @if (_showRoleValidation && _form.RoleID is null or <= 0)
+                                {
+                                    <div class="lts-form-error">Please select a role.</div>
+                                }
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div class="lts-form-group">
                                 <label class="lts-form-label">Status</label>
@@ -99,25 +116,25 @@
                                 </select>
                             </div>
                         </div>
-                    }
-                </div>
+                    </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="lts-form-group">
-                            <label class="lts-form-label">Phone <span class="text-muted fw-normal">(optional)</span></label>
-                            <InputText @bind-Value="_form.Phone" class="lts-form-control" maxlength="20" disabled="@_isSaving" />
-                            <ValidationMessage For="() => _form.Phone" class="lts-form-error" />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="lts-form-group">
+                                <label class="lts-form-label">Phone <span class="text-muted fw-normal">(optional)</span></label>
+                                <InputText @bind-Value="_form.Phone" class="lts-form-control" maxlength="20" disabled="@_isSaving" />
+                                <ValidationMessage For="() => _form.Phone" class="lts-form-error" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="lts-form-group">
+                                <label class="lts-form-label">Department <span class="text-muted fw-normal">(optional)</span></label>
+                                <InputText @bind-Value="_form.Department" class="lts-form-control" maxlength="100" disabled="@_isSaving" />
+                                <ValidationMessage For="() => _form.Department" class="lts-form-error" />
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="lts-form-group">
-                            <label class="lts-form-label">Department <span class="text-muted fw-normal">(optional)</span></label>
-                            <InputText @bind-Value="_form.Department" class="lts-form-control" maxlength="100" disabled="@_isSaving" />
-                            <ValidationMessage For="() => _form.Department" class="lts-form-error" />
-                        </div>
-                    </div>
-                </div>
+                }
 
                 <div class="lts-modal-footer" style="padding: 1rem 0 0; margin-top: 0.5rem;">
                     <button type="button" class="lts-btn lts-btn-ghost" @onclick="CloseIfNotSaving" disabled="@_isSaving">
@@ -216,7 +233,11 @@
 
     private async Task HandleSubmitAsync()
     {
-        if (_form.RoleID is null or <= 0)
+        // Role is only collected (and required) in Edit mode - Create is
+        // Full Name + Email + Temp Password only; the backend defaults
+        // every new user to Intern/Paralegal. Full Name itself is
+        // enforced by [Required] on CreateUserDTO (both modes) already.
+        if (IsEditMode && _form.RoleID is null or <= 0)
         {
             _showRoleValidation = true;
             return;
