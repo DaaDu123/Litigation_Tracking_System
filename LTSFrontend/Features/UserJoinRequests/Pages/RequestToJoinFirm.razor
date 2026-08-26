@@ -25,106 +25,81 @@
 else
 {
     <h2>Request to Join a Firm</h2>
-    <p class="auth-subtitle">Ask to join an existing firm as Partner, Associate Lawyer, Moharrir, or Intern/Paralegal. That firm's Admin will review and approve your request.</p>
+    <p class="auth-subtitle">Enter your firm's code and your details. Your firm's Admin will review and approve your request.</p>
+
+    <div class="form-text mb-3">
+        <i class="bi bi-info-circle"></i> You'll be added as <strong>Intern / Paralegal</strong>. Only your firm's Admin can change your role later, after approval.
+    </div>
 
     @if (!string.IsNullOrWhiteSpace(_errorMessage))
     {
         <div class="alert alert-danger py-2" style="white-space: pre-line;">@_errorMessage</div>
     }
 
-    @if (_isLoadingFirms)
-    {
-        <div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span></div>
-    }
-    else
-    {
-        <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
-            <DataAnnotationsValidator />
+    <EditForm Model="_model" OnValidSubmit="HandleSubmitAsync">
+        <DataAnnotationsValidator />
 
-            <div class="mb-3">
-                <label class="form-label">Firm</label>
-                <select class="form-select" @bind="_model.FirmID">
-                    <option value="0">-- Select the firm you want to join --</option>
-                    @foreach (var firm in _firms)
-                    {
-                        <option value="@firm.FirmID">@firm.FirmName (@firm.FirmCode)</option>
-                    }
-                </select>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Firm Code</label>
+                <input type="text" class="form-control" placeholder="e.g. ALPHA-LAW"
+                       value="@_firmCode" @oninput="OnFirmCodeInput" disabled="@(_isLoadingFirms || _isBusy)" autofocus required />
+                @if (_isLoadingFirms)
+                {
+                    <div class="form-text">Checking firm code…</div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_firmCode) && _model.FirmID <= 0)
+                {
+                    <div class="text-danger small">Firm code not recognized.</div>
+                }
                 <ValidationMessage For="() => _model.FirmID" class="text-danger small" />
             </div>
-
-            <div class="mb-3">
-                <label class="form-label">Role You're Requesting</label>
-                <select class="form-select" @bind="_model.RequestedRoleID">
-                    <option value="0">-- Select a role --</option>
-                    @foreach (var role in UserRoleExtensions.AssignableByFirmAdmin)
-                    {
-                        <option value="@role.Id">@role.Name</option>
-                    }
-                </select>
-                <ValidationMessage For="() => _model.RequestedRoleID" class="text-danger small" />
-            </div>
-
-            <div class="mb-3">
+            <div class="col-md-6 mb-3">
                 <label class="form-label">Full Name</label>
                 <input type="text" class="form-control" placeholder="Enter your full name"
-                       @bind="_model.FullName" @bind:event="oninput" required />
+                       @bind="_model.FullName" @bind:event="oninput" disabled="@_isBusy" required />
                 <ValidationMessage For="() => _model.FullName" class="text-danger small" />
             </div>
+        </div>
 
-            <div class="mb-3">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-control" placeholder="Enter your email address"
-                       @bind="_model.Email" @bind:event="oninput" required />
-                <ValidationMessage For="() => _model.Email" class="text-danger small" />
-            </div>
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" placeholder="Enter your email address"
+                   @bind="_model.Email" @bind:event="oninput" disabled="@_isBusy" required />
+            <ValidationMessage For="() => _model.Email" class="text-danger small" />
+        </div>
 
-            <div class="mb-3 password-toggle-wrap">
+        <div class="row">
+            <div class="col-md-6 mb-3 password-toggle-wrap">
                 <label class="form-label">Password</label>
                 <input type="@(_showPassword ? "text" : "password")" class="form-control"
-                       placeholder="At least 8 characters, mixed case, number & symbol"
-                       @bind="_model.Password" @bind:event="oninput" required />
+                       placeholder="8+ chars, mixed case, number & symbol"
+                       @bind="_model.Password" @bind:event="oninput" disabled="@_isBusy" required />
                 <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showPassword = !_showPassword">
                     <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>
                 </button>
                 <ValidationMessage For="() => _model.Password" class="text-danger small" />
             </div>
-
-            <div class="mb-3 password-toggle-wrap">
+            <div class="col-md-6 mb-3 password-toggle-wrap">
                 <label class="form-label">Confirm Password</label>
                 <input type="@(_showConfirmPassword ? "text" : "password")" class="form-control"
                        placeholder="Re-enter your password"
-                       @bind="_model.ConfirmPassword" @bind:event="oninput" required />
+                       @bind="_model.ConfirmPassword" @bind:event="oninput" disabled="@_isBusy" required />
                 <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showConfirmPassword = !_showConfirmPassword">
                     <i class="bi @(_showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
                 </button>
                 <ValidationMessage For="() => _model.ConfirmPassword" class="text-danger small" />
             </div>
+        </div>
 
-            <div class="row">
-                <div class="col-6 mb-3">
-                    <label class="form-label">Phone <span class="text-muted fw-normal">(optional)</span></label>
-                    <input type="text" class="form-control" placeholder="03xx-xxxxxxx"
-                           @bind="_model.Phone" @bind:event="oninput" />
-                    <ValidationMessage For="() => _model.Phone" class="text-danger small" />
-                </div>
-                <div class="col-6 mb-3">
-                    <label class="form-label">Department <span class="text-muted fw-normal">(optional)</span></label>
-                    <input type="text" class="form-control" placeholder="e.g. Litigation"
-                           @bind="_model.Department" @bind:event="oninput" />
-                    <ValidationMessage For="() => _model.Department" class="text-danger small" />
-                </div>
-            </div>
-
-            <button type="submit" class="btn btn-auth-primary" disabled="@_isBusy">
-                @if (_isBusy)
-                {
-                    <span class="spinner-border spinner-border-sm me-2"></span>
-                }
-                Submit Request
-            </button>
-        </EditForm>
-    }
+        <button type="submit" class="btn btn-auth-primary" disabled="@_isBusy">
+            @if (_isBusy)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+            }
+            Submit Request
+        </button>
+    </EditForm>
 
     <div class="auth-footer">
         Already have an account? <a class="auth-link" href="/login">Sign in</a>
@@ -135,8 +110,20 @@ else
 }
 
 @code {
-    private readonly SubmitUserJoinRequest _model = new();
+    // Firm and Role are never chosen by the requester: FirmID is resolved
+    // from the Firm Code they type (matched against the firm list fetched
+    // quietly in the background - never rendered as a public dropdown of
+    // every firm on the platform), and RequestedRoleID is always fixed to
+    // Intern/Paralegal. Only Firm Code, Full Name, Email and Password are
+    // essential, user-entered fields. A Firm Admin reviews the request
+    // afterward and can promote the role post-approval.
+    private readonly SubmitUserJoinRequest _model = new()
+    {
+        RequestedRoleID = (int)UserRole.InternParalegal
+    };
+
     private List<JoinableFirmDTO> _firms = new();
+    private string _firmCode = string.Empty;
     private bool _isLoadingFirms = true;
     private bool _isBusy;
     private bool _showPassword;
@@ -163,9 +150,31 @@ else
         }
     }
 
+    private void OnFirmCodeInput(ChangeEventArgs e)
+    {
+        _firmCode = e.Value?.ToString() ?? string.Empty;
+
+        var match = _firms.FirstOrDefault(f =>
+            string.Equals(f.FirmCode?.Trim(), _firmCode.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        _model.FirmID = match?.FirmID ?? 0;
+    }
+
     private async Task HandleSubmitAsync()
     {
         _errorMessage = null;
+
+        // Defensive: RequestedRoleID must always be Intern/Paralegal, no
+        // matter what - there is no UI path that can change it, but this
+        // guarantees it even if the model is ever reused/rebound.
+        _model.RequestedRoleID = (int)UserRole.InternParalegal;
+
+        if (_model.FirmID <= 0)
+        {
+            _errorMessage = "Please enter a valid firm code before submitting.";
+            return;
+        }
+
         _isBusy = true;
         try
         {

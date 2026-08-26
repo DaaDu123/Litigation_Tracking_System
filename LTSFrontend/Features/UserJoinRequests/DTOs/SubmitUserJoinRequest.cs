@@ -5,7 +5,7 @@ namespace LTSFrontend.Features.UserJoinRequests.DTOs
     /// <summary>Mirrors LTSBackend.Features.UserJoinRequests.Commands.SubmitUserJoinRequest.SubmitUserJoinRequestCommand</summary>
     public class SubmitUserJoinRequest : IValidatableObject
     {
-        [Range(1, int.MaxValue, ErrorMessage = "Please select the firm you want to join.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please enter a valid firm code.")]
         public int FirmID { get; set; }
 
         [Required(ErrorMessage = "Full name is required.")]

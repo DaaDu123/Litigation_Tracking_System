@@ -18,53 +18,55 @@
 <EditForm Model="_model" OnValidSubmit="HandleRegisterAsync">
     <DataAnnotationsValidator />
 
-    <div class="mb-3">
-        <label class="form-label">Full Name</label>
-        <input type="text" class="form-control" placeholder="Enter your full name"
-               @bind="_model.FullName" @bind:event="oninput" required />
-        <ValidationMessage For="() => _model.FullName" class="text-danger small" />
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-control" placeholder="Enter your email address"
-               @bind="_model.Email" @bind:event="oninput" required />
-        <ValidationMessage For="() => _model.Email" class="text-danger small" />
-    </div>
-
-    <div class="mb-3 password-toggle-wrap">
-        <label class="form-label">Password</label>
-        <input type="@(_showPassword ? "text" : "password")" class="form-control"
-               placeholder="At least 8 characters, mixed case, number & symbol"
-               @bind="_model.Password" @bind:event="oninput" required />
-        <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showPassword = !_showPassword">
-            <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>
-        </button>
-        <ValidationMessage For="() => _model.Password" class="text-danger small" />
-    </div>
-
-    <div class="mb-3 password-toggle-wrap">
-        <label class="form-label">Confirm Password</label>
-        <input type="@(_showConfirmPassword ? "text" : "password")" class="form-control"
-               placeholder="Re-enter your password"
-               @bind="_model.ConfirmPassword" @bind:event="oninput" required />
-        <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showConfirmPassword = !_showConfirmPassword">
-            <i class="bi @(_showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
-        </button>
-        <ValidationMessage For="() => _model.ConfirmPassword" class="text-danger small" />
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" placeholder="Enter your full name"
+                   @bind="_model.FullName" @bind:event="oninput" disabled="@_isBusy" required />
+            <ValidationMessage For="() => _model.FullName" class="text-danger small" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" placeholder="Enter your email address"
+                   @bind="_model.Email" @bind:event="oninput" disabled="@_isBusy" required />
+            <ValidationMessage For="() => _model.Email" class="text-danger small" />
+        </div>
     </div>
 
     <div class="row">
-        <div class="col-6 mb-3">
+        <div class="col-md-6 mb-3 password-toggle-wrap">
+            <label class="form-label">Password</label>
+            <input type="@(_showPassword ? "text" : "password")" class="form-control"
+                   placeholder="8+ chars, mixed case, number & symbol"
+                   @bind="_model.Password" @bind:event="oninput" disabled="@_isBusy" required />
+            <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showPassword = !_showPassword">
+                <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
+            <ValidationMessage For="() => _model.Password" class="text-danger small" />
+        </div>
+        <div class="col-md-6 mb-3 password-toggle-wrap">
+            <label class="form-label">Confirm Password</label>
+            <input type="@(_showConfirmPassword ? "text" : "password")" class="form-control"
+                   placeholder="Re-enter your password"
+                   @bind="_model.ConfirmPassword" @bind:event="oninput" disabled="@_isBusy" required />
+            <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showConfirmPassword = !_showConfirmPassword">
+                <i class="bi @(_showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
+            <ValidationMessage For="() => _model.ConfirmPassword" class="text-danger small" />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
             <label class="form-label">Phone <span class="text-muted fw-normal">(optional)</span></label>
             <input type="text" class="form-control" placeholder="03xx-xxxxxxx"
-                   @bind="_model.Phone" @bind:event="oninput" />
+                   @bind="_model.Phone" @bind:event="oninput" disabled="@_isBusy" />
             <ValidationMessage For="() => _model.Phone" class="text-danger small" />
         </div>
-        <div class="col-6 mb-3">
+        <div class="col-md-6 mb-3">
             <label class="form-label">Department <span class="text-muted fw-normal">(optional)</span></label>
             <input type="text" class="form-control" placeholder="e.g. Litigation"
-                   @bind="_model.Department" @bind:event="oninput" />
+                   @bind="_model.Department" @bind:event="oninput" disabled="@_isBusy" />
             <ValidationMessage For="() => _model.Department" class="text-danger small" />
         </div>
     </div>
@@ -72,7 +74,7 @@
     <div class="mb-3">
         <label class="form-label">Firm Code</label>
         <input type="text" class="form-control" placeholder="Ask your Firm Admin for the code"
-               @bind="_model.FirmCode" @bind:event="oninput" required />
+               @bind="_model.FirmCode" @bind:event="oninput" disabled="@_isBusy" required />
         <ValidationMessage For="() => _model.FirmCode" class="text-danger small" />
     </div>
 
