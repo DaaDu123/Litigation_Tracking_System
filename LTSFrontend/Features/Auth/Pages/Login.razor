@@ -30,14 +30,16 @@
         <ValidationMessage For="() => _model.Email" class="text-danger small" />
     </div>
 
-    <div class="mb-2 password-toggle-wrap">
+    <div class="mb-2">
         <label class="form-label">Password</label>
-        <input type="@(_showPassword ? "text" : "password")" class="form-control"
-               placeholder="Enter your password"
-               @bind="_model.Password" @bind:event="oninput" required />
-        <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showPassword = !_showPassword">
-            <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>
-        </button>
+        <div class="password-toggle-wrap">
+            <input type="@(_showPassword ? "text" : "password")" class="form-control"
+                   placeholder="Enter your password"
+                   @bind="_model.Password" @bind:event="oninput" required />
+            <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showPassword = !_showPassword">
+                <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+            </button>
+        </div>
         <ValidationMessage For="() => _model.Password" class="text-danger small" />
     </div>
 
@@ -56,7 +58,11 @@
 
 <div class="auth-footer">
     Don't have an account? <a class="auth-link" href="/request-to-join">Request to join your firm</a>
-    <br />
+</div>
+<div class="auth-footer">
+    Starting a new firm? <a class="auth-link" href="/request-firm-admin">Sign up as Firm Admin</a>
+</div>
+<div class="auth-footer">
     &copy; @DateTime.Now.Year LTS. All rights reserved.
 </div>
 

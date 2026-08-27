@@ -66,24 +66,28 @@ else
     </div>
 
     <div class="row">
-        <div class="col-md-6 mb-3 password-toggle-wrap">
+        <div class="col-md-6 mb-3">
             <label class="form-label">Password</label>
-            <input type="@(_showPassword ? "text" : "password")" class="form-control"
-                   placeholder="8+ chars, mixed case, number & symbol"
-                   @bind="_model.AdminPassword" @bind:event="oninput" disabled="@_isBusy" required />
-            <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showPassword = !_showPassword">
-                <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>
-            </button>
+            <div class="password-toggle-wrap">
+                <input type="@(_showPassword ? "text" : "password")" class="form-control"
+                       placeholder="8+ chars, mixed case, number & symbol"
+                       @bind="_model.AdminPassword" @bind:event="oninput" disabled="@_isBusy" required />
+                <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showPassword = !_showPassword">
+                    <i class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                </button>
+            </div>
             <ValidationMessage For="() => _model.AdminPassword" class="text-danger small" />
         </div>
-        <div class="col-md-6 mb-3 password-toggle-wrap">
+        <div class="col-md-6 mb-3">
             <label class="form-label">Confirm Password</label>
-            <input type="@(_showConfirmPassword ? "text" : "password")" class="form-control"
-                   placeholder="Re-enter your password"
-                   @bind="_model.ConfirmPassword" @bind:event="oninput" disabled="@_isBusy" required />
-            <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showConfirmPassword = !_showConfirmPassword">
-                <i class="bi @(_showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
-            </button>
+            <div class="password-toggle-wrap">
+                <input type="@(_showConfirmPassword ? "text" : "password")" class="form-control"
+                       placeholder="Re-enter your password"
+                       @bind="_model.ConfirmPassword" @bind:event="oninput" disabled="@_isBusy" required />
+                <button type="button" class="password-toggle-btn" tabindex="-1" @onclick="() => _showConfirmPassword = !_showConfirmPassword">
+                    <i class="bi @(_showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                </button>
+            </div>
             <ValidationMessage For="() => _model.ConfirmPassword" class="text-danger small" />
         </div>
     </div>
@@ -102,6 +106,9 @@ else
     </EditForm>
 
     <div class="auth-footer">
+        <div class="auth-footer">
+            Already have an account? <a class="auth-link" href="/login">Sign in</a>
+        </div><br/>
         Joining an existing firm instead? <a class="auth-link" href="/request-to-join">Request to join with a Firm Code</a>
     </div>
 }

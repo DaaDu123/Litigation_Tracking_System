@@ -60,7 +60,7 @@ namespace LTSFrontend.Features.Firms.Services
 
         public async Task ExportAsync(int id)
         {
-            using var response = await _api.Http.GetAsync(ApiEndpoints.Firms.Export(id));
+            using var response = await _api.GetRawAsync(ApiEndpoints.Firms.Export(id));
 
             if (!response.IsSuccessStatusCode)
             {

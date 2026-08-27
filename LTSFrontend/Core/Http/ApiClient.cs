@@ -76,6 +76,21 @@ namespace LTSFrontend.Core.Http
             return SendAsync<T>(new HttpRequestMessage(HttpMethod.Delete, url), ct);
         }
 
+        // For endpoints that return raw bytes (file downloads) rather than
+        // the ApiResponse<T> JSON envelope. Still runs the request through
+        // EnsureAuthorizationHeaderAsync (attaches the Bearer token and
+        // performs the same silent token refresh as every other call) -
+        // calling Http.GetAsync directly, as DocumentService.DownloadAsync
+        // used to, skips that step entirely and sends the request with NO
+        // Authorization header, which is why downloads were failing for
+        // every user regardless of their actual document permissions.
+        public async Task<HttpResponseMessage> GetRawAsync(string url, CancellationToken ct = default)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            await EnsureAuthorizationHeaderAsync(request);
+            return await Http.SendAsync(request, ct);
+        }
+
         private async Task EnsureAuthorizationHeaderAsync(HttpRequestMessage request)
         {
             // If this circuit's session hasn't been populated yet (e.g. a

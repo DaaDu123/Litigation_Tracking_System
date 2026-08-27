@@ -55,7 +55,7 @@ namespace LTSFrontend.Features.Documents.Services
 
         public async Task DownloadAsync(long documentId)
         {
-            using var response = await _api.Http.GetAsync(ApiEndpoints.Documents.Download(documentId));
+            using var response = await _api.GetRawAsync(ApiEndpoints.Documents.Download(documentId));
 
             if (!response.IsSuccessStatusCode)
             {
