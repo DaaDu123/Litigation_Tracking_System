@@ -27,10 +27,6 @@ else
     <h2>Request to Join a Firm</h2>
     <p class="auth-subtitle">Enter your firm's code and your details. Your firm's Admin will review and approve your request.</p>
 
-    <div class="form-text mb-3">
-        <i class="bi bi-info-circle"></i> You'll be added as <strong>Intern / Paralegal</strong>. Only your firm's Admin can change your role later, after approval.
-    </div>
-
     @if (!string.IsNullOrWhiteSpace(_errorMessage))
     {
         <div class="alert alert-danger py-2" style="white-space: pre-line;">@_errorMessage</div>

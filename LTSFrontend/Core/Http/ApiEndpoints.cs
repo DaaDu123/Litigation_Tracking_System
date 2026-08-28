@@ -193,6 +193,12 @@
             public static string Reject(int id) => $"{Root}/{id}/reject";
         }
 
+        public static class ContactMessages
+        {
+            private const string Root = Base + "/contactmessages";
+            public const string Base_ = Root;
+        }
+
         public static class UserJoinRequests
         {
             private const string Root = Base + "/userjoinrequests";

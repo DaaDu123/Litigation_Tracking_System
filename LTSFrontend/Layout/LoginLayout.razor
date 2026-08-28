@@ -1,38 +1,47 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-<div class="auth-shell">
-    <div class="auth-brand-panel">
-        <div class="auth-brand-inner">
-            <div class="auth-brand-icon">
-                <img src="images/justice-scale-logo.png" alt="Litigation Tracking System" />
-            </div>
-            <h1>LITIGATION TRACKING SYSTEM</h1>
-            <p>Streamline. Monitor. Resolve.</p>
+<div class="public-shell">
+    <PublicNavbar />
 
-            <div class="auth-brand-features">
-                <div class="auth-brand-feature">
-                    <i class="bi bi-briefcase"></i>
-                    <span>Case Management</span>
+    <div class="auth-hero-section">
+        <div class="auth-hero-left">
+            <div class="auth-hero-rule"></div>
+            <h1>Litigation Tracking System</h1>
+            <p class="auth-hero-lead">
+                Helping law firms and legal teams manage cases, hearings, documents, and
+                deadlines &mdash; all in one secure platform.
+            </p>
+
+            <div class="hero-feature-grid">
+                <div class="hero-feature-item">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <h4>Case Management</h4>
+                    <p>Track and manage cases efficiently</p>
                 </div>
-                <div class="auth-brand-feature">
+                <div class="hero-feature-item">
                     <i class="bi bi-calendar-event"></i>
-                    <span>Hearing &amp; Deadlines</span>
+                    <h4>Hearing &amp; Deadlines</h4>
+                    <p>Never miss a hearing or important date</p>
                 </div>
-                <div class="auth-brand-feature">
+                <div class="hero-feature-item">
                     <i class="bi bi-folder2-open"></i>
-                    <span>Document Management</span>
+                    <h4>Document Management</h4>
+                    <p>Organize and access documents securely</p>
                 </div>
-                <div class="auth-brand-feature">
+                <div class="hero-feature-item">
                     <i class="bi bi-bar-chart-line"></i>
-                    <span>Reports &amp; Analytics</span>
+                    <h4>Reports &amp; Analytics</h4>
+                    <p>Get insights and make better decisions</p>
                 </div>
+            </div>
+        </div>
+
+        <div class="auth-hero-right">
+            <div class="auth-form-card">
+                @Body
             </div>
         </div>
     </div>
 
-    <div class="auth-form-panel">
-        <div class="auth-form-card">
-            @Body
-        </div>
-    </div>
+    <PublicFooter />
 </div>
