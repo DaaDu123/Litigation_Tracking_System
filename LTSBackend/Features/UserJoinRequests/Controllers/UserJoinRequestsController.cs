@@ -59,14 +59,19 @@ public class UserJoinRequestsController(IMediator _mediator, ILogger<UserJoinReq
     }
 
     // =====================================================
-    // GET ALL USER JOIN REQUESTS — FirmAdmin and Partner
+    // GET ALL USER JOIN REQUESTS — FirmAdmin ONLY
     // Lists pending/approved/rejected join requests (optionally filtered
     // by status) aimed at the acting FirmAdmin's own firm. Cross-firm
     // isolation is enforced by the UserJoinRequest tenant query filter
     // in AppDbContext, not by anything in this controller.
+    //
+    // Deliberately FirmAdmin-only (not RoleNames.FirmAdminAndAbove): per
+    // policy, Partner has ZERO access to the Join Request queue - this
+    // closes off the approval path as another route by which Partner
+    // could otherwise end up creating a user, matching Approve below.
     // =====================================================
     [HttpGet]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.FirmAdminOnly)]
     public async Task<IActionResult> GetAll([FromQuery] string? status)
     {
         var requests = await _mediator.Send(new GetUserJoinRequestsQuery(status));
@@ -74,15 +79,11 @@ public class UserJoinRequestsController(IMediator _mediator, ILogger<UserJoinReq
     }
 
     // =====================================================
-    // APPROVE USER JOIN REQUEST — FirmAdmin ONLY (deliberate exception)
+    // APPROVE USER JOIN REQUEST — FirmAdmin ONLY
     // Accepts a pending request: activates the requested Partner/Associate/
     // Moharrir/Intern account, linked to this firm with the requested role.
-    //
-    // Uses RoleNames.FirmAdminOnly (NOT FirmAdminAndAbove) on purpose: this
-    // action creates/activates a brand-new user account, exactly like
-    // UsersController.Create — the one action Partner does not get, per
-    // policy, even though Partner has FirmAdmin-equivalent access to every
-    // other action in this controller.
+    // This action creates/activates a brand-new user account, exactly like
+    // UsersController.Create - Partner has no access to either.
     // =====================================================
     [HttpPut("{id}/approve")]
     [Authorize(Roles = RoleNames.FirmAdminOnly)]
@@ -97,12 +98,15 @@ public class UserJoinRequestsController(IMediator _mediator, ILogger<UserJoinReq
     }
 
     // =====================================================
-    // REJECT USER JOIN REQUEST — FirmAdmin and Partner
+    // REJECT USER JOIN REQUEST — FirmAdmin ONLY
     // Declines a pending request, optionally with a reason, without
-    // creating a user account.
+    // creating a user account. Kept FirmAdmin-only alongside Approve/GetAll
+    // above so the entire Join Request queue - view, approve, and reject -
+    // is exclusively the FirmAdmin's call; Partner has no access to any of
+    // the three.
     // =====================================================
     [HttpPut("{id}/reject")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.FirmAdminOnly)]
     public async Task<IActionResult> Reject(int id, [FromBody] RejectUserJoinRequestBody? body)
     {
         var actingUserId = GetActingUserId();

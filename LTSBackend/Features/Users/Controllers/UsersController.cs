@@ -52,11 +52,17 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // GET ALL USERS — Partner and above
+    // GET ALL USERS — FirmAdmin and Partner (view only)
     // Returns the full, firm-scoped list of active users so admin/partner
-    // screens (user grids, assignment dropdowns, etc.) can populate. Row
-    // level scoping to the caller's firm is enforced inside the query
+    // screens (user grids, case-assignment dropdowns, etc.) can populate.
+    // Row level scoping to the caller's firm is enforced inside the query
     // handler, not here.
+    //
+    // Partner can SELECT/VIEW users (needed e.g. to pick a lawyer when
+    // assigning a case) but has NO Create/Update/Delete access - see those
+    // three actions below, all RoleNames.FirmAdminOnly. Join Requests are a
+    // separate, stricter story: Partner has ZERO access there (not even
+    // view) - see UserJoinRequestsController.
     // =====================================================
     [HttpGet]
     [Authorize(Roles = RoleNames.PartnerAndAbove)]
@@ -70,7 +76,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // GET USER BY ID — Partner and above
+    // GET USER BY ID — FirmAdmin and Partner (view only)
     // Fetches a single user's full profile/detail record by their UserID.
     // Used by user-detail screens and by CreatedAtAction on user creation.
     // Returns 404 if no such user exists (or isn't visible to this firm).
@@ -90,7 +96,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // UPDATE USER — FirmAdmin and Partner
+    // UPDATE USER — FirmAdmin ONLY
     // Edits an existing user's details (name, contact info, role, photo,
     // etc.). The route id and the command's UserID must match, guarding
     // against a mismatched/forged request body. The acting user's ID is
@@ -98,7 +104,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     // and role-hierarchy checks inside the handler.
     // =====================================================
     [HttpPut("{id}")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.FirmAdminOnly)]
     public async Task<IActionResult> Update(int id, [FromForm] UpdateUserCommand command)
     {
         _logger.LogInformation("Update user request: {UserID}", id);
@@ -116,14 +122,14 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // DELETE USER (Deactivate — reversible) — FirmAdmin and Partner
+    // DELETE USER (Deactivate — reversible) — FirmAdmin ONLY
     // Soft-deletes/deactivates a user so they can no longer log in, without
     // erasing their historical case/hearing/document records. This is
     // reversible via the Activate endpoint below. Distinct from
     // PermanentDelete, which removes the record outright.
     // =====================================================
     [HttpDelete("{id}")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.FirmAdminOnly)]
     public async Task<IActionResult> Delete(int id)
     {
         _logger.LogInformation("Deactivate user request: {UserID}", id);
@@ -138,13 +144,13 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // ACTIVATE USER (reverses Deactivate) — FirmAdmin and Partner
+    // ACTIVATE USER (reverses Deactivate) — FirmAdmin ONLY
     // Re-enables a previously deactivated user so they can log in again.
     // Does not touch a permanently-deleted user — once permanently deleted,
     // a user cannot be reactivated through this endpoint.
     // =====================================================
     [HttpPut("{id}/activate")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.FirmAdminOnly)]
     public async Task<IActionResult> Activate(int id)
     {
         _logger.LogInformation("Activate user request: {UserID}", id);
@@ -159,14 +165,14 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // PERMANENT DELETE — FirmAdmin and Partner
+    // PERMANENT DELETE — FirmAdmin ONLY
     // Hard-deletes a (typically already-deactivated) user record from the
     // system. Unlike Delete/Activate above, this is NOT reversible from the
     // application — the row is gone. Used for cleaning up test accounts or
     // records a firm no longer wants retained at all.
     // =====================================================
     [HttpDelete("{id}/permanent")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.FirmAdminOnly)]
     public async Task<IActionResult> PermanentDelete(int id)
     {
         _logger.LogInformation("Permanent delete user request: {UserID}", id);

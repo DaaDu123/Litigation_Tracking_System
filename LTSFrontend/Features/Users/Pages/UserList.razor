@@ -1,5 +1,5 @@
 @page "/users"
-@attribute [Authorize(Roles = "Partner,FirmAdmin")]
+@attribute [Authorize(Roles = "FirmAdmin,Partner")]
 @using LTSFrontend.Features.Users.Components
 @using LTSFrontend.Features.Users.DTOs
 @using LTSFrontend.Features.Users.Services
@@ -85,18 +85,18 @@
 
     /// <summary>
     /// Gates Edit/Deactivate/Activate/PermanentDelete (the Actions column in
-    /// UserTable). Per policy, Partner has the same access as FirmAdmin for
-    /// every user-management action EXCEPT creating a new user - see
-    /// CanCreateUsers below. SuperAdmin is deliberately excluded: firm user
-    /// management is the firm's own domain, not the platform owner's.
+    /// UserTable). FirmAdmin-only: Partner CAN view this page/list (see the
+    /// page's own @attribute above, now "FirmAdmin,Partner") but has NO
+    /// Create/Update/Delete access to users - view-only. SuperAdmin is
+    /// likewise excluded: firm user management is the firm's own domain,
+    /// not the platform owner's.
     /// </summary>
-    private bool CanManageUsers => Session.Role is "FirmAdmin" or "Partner";
+    private bool CanManageUsers => Session.Role is "FirmAdmin";
 
     /// <summary>
-    /// Gates the "Add User" button only. FirmAdmin-exclusive - the one
-    /// deliberate exception where Partner does NOT get FirmAdmin-equivalent
-    /// access (matches UsersController.Create's [Authorize(Roles =
-    /// RoleNames.FirmAdminOnly)] on the backend).
+    /// Gates the "Add User" button. Same FirmAdmin-only rule as
+    /// CanManageUsers above (matches UsersController.Create's
+    /// [Authorize(Roles = RoleNames.FirmAdminOnly)] on the backend).
     /// </summary>
     private bool CanCreateUsers => Session.Role is "FirmAdmin";
 

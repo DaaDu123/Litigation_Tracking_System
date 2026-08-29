@@ -1,5 +1,5 @@
 @page "/users/details/{UserId:int}"
-@attribute [Authorize(Roles = "Partner,FirmAdmin")]
+@attribute [Authorize(Roles = "FirmAdmin,Partner")]
 @using LTSFrontend.Features.Users.DTOs
 @using LTSFrontend.Features.Users.Services
 @inject IUserService UserService
@@ -94,11 +94,12 @@ else
     private bool _isLoading = true;
     private bool _notFound;
 
-    /// <summary>Gates the "Edit" button. Per policy Partner has FirmAdmin-
-    /// equivalent access to editing users (see EditUser.razor's own
-    /// [Authorize(Roles = "FirmAdmin,Partner")]).</summary>
-    private bool CanManage =>
-        Session.Role is "FirmAdmin" or "Partner";
+    /// <summary>Gates the "Edit" button. FirmAdmin-only - Partner can VIEW
+    /// this page (see the page's own [Authorize(Roles =
+    /// "FirmAdmin,Partner")] above) but has no Create/Update/Delete access
+    /// to users, matching EditUser.razor's [Authorize(Roles =
+    /// "FirmAdmin")].</summary>
+    private bool CanManage => Session.Role is "FirmAdmin";
 
     protected override async Task OnParametersSetAsync()
     {

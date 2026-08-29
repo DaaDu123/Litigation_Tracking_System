@@ -22,11 +22,15 @@ public sealed class GetDocumentTypeOptionsHandler(AppDbContext _context, ILogger
     {
         _logger.LogInformation("Fetching document type dropdown options");
 
-        var options = await _context.DocumentTypes.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.TypeName).Select(x => new DocumentTypeOptionDTO
+        var options = await _context.DocumentTypes.AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.TypeName)
+            .Select(x => new DocumentTypeOptionDTO
             {
                 DocumentTypeID = x.DocumentTypeID,
                 TypeName = x.TypeName
-            }).ToListAsync(cancellationToken);
+            })
+            .ToListAsync(cancellationToken);
 
         _logger.LogInformation("Retrieved {Count} document type options", options.Count);
 

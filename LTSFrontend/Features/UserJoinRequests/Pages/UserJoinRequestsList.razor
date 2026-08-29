@@ -1,5 +1,5 @@
 @page "/user-join-requests"
-@attribute [Authorize(Roles = "FirmAdmin,Partner")]
+@attribute [Authorize(Roles = "FirmAdmin")]
 @using LTSFrontend.Core.Enums
 @using LTSFrontend.Features.UserJoinRequests.Components
 @using LTSFrontend.Features.UserJoinRequests.DTOs
@@ -116,11 +116,9 @@
                             <td class="text-end">
                                 @if (r.Status == "Pending")
                                 {
-                                    <PermissionGate Roles="FirmAdmin">
-                                        <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="() => HandleApproveAsync(r)" title="Approve">
-                                            <i class="bi bi-check-circle"></i> Approve
-                                        </button>
-                                    </PermissionGate>
+                                    <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="() => HandleApproveAsync(r)" title="Approve">
+                                        <i class="bi bi-check-circle"></i> Approve
+                                    </button>
                                     <button class="lts-btn lts-btn-outline lts-btn-sm" @onclick="() => _rejectModal.Open(r)" title="Reject">
                                         <i class="bi bi-x-circle"></i> Reject
                                     </button>

@@ -36,9 +36,11 @@
         </Authorized>
     </AuthorizeView>
 
-    @* Firm staff directory - FirmAdmin and Partner only (matches
-       RoleNames.PartnerAndAbove / FirmAdminAndAbove on UsersController,
-       both of which now exclude SuperAdmin). *@
+    @* Firm staff directory - FirmAdmin AND Partner can VIEW (matches
+       RoleNames.PartnerAndAbove on UsersController's GetAll/GetById -
+       Partner needs this e.g. to pick a lawyer when assigning a case).
+       Create/Update/Delete are still FirmAdmin-only underneath - see
+       UserList.razor's CanCreateUsers/CanManageUsers flags. *@
     <AuthorizeView Roles="FirmAdmin,Partner">
         <Authorized>
             <div class="nav-item">
@@ -49,16 +51,15 @@
         </Authorized>
     </AuthorizeView>
 
-    @* Join Requests - FirmAdmin and Partner. Pending self-service requests
-       from people who want to join THIS firm as Partner/Associate/
-       Moharrir/Intern (see Features/UserJoinRequests). Distinct from the
-       FirmAdmin's own direct "Create User" flow above, which still adds
-       users immediately with no approval step. Partner can view/reject
-       requests but the Approve action itself stays FirmAdmin-only inside
-       the page (UserJoinRequestsList.razor), matching
+    @* Join Requests - FirmAdmin ONLY. Pending self-service requests from
+       people who want to join THIS firm as Partner/Associate/Moharrir/
+       Intern (see Features/UserJoinRequests). Distinct from the FirmAdmin's
+       own direct "Create User" flow above, which still adds users
+       immediately with no approval step. Partner has ZERO access here too
+       - view, approve, AND reject are all FirmAdmin-only, matching
        UserJoinRequestsController's [Authorize(Roles =
-       RoleNames.FirmAdminOnly)] on Approve. *@
-    <AuthorizeView Roles="FirmAdmin,Partner">
+       RoleNames.FirmAdminOnly)] on GetAll/Approve/Reject. *@
+    <AuthorizeView Roles="FirmAdmin">
         <Authorized>
             <div class="nav-item">
                 <NavLink class="nav-link" href="user-join-requests">
