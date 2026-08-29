@@ -23,7 +23,7 @@ namespace LTSBackend.Features.Users.Controllers;
 public class UsersController(IMediator _mediator, ILogger<UsersController> _logger) : ControllerBase
 {
     // =====================================================
-    // CREATE USER — FirmAdmin + SuperAdmin
+    // CREATE USER — FirmAdmin ONLY (deliberate exception — Partner excluded)
     // Registers a brand-new user (Partner / Associate Lawyer / Moharrir /
     // Intern Paralegal, etc.) inside the acting FirmAdmin's own firm, or a
     // new firm-scoped account created by a SuperAdmin. Accepts multipart
@@ -31,9 +31,14 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     // The acting user's ID is pulled from the JWT claim (never trusted from
     // the request body) and stamped onto the command as ActingUserID so the
     // handler can enforce role-hierarchy and firm-scoping rules.
+    //
+    // Uses RoleNames.FirmAdminOnly (NOT FirmAdminAndAbove) on purpose: per
+    // policy, Partner has FirmAdmin-equivalent access everywhere else in
+    // this controller, EXCEPT creating a new user account. That one action
+    // stays FirmAdmin-exclusive.
     // =====================================================
     [HttpPost]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.FirmAdminOnly)]
     public async Task<IActionResult> Create([FromForm] CreateUserCommand command)
     {
         var actingUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -85,7 +90,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // UPDATE USER — FirmAdmin only
+    // UPDATE USER — FirmAdmin and Partner
     // Edits an existing user's details (name, contact info, role, photo,
     // etc.). The route id and the command's UserID must match, guarding
     // against a mismatched/forged request body. The acting user's ID is
@@ -111,7 +116,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // DELETE USER (Deactivate — reversible) — FirmAdmin only
+    // DELETE USER (Deactivate — reversible) — FirmAdmin and Partner
     // Soft-deletes/deactivates a user so they can no longer log in, without
     // erasing their historical case/hearing/document records. This is
     // reversible via the Activate endpoint below. Distinct from
@@ -133,7 +138,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // ACTIVATE USER (reverses Deactivate) — FirmAdmin only
+    // ACTIVATE USER (reverses Deactivate) — FirmAdmin and Partner
     // Re-enables a previously deactivated user so they can log in again.
     // Does not touch a permanently-deleted user — once permanently deleted,
     // a user cannot be reactivated through this endpoint.
@@ -154,7 +159,7 @@ public class UsersController(IMediator _mediator, ILogger<UsersController> _logg
     }
 
     // =====================================================
-    // PERMANENT DELETE — FirmAdmin only
+    // PERMANENT DELETE — FirmAdmin and Partner
     // Hard-deletes a (typically already-deactivated) user record from the
     // system. Unlike Delete/Activate above, this is NOT reversible from the
     // application — the row is gone. Used for cleaning up test accounts or

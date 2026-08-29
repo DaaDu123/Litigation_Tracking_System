@@ -19,7 +19,7 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
 {
     // =====================================================
     // GET ALL DEPARTMENTS — FirmAdmin and above ONLY
-    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // Master-data management is FirmAdmin and Partner's task.
     // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
     // access (not even read) to this master data admin surface. Query
     // results are automatically scoped by the caller's visibility

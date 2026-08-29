@@ -59,7 +59,7 @@ public class UserJoinRequestsController(IMediator _mediator, ILogger<UserJoinReq
     }
 
     // =====================================================
-    // GET ALL USER JOIN REQUESTS — FirmAdmin only
+    // GET ALL USER JOIN REQUESTS — FirmAdmin and Partner
     // Lists pending/approved/rejected join requests (optionally filtered
     // by status) aimed at the acting FirmAdmin's own firm. Cross-firm
     // isolation is enforced by the UserJoinRequest tenant query filter
@@ -74,12 +74,18 @@ public class UserJoinRequestsController(IMediator _mediator, ILogger<UserJoinReq
     }
 
     // =====================================================
-    // APPROVE USER JOIN REQUEST — FirmAdmin only
+    // APPROVE USER JOIN REQUEST — FirmAdmin ONLY (deliberate exception)
     // Accepts a pending request: activates the requested Partner/Associate/
     // Moharrir/Intern account, linked to this firm with the requested role.
+    //
+    // Uses RoleNames.FirmAdminOnly (NOT FirmAdminAndAbove) on purpose: this
+    // action creates/activates a brand-new user account, exactly like
+    // UsersController.Create — the one action Partner does not get, per
+    // policy, even though Partner has FirmAdmin-equivalent access to every
+    // other action in this controller.
     // =====================================================
     [HttpPut("{id}/approve")]
-    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
+    [Authorize(Roles = RoleNames.FirmAdminOnly)]
     public async Task<IActionResult> Approve(int id)
     {
         var actingUserId = GetActingUserId();
@@ -91,7 +97,7 @@ public class UserJoinRequestsController(IMediator _mediator, ILogger<UserJoinReq
     }
 
     // =====================================================
-    // REJECT USER JOIN REQUEST — FirmAdmin only
+    // REJECT USER JOIN REQUEST — FirmAdmin and Partner
     // Declines a pending request, optionally with a reason, without
     // creating a user account.
     // =====================================================

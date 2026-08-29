@@ -5,6 +5,7 @@ using LTSBackend.Features.DocumentTypes.Commands.UpdateDocumentType;
 using LTSBackend.Features.DocumentTypes.DTOs;
 using LTSBackend.Features.DocumentTypes.Queries.GetAllDocumentTypes;
 using LTSBackend.Features.DocumentTypes.Queries.GetDocumentTypeById;
+using LTSBackend.Features.DocumentTypes.Queries.GetDocumentTypeOptions;
 using LTSBackend.Models.Security;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -24,10 +25,32 @@ namespace LTSBackend.Features.DocumentTypes.Controllers;
 public class DocumentTypesController(IMediator mediator) : ControllerBase
 {
     // =====================================================
+    // GET DOCUMENT TYPE OPTIONS (dropdown) — same roles as Document upload
+    // Deliberately NOT a master-data admin endpoint: returns only
+    // {DocumentTypeID, TypeName} pairs, nothing else, and is reachable by
+    // every role that DocumentsController.UploadDocument allows
+    // (Partner/AssociateLawyer/Moharrir/InternParalegal/FirmAdmin), not
+    // just FirmAdmin/Partner. This is what closes the gap: those roles can
+    // upload a document but cannot reach GetAll below (master-data admin
+    // is FirmAdmin/Partner only) - this endpoint gives them just enough to
+    // populate the "Document Type" dropdown on the upload form, without
+    // granting any create/update/delete/admin-list access.
+    // =====================================================
+    [HttpGet("options")]
+    [Authorize(Roles = RoleNames.AllFirmUsers)]
+    public async Task<IActionResult> GetOptions()
+    {
+        var options = await mediator.Send(new GetDocumentTypeOptionsQuery());
+        return Ok(ApiResponse<List<DocumentTypeOptionDTO>>.SuccessResponse(options));
+    }
+
+    // =====================================================
     // GET ALL DOCUMENT TYPES — FirmAdmin and above ONLY
-    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // Master-data management is FirmAdmin and Partner's task.
     // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
-    // access (not even read) to this master data admin surface.
+    // access (not even read) to this master data admin surface. For the
+    // Document upload dropdown, AssociateLawyer/Moharrir/InternParalegal
+    // use the "options" endpoint above instead.
     // =====================================================
     [HttpGet]
     [Authorize(Roles = RoleNames.FirmAdminAndAbove)]

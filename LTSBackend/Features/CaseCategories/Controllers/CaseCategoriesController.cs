@@ -28,11 +28,10 @@ public class CaseCategoriesController(IMediator mediator) : ControllerBase
 {
     // =====================================================
     // GET ALL CASE CATEGORIES — FirmAdmin and above ONLY
-    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // Master-data management is FirmAdmin and Partner's task.
     // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
-    // access (not even read) to this master data admin surface - this is
-    // deliberately NOT used to populate Case create/edit dropdowns for
-    // those roles. Scoping to global + own firm happens automatically via
+    // access (not even read) to this master data admin surface. Scoping to
+    // global + own firm happens automatically via
     // the EF Core HasQueryFilter on CaseCategory, not in this controller.
     // =====================================================
     [HttpGet]

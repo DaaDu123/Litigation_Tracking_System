@@ -25,7 +25,7 @@ public class CaseStatusesController(IMediator mediator) : ControllerBase
 {
     // =====================================================
     // GET ALL CASE STATUSES — FirmAdmin and above ONLY
-    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // Master-data management is FirmAdmin and Partner's task.
     // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
     // access (not even read) to this master data admin surface.
     // =====================================================
