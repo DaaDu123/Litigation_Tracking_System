@@ -1,5 +1,5 @@
 @page "/users/edit/{UserId:int}"
-@attribute [Authorize(Roles = "FirmAdmin")]
+@attribute [Authorize(Roles = "FirmAdmin,Partner")]
 @using LTSFrontend.Core.Enums
 @using LTSFrontend.Features.Users.DTOs
 @using LTSFrontend.Features.Users.Services

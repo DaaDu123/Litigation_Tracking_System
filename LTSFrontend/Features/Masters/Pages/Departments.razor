@@ -1,5 +1,5 @@
 @page "/masters/departments"
-@attribute [Authorize(Roles = "FirmAdmin")]
+@attribute [Authorize(Roles = "FirmAdmin,Partner")]
 @using LTSFrontend.Features.Masters.Components
 @using LTSFrontend.Features.Masters.DTOs
 @using LTSFrontend.Features.Masters.Services
@@ -21,7 +21,7 @@
         <p class="lts-page-subtitle">Departments and business units within the firm.</p>
     </div>
     <div class="lts-page-header-actions">
-        <PermissionGate Roles="FirmAdmin,SuperAdmin">
+        <PermissionGate Roles="FirmAdmin,Partner">
             <button class="lts-btn lts-btn-primary" @onclick="OpenCreate">
                 <i class="bi bi-plus-lg"></i> Add Department
             </button>
@@ -123,7 +123,7 @@
                 </div>
                 @if (_allDepartments.Count == 0)
                 {
-                    <PermissionGate Roles="FirmAdmin,SuperAdmin">
+                    <PermissionGate Roles="FirmAdmin,Partner">
                         <button class="lts-btn lts-btn-primary lts-btn-sm" @onclick="OpenCreate">
                             <i class="bi bi-plus-lg"></i> Add Department
                         </button>

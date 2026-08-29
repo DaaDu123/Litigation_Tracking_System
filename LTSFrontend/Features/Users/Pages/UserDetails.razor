@@ -94,8 +94,11 @@ else
     private bool _isLoading = true;
     private bool _notFound;
 
+    /// <summary>Gates the "Edit" button. Per policy Partner has FirmAdmin-
+    /// equivalent access to editing users (see EditUser.razor's own
+    /// [Authorize(Roles = "FirmAdmin,Partner")]).</summary>
     private bool CanManage =>
-        string.Equals(Session.Role, "FirmAdmin", StringComparison.OrdinalIgnoreCase);
+        Session.Role is "FirmAdmin" or "Partner";
 
     protected override async Task OnParametersSetAsync()
     {

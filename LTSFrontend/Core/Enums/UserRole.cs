@@ -35,14 +35,37 @@
         // user - mirrors the backend fix in RoleHierarchy.CanAssignRole
         // (strictly lower privilege only). SRS: "Firm Admin can create
         // only: Partner, Associate Lawyer, Moharrir, Intern/Paralegal" and
-        // "Firm Admin cannot create another Firm Admin." Only FirmAdmin can
-        // reach the Create/Edit User pages, so this is the full set every
-        // caller of this list needs.
+        // "Firm Admin cannot create another Firm Admin." Kept for backward
+        // compatibility with existing call sites; equivalent to
+        // AssignableBy((int)UserRole.FirmAdmin).
         public static IReadOnlyList<(int Id, string Name)> AssignableByFirmAdmin { get; } =
             All.Where(r =>
             {
                 return r.Id > (int)UserRole.FirmAdmin;
             })
             .ToList();
+
+        /// <summary>
+        /// Generic version of AssignableByFirmAdmin - mirrors
+        /// RoleHierarchy.CanAssignRole exactly: a user may only assign a
+        /// role that is STRICTLY lower privilege (numerically greater) than
+        /// their own. Needed now that Partner (not just FirmAdmin) can open
+        /// UserFormModal to create/edit users - a Partner(3) should only see
+        /// AssociateLawyer/Moharrir/InternParalegal (4,5,6) in the dropdown,
+        /// never FirmAdmin or another Partner.
+        /// </summary>
+        public static IReadOnlyList<(int Id, string Name)> AssignableBy(int actingRoleId) =>
+            All.Where(r => r.Id > actingRoleId).ToList();
+
+        /// <summary>Convenience overload taking the acting user's role NAME
+        /// (e.g. Session.Role) instead of its numeric ID. Returns an empty
+        /// list if the name doesn't parse to a known UserRole.</summary>
+        public static IReadOnlyList<(int Id, string Name)> AssignableBy(string? actingRoleName)
+        {
+            if (Enum.TryParse<UserRole>(actingRoleName, out var role))
+                return AssignableBy((int)role);
+
+            return Array.Empty<(int, string)>();
+        }
     }
 }

@@ -7,6 +7,7 @@
 @using LTSFrontend.Features.Users.DTOs
 @using LTSFrontend.Features.Users.Services
 @inject IUserService UserService
+@inject UserSessionState Session
 
 <div class="lts-modal-backdrop @(_isOpen ? "show" : "")" @onclick="CloseIfNotSaving"></div>
 <div class="lts-modal-wrap @(_isOpen ? "show" : "")" role="dialog" aria-modal="true">
@@ -169,10 +170,14 @@
     private CreateUserDTO _form = new();
     private IBrowserFile? _profileImage;
 
-    // Mirrors CreateUser.razor/EditUser.razor: a FirmAdmin can only assign
-    // Partner/AssociateLawyer/Moharrir/InternParalegal - never another
-    // FirmAdmin or SuperAdmin (see RoleHierarchy.CanAssignRole).
-    private List<(int Id, string Name)> _roleOptions = UserRoleExtensions.AssignableByFirmAdmin.ToList();
+    // Mirrors CreateUser.razor/EditUser.razor: the acting user (FirmAdmin OR
+    // Partner - both can reach this modal now) can only assign a role that
+    // is strictly lower privilege than their own (see
+    // RoleHierarchy.CanAssignRole on the backend). A FirmAdmin sees
+    // Partner/AssociateLawyer/Moharrir/InternParalegal; a Partner sees only
+    // AssociateLawyer/Moharrir/InternParalegal - never FirmAdmin, Partner,
+    // or SuperAdmin either way.
+    private List<(int Id, string Name)> _roleOptions = new();
 
     private bool IsEditMode => _form.UserID.HasValue;
 
@@ -180,6 +185,7 @@
     {
         _form = new CreateUserDTO();
         _currentImageUrl = null;
+        _roleOptions = UserRoleExtensions.AssignableBy(Session.Role).ToList();
         return OpenAsync();
     }
 
@@ -198,9 +204,10 @@
         _currentImageUrl = user.ProfileImage;
 
         // Keep the user's current role selectable even if it falls outside
-        // what a FirmAdmin can newly assign (e.g. editing the workspace's
-        // own FirmAdmin record) - the dropdown shouldn't silently drop it.
-        _roleOptions = UserRoleExtensions.AssignableByFirmAdmin.ToList();
+        // what the acting user (FirmAdmin or Partner) can newly assign
+        // (e.g. a Partner editing a Moharrir who was later promoted) - the
+        // dropdown shouldn't silently drop it.
+        _roleOptions = UserRoleExtensions.AssignableBy(Session.Role).ToList();
         if (user.RoleID.HasValue && !_roleOptions.Any(r => r.Id == user.RoleID.Value))
         {
             _roleOptions = new List<(int Id, string Name)>(_roleOptions)

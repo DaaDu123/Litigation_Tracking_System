@@ -51,5 +51,11 @@ namespace LTSFrontend.Features.Masters.Services
 
         public Task<bool> DeleteAsync(int id) =>
             _api.DeleteAsync<bool>(ApiEndpoints.Masters.DocumentTypes.ById(id));
+
+        public async Task<List<DocumentTypeOptionDTO>> GetOptionsAsync()
+        {
+            var result = await _api.GetAsync<List<DocumentTypeOptionDTO>>(ApiEndpoints.Masters.DocumentTypes.Options);
+            return result ?? new List<DocumentTypeOptionDTO>();
+        }
     }
 }

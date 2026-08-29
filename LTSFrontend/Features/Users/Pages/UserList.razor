@@ -14,7 +14,7 @@
         <h1 class="lts-page-title">User Management</h1>
         <p class="lts-page-subtitle">Manage the people in your firm's workspace and the roles they hold.</p>
     </div>
-    @if (CanManageUsers)
+    @if (CanCreateUsers)
     {
         <div class="lts-page-header-actions">
             <button class="lts-btn lts-btn-primary" @onclick="OpenCreateAsync">
@@ -83,7 +83,22 @@
     private UserFormModal _formModal = default!;
     private ConfirmDialog _confirmDialog = default!;
 
-    private bool CanManageUsers => Session.Role is "FirmAdmin" or "SuperAdmin";
+    /// <summary>
+    /// Gates Edit/Deactivate/Activate/PermanentDelete (the Actions column in
+    /// UserTable). Per policy, Partner has the same access as FirmAdmin for
+    /// every user-management action EXCEPT creating a new user - see
+    /// CanCreateUsers below. SuperAdmin is deliberately excluded: firm user
+    /// management is the firm's own domain, not the platform owner's.
+    /// </summary>
+    private bool CanManageUsers => Session.Role is "FirmAdmin" or "Partner";
+
+    /// <summary>
+    /// Gates the "Add User" button only. FirmAdmin-exclusive - the one
+    /// deliberate exception where Partner does NOT get FirmAdmin-equivalent
+    /// access (matches UsersController.Create's [Authorize(Roles =
+    /// RoleNames.FirmAdminOnly)] on the backend).
+    /// </summary>
+    private bool CanCreateUsers => Session.Role is "FirmAdmin";
 
     private List<UserDTO> FilteredUsers =>
         string.IsNullOrWhiteSpace(_searchTerm)

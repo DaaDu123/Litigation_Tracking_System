@@ -49,12 +49,16 @@
         </Authorized>
     </AuthorizeView>
 
-    @* Join Requests - FirmAdmin only. Pending self-service requests from
-       people who want to join THIS firm as Partner/Associate/Moharrir/
-       Intern (see Features/UserJoinRequests). Distinct from the FirmAdmin's
-       own direct "Create User" flow above, which still adds users
-       immediately with no approval step. *@
-    <AuthorizeView Roles="FirmAdmin">
+    @* Join Requests - FirmAdmin and Partner. Pending self-service requests
+       from people who want to join THIS firm as Partner/Associate/
+       Moharrir/Intern (see Features/UserJoinRequests). Distinct from the
+       FirmAdmin's own direct "Create User" flow above, which still adds
+       users immediately with no approval step. Partner can view/reject
+       requests but the Approve action itself stays FirmAdmin-only inside
+       the page (UserJoinRequestsList.razor), matching
+       UserJoinRequestsController's [Authorize(Roles =
+       RoleNames.FirmAdminOnly)] on Approve. *@
+    <AuthorizeView Roles="FirmAdmin,Partner">
         <Authorized>
             <div class="nav-item">
                 <NavLink class="nav-link" href="user-join-requests">
@@ -117,12 +121,11 @@
         </Authorized>
     </AuthorizeView>
 
-    @* Master Data configuration - FirmAdmin only (SRS: "Firm Admin can
-       configure: Case Categories... create, edit and delete custom case
-       categories" - no other role manages reference data). Matches the
-       [Authorize(Roles = "FirmAdmin")] now restored on every page under
-       Features/Masters. *@
-    <AuthorizeView Roles="FirmAdmin">
+    @* Master Data configuration - FirmAdmin AND Partner (per policy,
+       Partner has FirmAdmin-equivalent access everywhere in the firm
+       except creating a new user). Matches [Authorize(Roles =
+       "FirmAdmin,Partner")] now on every page under Features/Masters. *@
+    <AuthorizeView Roles="FirmAdmin,Partner">
         <Authorized>
             <div class="nav-section-title">Configuration</div>
 

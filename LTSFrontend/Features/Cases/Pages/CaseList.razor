@@ -21,7 +21,7 @@
         <p class="lts-page-subtitle">All litigation cases you have access to, across every court and status.</p>
     </div>
     <div class="lts-page-header-actions">
-        <PermissionGate Roles="Partner,FirmAdmin,SuperAdmin">
+        <PermissionGate Roles="Partner,FirmAdmin">
             <button class="lts-btn lts-btn-primary" @onclick='() => Nav.NavigateTo("/cases/create")'>
                 <i class="bi bi-plus-lg"></i> New Case
             </button>
@@ -113,7 +113,7 @@
                 </div>
                 @if (_totalRecords == 0 && !HasActiveFilters)
                 {
-                    <PermissionGate Roles="Partner,FirmAdmin,SuperAdmin">
+                    <PermissionGate Roles="Partner,FirmAdmin">
                         <button class="lts-btn lts-btn-primary lts-btn-sm" @onclick='() => Nav.NavigateTo("/cases/create")'>
                             <i class="bi bi-plus-lg"></i> New Case
                         </button>
@@ -162,12 +162,12 @@
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick='() => Nav.NavigateTo($"/cases/{c.CaseID}")'>
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <PermissionGate Roles="Partner,FirmAdmin,SuperAdmin">
+                                        <PermissionGate Roles="Partner,FirmAdmin">
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Edit" @onclick='() => Nav.NavigateTo($"/cases/{c.CaseID}/edit")'>
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                         </PermissionGate>
-                                        <PermissionGate Roles="FirmAdmin,SuperAdmin">
+                                        <PermissionGate Roles="FirmAdmin,Partner">
                                             <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="Delete" @onclick="() => HandleDeleteAsync(c)">
                                                 <i class="bi bi-trash text-danger"></i>
                                             </button>

@@ -103,7 +103,7 @@
     private string _documentName = string.Empty;
     private string? _remarks;
 
-    private List<DocumentTypeDTO> _documentTypes = new();
+    private List<DocumentTypeOptionDTO> _documentTypes = new();
     private bool _isLoadingTypes = true;
     private bool _isSaving;
     private bool _showValidation;
@@ -115,7 +115,11 @@
     {
         try
         {
-            _documentTypes = await DocumentTypeService.GetAllAsync(activeOnly: true);
+            // Uses the lightweight dropdown-only endpoint (not GetAllAsync,
+            // which is FirmAdmin/Partner-only master-data admin access) so
+            // AssociateLawyer/Moharrir/InternParalegal can populate this
+            // dropdown too, same as they're allowed to upload documents.
+            _documentTypes = await DocumentTypeService.GetOptionsAsync();
         }
         catch (Exception)
         {

@@ -83,6 +83,15 @@
                 private const string Root = Base + "/documenttypes";
                 public const string Base_ = Root;
                 public static string ById(int id) => $"{Root}/{id}";
+
+                /// <summary>
+                /// Lightweight {DocumentTypeID, TypeName} dropdown list, reachable by
+                /// every role that can upload a document (Partner/AssociateLawyer/
+                /// Moharrir/InternParalegal/FirmAdmin) — not just FirmAdmin/Partner
+                /// like Base_ (the full master-data admin list). Use this to
+                /// populate the "Document Type" dropdown on the upload form.
+                /// </summary>
+                public const string Options = Root + "/options";
             }
         }
 

@@ -33,10 +33,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
         _logger.LogInformation("Login attempt for email: {Email}", request.Email);
 
         // 1. Find user by email with role
-        var user = await _context.Users
-            .Include(x => x.Role)
-            .Include(x => x.Firm)
-            .FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+        var user = await _context.Users.Include(x => x.Role).Include(x => x.Firm).FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
 
         if (user == null)
         {
