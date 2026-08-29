@@ -18,13 +18,16 @@ namespace LTSBackend.Features.Departments.Controllers;
 public class DepartmentsController(IMediator mediator) : ControllerBase
 {
     // =====================================================
-    // GET ALL DEPARTMENTS — Any authenticated user
-    // Returns departments for populating dropdowns on Case/User forms.
-    // Query results are automatically scoped by the caller's visibility
+    // GET ALL DEPARTMENTS — FirmAdmin and above ONLY
+    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
+    // access (not even read) to this master data admin surface. Query
+    // results are automatically scoped by the caller's visibility
     // (system-wide global departments + their own firm's custom ones) via
     // the HasQueryFilter on Department in AppDbContext.
     // =====================================================
     [HttpGet]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetAll([FromQuery] bool activeOnly = false)
     {
         var departments = await mediator.Send(new GetAllDepartmentsQuery(activeOnly));
@@ -32,10 +35,11 @@ public class DepartmentsController(IMediator mediator) : ControllerBase
     }
 
     // =====================================================
-    // GET DEPARTMENT BY ID — Any authenticated user
+    // GET DEPARTMENT BY ID — FirmAdmin and above ONLY
     // Fetches a single department's details by its ID.
     // =====================================================
     [HttpGet("{id}")]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetById(int id)
     {
         var department = await mediator.Send(new GetDepartmentByIdQuery(id));

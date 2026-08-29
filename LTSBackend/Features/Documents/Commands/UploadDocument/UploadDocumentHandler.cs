@@ -62,7 +62,10 @@ public class UploadDocumentHandler(AppDbContext _context, IFileService _fileServ
         string filePath;
         try
         {
-            filePath = await _fileService.SaveSecureFileAsync(request.File, "case_documents");
+            // Tenant/case-isolated storage: Firm/{FirmID}/Case/{CaseID}/Documents/.
+            // caseRecord.FirmID was already confirmed to match the caller's own
+            // firm above, so this can never write into another firm's folder.
+            filePath = await _fileService.SaveCaseDocumentAsync(request.File, caseRecord.FirmID, request.CaseID);
             _logger.LogInformation("File saved to secure disk storage: {FilePath}", filePath);
         }
         catch (ValidationException)

@@ -27,13 +27,16 @@ namespace LTSBackend.Features.CaseCategories.Controllers;
 public class CaseCategoriesController(IMediator mediator) : ControllerBase
 {
     // =====================================================
-    // GET ALL CASE CATEGORIES — Any authenticated user
-    // Returns the case categories available to the caller's firm (global
-    // ones plus the firm's own), for populating Case create/edit
-    // dropdowns. Scoping to global + own firm happens automatically via
+    // GET ALL CASE CATEGORIES — FirmAdmin and above ONLY
+    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
+    // access (not even read) to this master data admin surface - this is
+    // deliberately NOT used to populate Case create/edit dropdowns for
+    // those roles. Scoping to global + own firm happens automatically via
     // the EF Core HasQueryFilter on CaseCategory, not in this controller.
     // =====================================================
     [HttpGet]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText, [FromQuery] bool activeOnly = true)
     {
         var categories = await mediator.Send(new GetAllCaseCategoriesQuery(searchText, activeOnly));
@@ -41,10 +44,11 @@ public class CaseCategoriesController(IMediator mediator) : ControllerBase
     }
 
     // =====================================================
-    // GET CASE CATEGORY BY ID — Any authenticated user
+    // GET CASE CATEGORY BY ID — FirmAdmin and above ONLY
     // Fetches a single category's details by its ID.
     // =====================================================
     [HttpGet("{id}")]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetById(int id)
     {
         var category = await mediator.Send(new GetCaseCategoryByIdQuery(id));

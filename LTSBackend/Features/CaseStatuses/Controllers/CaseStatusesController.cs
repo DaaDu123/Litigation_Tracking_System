@@ -24,12 +24,13 @@ namespace LTSBackend.Features.CaseStatuses.Controllers;
 public class CaseStatusesController(IMediator mediator) : ControllerBase
 {
     // =====================================================
-    // GET ALL CASE STATUSES — Any authenticated user
-    // Returns the workflow statuses (New, Pending, Active, Hearing
-    // Scheduled, Closed, Archived, etc.) available to the caller's firm,
-    // for Case create/edit dropdowns and status-change screens.
+    // GET ALL CASE STATUSES — FirmAdmin and above ONLY
+    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
+    // access (not even read) to this master data admin surface.
     // =====================================================
     [HttpGet]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText, [FromQuery] bool activeOnly = true)
     {
         var statuses = await mediator.Send(new GetAllCaseStatusesQuery(searchText, activeOnly));
@@ -37,10 +38,11 @@ public class CaseStatusesController(IMediator mediator) : ControllerBase
     }
 
     // =====================================================
-    // GET CASE STATUS BY ID — Any authenticated user
+    // GET CASE STATUS BY ID — FirmAdmin and above ONLY
     // Fetches a single status's details by its ID.
     // =====================================================
     [HttpGet("{id}")]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetById(int id)
     {
         var status = await mediator.Send(new GetCaseStatusByIdQuery(id));

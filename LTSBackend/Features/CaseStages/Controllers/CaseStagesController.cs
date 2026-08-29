@@ -23,12 +23,13 @@ namespace LTSBackend.Features.CaseStages.Controllers;
 public class CaseStagesController(IMediator mediator) : ControllerBase
 {
     // =====================================================
-    // GET ALL CASE STAGES — Any authenticated user
-    // Returns the stages (Filing, Admission, Evidence, Arguments,
-    // Judgment, Appeal, etc.) available to the caller's firm, for Case
-    // create/edit dropdowns.
+    // GET ALL CASE STAGES — FirmAdmin and above ONLY
+    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
+    // access (not even read) to this master data admin surface.
     // =====================================================
     [HttpGet]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText, [FromQuery] bool activeOnly = true)
     {
         var stages = await mediator.Send(new GetAllCaseStagesQuery(searchText, activeOnly));
@@ -36,10 +37,11 @@ public class CaseStagesController(IMediator mediator) : ControllerBase
     }
 
     // =====================================================
-    // GET CASE STAGE BY ID — Any authenticated user
+    // GET CASE STAGE BY ID — FirmAdmin and above ONLY
     // Fetches a single stage's details by its ID.
     // =====================================================
     [HttpGet("{id}")]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetById(int id)
     {
         var stage = await mediator.Send(new GetCaseStageByIdQuery(id));

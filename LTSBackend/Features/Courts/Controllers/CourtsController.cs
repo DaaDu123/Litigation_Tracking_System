@@ -18,16 +18,16 @@ namespace LTSBackend.Features.Courts.Controllers;
 public class CourtsController(IMediator mediator) : ControllerBase
 {
     // =====================================================
-    // GET ALL COURTS — Any authenticated user
-    // Returns the courts available to the caller's firm for Case
-    // create/edit dropdowns and admin screens. Default activeOnly=true
-    // covers the dropdown use case; pass activeOnly=false in an admin
-    // panel to see every record including inactive ones. Query results
-    // are automatically scoped (system-wide global courts + the caller's
-    // own firm's custom courts) via the HasQueryFilter on Court in
-    // AppDbContext — not by anything in this controller.
+    // GET ALL COURTS — FirmAdmin and above ONLY
+    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
+    // access (not even read) to this master data admin surface. Query
+    // results are automatically scoped (system-wide global courts + the
+    // caller's own firm's custom courts) via the HasQueryFilter on Court
+    // in AppDbContext — not by anything in this controller.
     // =====================================================
     [HttpGet]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText,[FromQuery] bool activeOnly = true)
     {
         var courts = await mediator.Send(new GetAllCourtsQuery(searchText, activeOnly));
@@ -35,10 +35,11 @@ public class CourtsController(IMediator mediator) : ControllerBase
     }
 
     // =====================================================
-    // GET COURT BY ID — Any authenticated user
+    // GET COURT BY ID — FirmAdmin and above ONLY
     // Fetches a single court's details by its ID.
     // =====================================================
     [HttpGet("{id}")]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetById(int id)
     {
         var court = await mediator.Send(new GetCourtByIdQuery(id));

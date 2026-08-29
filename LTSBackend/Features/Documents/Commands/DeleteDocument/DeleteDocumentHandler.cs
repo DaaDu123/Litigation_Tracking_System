@@ -1,13 +1,14 @@
 using LTSBackend.Comman.Exceptions;
 using LTSBackend.Data;
 using LTSBackend.Services.Audit;
+using LTSBackend.Services.CurrentUser;
 using LTSBackend.Services.ProfileService;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Documents.Commands.DeleteDocument;
 
-public class DeleteDocumentHandler(AppDbContext _context, IFileService _fileService, IAuditService _auditService, ILogger<DeleteDocumentHandler> _logger) : IRequestHandler<DeleteDocumentCommand, bool>
+public class DeleteDocumentHandler(AppDbContext _context, IFileService _fileService, IAuditService _auditService,ICurrentUserService _currentUser, ILogger<DeleteDocumentHandler> _logger) : IRequestHandler<DeleteDocumentCommand, bool>
 {
     // =====================================================
     // HANDLE — hard-deletes a document, its permissions, and its file
@@ -20,13 +21,31 @@ public class DeleteDocumentHandler(AppDbContext _context, IFileService _fileServ
     {
         _logger.LogInformation("Document delete attempt - ID: {DocumentId}, User: {UserId}", request.DocumentID, request.UserID);
 
-        var document = await _context.Documents.FirstOrDefaultAsync(x => x.DocumentID == request.DocumentID, cancellationToken);
+        // Include Case so we have its FirmID for the storage-layer ownership check below.
+        // (Document itself is also tenant-filtered by EF Core's HasQueryFilter on
+        // Case.FirmID == RequestFirmId, so this Include also re-confirms that filter fired.)
+        var document = await _context.Documents.Include(x => x.Case).FirstOrDefaultAsync(x => x.DocumentID == request.DocumentID, cancellationToken);
 
         if (document == null)
         {
             _logger.LogWarning("Delete failed: Document not found {DocumentId}", request.DocumentID);
             throw new NotFoundException($"Document {request.DocumentID} not found");
         }
+
+        // Defense-in-depth: re-confirm the document's own case belongs to the
+        // caller's firm even though the EF query filter already enforces this,
+        // before we ever remove the row or the file on disk. SuperAdmin is
+        // platform-level (FirmID is null on their own account) and is
+        // intentionally exempt, same as the EF Core tenant query filter's
+        // BypassTenantFilter rule.
+        if (document.Case == null || (!_currentUser.IsSuperAdmin && document.Case.FirmID != _currentUser.FirmID))
+        {
+            _logger.LogWarning("Delete denied: document {DocumentId} does not belong to the caller's firm", request.DocumentID);
+            throw new NotFoundException($"Document {request.DocumentID} not found");
+        }
+
+        int documentFirmId = document.Case.FirmID;
+        long documentCaseId = document.CaseID;
 
         var permissions = await _context.DocumentPermissions.Where(x => x.DocumentID == request.DocumentID).ToListAsync(cancellationToken);
         if (permissions.Any())
@@ -43,7 +62,7 @@ public class DeleteDocumentHandler(AppDbContext _context, IFileService _fileServ
 
         try
         {
-            _fileService.DeleteSecureFile(document.FilePath);
+            _fileService.DeleteCaseDocument(document.FilePath, documentFirmId, documentCaseId);
             _logger.LogInformation("File deleted from secure disk storage: {FilePath}", document.FilePath);
         }
         catch (Exception ex)

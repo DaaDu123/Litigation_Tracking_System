@@ -181,6 +181,79 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         }
     }
 
+    // =====================================================
+    // CASE DOCUMENT STORAGE — Firm/{firmId}/Case/{caseId}/Documents/
+    // Physically segregates every firm's documents from every other firm's,
+    // and every case's documents from every other case's, on disk (not just
+    // via query filtering). No firm/case ID is ever hard-coded - the folder
+    // is built from whatever FirmID/CaseID is passed in, so this scales to
+    // any number of firms and cases without configuration.
+    // =====================================================
+
+    // Builds the tenant/case-scoped relative folder, e.g. "Firm/10/Case/125/Documents".
+    private static string BuildCaseDocumentFolder(int firmId, long caseId)
+        => $"Firm/{firmId}/Case/{caseId}/Documents";
+
+    public Task<string> SaveCaseDocumentAsync(IFormFile file, int firmId, long caseId)
+    {
+        string secureRoot = Path.Combine(_environment.ContentRootPath, "SecureStorage");
+        string folder = BuildCaseDocumentFolder(firmId, caseId);
+        return SaveFileInternalAsync(file, folder, secureRoot, isPublic: false);
+    }
+
+    public async Task<byte[]> ReadCaseDocumentAsync(string relativePath, int firmId, long caseId)
+    {
+        ValidateCaseDocumentOwnership(relativePath, firmId, caseId);
+        return await ReadSecureFileAsync(relativePath);
+    }
+
+    public void DeleteCaseDocument(string? relativePath, int firmId, long caseId)
+    {
+        if (string.IsNullOrEmpty(relativePath))
+        {
+            return;
+        }
+
+        ValidateCaseDocumentOwnership(relativePath, firmId, caseId);
+        DeleteSecureFile(relativePath);
+    }
+
+    // Confirms a stored relative path actually lives under the caller's own
+    // Firm/{firmId}/Case/{caseId}/Documents/ folder before it's read or deleted.
+    // This is deliberately independent of the EF Core tenant query filter: even
+    // if a document row were somehow reached for the wrong firm/case, the file
+    // itself still cannot be opened or removed unless the path matches.
+    //
+    // Backward compatibility: documents uploaded BEFORE this isolation rollout
+    // were stored flat under "case_documents/{guid}.ext" (no Firm/Case segments
+    // at all). Those pre-existing rows/files must keep working, so a path that
+    // doesn't look like our new "Firm/.../Case/.../Documents/..." layout at all
+    // is allowed through unchanged (there's no firm/case folder to mismatch on).
+    // Any path that DOES start with "Firm/" but points at a different
+    // firm/case is unambiguously a tenant-isolation violation and is blocked.
+    private void ValidateCaseDocumentOwnership(string relativePath, int firmId, long caseId)
+    {
+        string expectedFolder = BuildCaseDocumentFolder(firmId, caseId);
+        string normalizedPath = relativePath.Replace('\\', '/').TrimStart('/');
+
+        if (normalizedPath.StartsWith(expectedFolder + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!normalizedPath.StartsWith("Firm/", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation(
+                "Legacy (pre-isolation) document path served without Firm/Case validation: {RelativePath}", relativePath);
+            return;
+        }
+
+        _logger.LogWarning(
+            "Blocked cross-tenant/cross-case document access attempt: path {RelativePath} does not belong to Firm {FirmId} / Case {CaseId}",
+            relativePath, firmId, caseId);
+        throw new UnauthorizedAccessException("This document does not belong to the specified firm or case.");
+    }
+
     // Resolves a stored relative path to an absolute path and rejects anything outside SecureStorage.
     private string ResolveSecurePath(string relativePath)
     {

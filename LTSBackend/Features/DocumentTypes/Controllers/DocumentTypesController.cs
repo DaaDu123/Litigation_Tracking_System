@@ -24,12 +24,13 @@ namespace LTSBackend.Features.DocumentTypes.Controllers;
 public class DocumentTypesController(IMediator mediator) : ControllerBase
 {
     // =====================================================
-    // GET ALL DOCUMENT TYPES — Any authenticated user
-    // Returns the document types (Petition, Affidavit, Court Order,
-    // Evidence, Reply, Judgment, etc.) available to the caller's firm, for
-    // Document upload/edit dropdowns.
+    // GET ALL DOCUMENT TYPES — FirmAdmin and above ONLY
+    // Master-data management is exclusively a FirmAdmin task. Partner,
+    // AssociateLawyer, Moharrir, InternParalegal and SuperAdmin have NO
+    // access (not even read) to this master data admin surface.
     // =====================================================
     [HttpGet]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetAll([FromQuery] string? searchText, [FromQuery] bool activeOnly = true)
     {
         var types = await mediator.Send(new GetAllDocumentTypesQuery(searchText, activeOnly));
@@ -37,10 +38,11 @@ public class DocumentTypesController(IMediator mediator) : ControllerBase
     }
 
     // =====================================================
-    // GET DOCUMENT TYPE BY ID — Any authenticated user
+    // GET DOCUMENT TYPE BY ID — FirmAdmin and above ONLY
     // Fetches a single document type's details by its ID.
     // =====================================================
     [HttpGet("{id}")]
+    [Authorize(Roles = RoleNames.FirmAdminAndAbove)]
     public async Task<IActionResult> GetById(int id)
     {
         var type = await mediator.Send(new GetDocumentTypeByIdQuery(id));
