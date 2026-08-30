@@ -69,10 +69,12 @@
         </Authorized>
     </AuthorizeView>
 
-    @* Full Login History - only FirmAdmin holds ViewLoginHistory (see
-       AppDbContext.SeedRolePermissions). Everyone still gets "My Login
-       History" further down for their own account. *@
-    <AuthorizeView Roles="FirmAdmin">
+    @* Login History - FirmAdmin sees only their own firm (enforced by the
+       AppDbContext global query filter on LoginHistory); SuperAdmin sees
+       every firm's (same handler, unrestricted for SuperAdmin - see
+       GetAllLoginHistoryHandler). Everyone still gets "My Login History"
+       further down for their own account regardless of role. *@
+    <AuthorizeView Roles="FirmAdmin,SuperAdmin">
         <Authorized>
             <div class="nav-item">
                 <NavLink class="nav-link" href="login-history">

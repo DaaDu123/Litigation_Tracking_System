@@ -1,5 +1,5 @@
 @page "/login-history"
-@attribute [Authorize(Roles = "FirmAdmin")]
+@attribute [Authorize(Roles = "FirmAdmin,SuperAdmin")]
 @using LTSFrontend.Features.LoginHistory.Components
 @using LTSFrontend.Features.LoginHistory.DTOs
 @using LTSFrontend.Features.LoginHistory.Services
@@ -11,14 +11,9 @@
 <div class="lts-page-header">
     <div>
         <h1 class="lts-page-title">Login History</h1>
-        <p class="lts-page-subtitle">Sign-in activity across your firm.</p>
-    </div>
-    <div class="lts-page-header-actions">
-        <PermissionGate Roles="SuperAdmin">
-            <button class="lts-btn lts-btn-outline" @onclick="HandleCleanupAsync">
-                <i class="bi bi-trash3"></i> Clean Up Old Records
-            </button>
-        </PermissionGate>
+        <p class="lts-page-subtitle">
+            Sign-in activity across your firm. This is a permanent audit trail - records cannot be deleted.
+        </p>
     </div>
 </div>
 
@@ -46,7 +41,7 @@
     }
     else
     {
-        <LoginHistoryTable Rows="_rows" ShowUser="true" ShowDelete="_canDelete" OnDelete="HandleDeleteAsync" />
+        <LoginHistoryTable Rows="_rows" ShowUser="true" />
 
         <div style="padding: 0 1.1rem 1.1rem;">
             <Pagination CurrentPage="_filter.PageNumber" TotalItems="_totalRecords" PageSize="_filter.PageSize" PageChanged="OnPageChangedAsync" />
@@ -54,25 +49,16 @@
     }
 </div>
 
-<ConfirmDialog @ref="_confirmDialog" />
-
 @code {
     private LoginHistoryFilterDTO _filter = new();
     private List<LoginHistoryTable.LoginHistoryRow> _rows = new();
     private int _totalRecords;
     private bool _isLoading = true;
 
-    // Backend gates actual deletion via the separate "DeleteLoginHistory"
-    // permission (SRS note: intentionally not granted to FirmAdmin by
-    // default) - this only controls whether the button is shown.
-    private readonly bool _canDelete = true;
-
     private string _search = string.Empty;
     private string _status = string.Empty;
     private DateTime? _fromDate;
     private DateTime? _toDate;
-
-    private ConfirmDialog _confirmDialog = default!;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -123,53 +109,5 @@
     {
         _filter.PageNumber = page;
         await LoadAsync();
-    }
-
-    private async Task HandleDeleteAsync(int loginId)
-    {
-        var confirmed = await _confirmDialog.ShowAsync(
-            "Delete this login history record?", "This cannot be undone.", "Delete", "danger");
-
-        if (!confirmed) return;
-
-        try
-        {
-            await LoginHistoryService.DeleteAsync(loginId);
-            await LoadAsync();
-            Toast.Success("Record deleted", "The login history record has been removed.");
-        }
-        catch (ApiException ex)
-        {
-            Toast.Error("Couldn't delete record", ex.GetFullMessage());
-        }
-        catch (Exception)
-        {
-            Toast.Error("Couldn't delete record", "Please try again.");
-        }
-    }
-
-    private async Task HandleCleanupAsync()
-    {
-        var confirmed = await _confirmDialog.ShowAsync(
-            "Clean up old login history?",
-            "This will permanently delete logged-out records older than 90 days.",
-            "Clean Up", "danger");
-
-        if (!confirmed) return;
-
-        try
-        {
-            var deleted = await LoginHistoryService.CleanupAsync(90);
-            await LoadAsync();
-            Toast.Success("Cleanup complete", $"{deleted} old record(s) deleted.");
-        }
-        catch (ApiException ex)
-        {
-            Toast.Error("Couldn't clean up records", ex.GetFullMessage());
-        }
-        catch (Exception)
-        {
-            Toast.Error("Couldn't clean up records", "Please try again.");
-        }
     }
 }

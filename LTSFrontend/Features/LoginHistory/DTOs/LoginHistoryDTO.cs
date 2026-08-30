@@ -7,6 +7,7 @@ namespace LTSFrontend.Features.LoginHistory.DTOs
         public int UserID { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? FirmName { get; set; }
         public DateTime LoginTime { get; set; }
         public DateTime? LogoutTime { get; set; }
         public string? IPAddress { get; set; }

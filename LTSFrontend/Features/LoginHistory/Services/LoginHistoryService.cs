@@ -35,11 +35,5 @@ namespace LTSFrontend.Features.LoginHistory.Services
             var result = await _api.GetAsync<List<MyLoginHistoryDTO>>(ApiEndpoints.LoginHistory.My);
             return result ?? new List<MyLoginHistoryDTO>();
         }
-
-        public Task<bool> DeleteAsync(int id) =>
-            _api.DeleteAsync<bool>(ApiEndpoints.LoginHistory.ById(id));
-
-        public Task<int> CleanupAsync(int days = 90) =>
-            _api.DeleteAsync<int>(ApiEndpoints.LoginHistory.Cleanup(days));
     }
 }

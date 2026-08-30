@@ -29,7 +29,7 @@ public class GetAllLoginHistoryHandler(AppDbContext context) : IRequestHandler<G
     // =====================================================
     public async Task<PagedResult<LoginHistoryDTO>> Handle(GetAllLoginHistoryQuery request, CancellationToken cancellationToken)
     {
-        var query = context.LoginHistories.AsNoTracking().Include(x => x.User).AsQueryable();
+        var query = context.LoginHistories.AsNoTracking().Include(x => x.User).ThenInclude(u => u.Firm).AsQueryable();
 
         //----------------------------------------
         // Search
@@ -89,6 +89,7 @@ public class GetAllLoginHistoryHandler(AppDbContext context) : IRequestHandler<G
                 UserID = x.UserID,
                 FullName = x.User.FullName,
                 Email = x.User.Email,
+                FirmName = x.User.Firm != null ? x.User.Firm.FirmName : null,
                 LoginTime = x.LoginTime,
                 LogoutTime = x.LogoutTime,
                 IPAddress = x.IPAddress,

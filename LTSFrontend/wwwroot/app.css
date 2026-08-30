@@ -1457,7 +1457,7 @@ h1:focus {
     border: 1px solid var(--lts-border-color);
     border-radius: var(--lts-radius);
     box-shadow: var(--lts-shadow-sm);
-
+    
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;

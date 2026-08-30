@@ -26,7 +26,6 @@ public class PermissionService(AppDbContext _context, ILogger<PermissionService>
         nameof(PermissionEnum.ViewSystemAuditLogs),   // System-wide audit visibility (all firms)
         nameof(PermissionEnum.ViewAuditLogs),         // AuditLogsController policy name - unfiltered for SuperAdmin
         nameof(PermissionEnum.ViewLoginHistory),      // Login-attempt audit trail, all firms
-        nameof(PermissionEnum.DeleteLoginHistory),    // Retention cleanup of login history (audit housekeeping)
         nameof(PermissionEnum.ViewDashboard),         // SuperAdmin's own platform dashboard
         "ManageRoles",                                // Global RBAC config - see RolesController for why
     };

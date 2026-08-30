@@ -36,7 +36,7 @@ public static class WebHostExtensions
             {
                 "ViewUsers", "CreateUsers", "UpdateUsers", "DeleteUsers",
                 "ManageRoles", "ViewAuditLogs", "ViewDashboard",
-                "ViewLoginHistory", "DeleteLoginHistory",
+                "ViewLoginHistory",
                 "UploadDocuments", "ViewDocuments", "DownloadDocuments", "DeleteDocuments"
             };
 

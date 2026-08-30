@@ -7,7 +7,5 @@ namespace LTSFrontend.Features.LoginHistory.Services
     {
         Task<PagedResult<LoginHistoryDTO>> GetAllAsync(LoginHistoryFilterDTO filter);
         Task<List<MyLoginHistoryDTO>> GetMyHistoryAsync();
-        Task<bool> DeleteAsync(int id);
-        Task<int> CleanupAsync(int days = 90);
     }
 }

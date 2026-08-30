@@ -161,6 +161,6 @@
             ? _allPermissions
             : _allPermissions.Where(p => p.PermissionName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
-        private static bool RoleHasPermission(RoleDTO role, PermissionDTO permission) =>
+    private static bool RoleHasPermission(RoleDTO role, PermissionDTO permission) =>
         role.Permissions.Any(p => p.PermissionID == permission.PermissionID);
 }

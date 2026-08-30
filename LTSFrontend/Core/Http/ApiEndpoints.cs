@@ -178,8 +178,6 @@
             private const string Root = Base + "/loginhistory";
             public const string Base_ = Root;
             public const string My = Root + "/my";
-            public static string ById(int id) => $"{Root}/{id}";
-            public static string Cleanup(int days) => $"{Root}/cleanup?days={days}";
         }
 
         public static class Firms
