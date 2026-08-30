@@ -28,13 +28,6 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         DeleteFileInternal(relativePath, publicRoot, isPublic: true);
     }
 
-    // Saves a file outside wwwroot so it can never be served directly, e.g. case documents.
-    public Task<string> SaveSecureFileAsync(IFormFile file, string folderName)
-    {
-        string secureRoot = Path.Combine(_environment.ContentRootPath, "SecureStorage");
-        return SaveFileInternalAsync(file, folderName, secureRoot, isPublic: false);
-    }
-
     // Reads a secure file's bytes back after resolving/validating its path.
     public async Task<byte[]> ReadSecureFileAsync(string relativePath)
     {
@@ -47,19 +40,6 @@ public class FileService(IWebHostEnvironment _environment, IVirusScanService _vi
         }
 
         return await File.ReadAllBytesAsync(fullPath);
-    }
-
-    // Checks whether a secure file exists on disk without reading it.
-    public bool SecureFileExists(string relativePath)
-    {
-        try
-        {
-            return File.Exists(ResolveSecurePath(relativePath));
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     // Deletes a secure file, if present, and logs but swallows disk errors.

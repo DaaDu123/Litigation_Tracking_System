@@ -24,9 +24,6 @@ namespace LTSFrontend.Features.Masters.Services
             return result ?? new List<DocumentTypeDTO>();
         }
 
-        public Task<DocumentTypeDTO?> GetByIdAsync(int id) =>
-            _api.GetAsync<DocumentTypeDTO>(ApiEndpoints.Masters.DocumentTypes.ById(id));
-
         public Task<int> CreateAsync(DocumentTypeFormDTO form) =>
             _api.PostAsync<int>(ApiEndpoints.Masters.DocumentTypes.Base_, new
             {

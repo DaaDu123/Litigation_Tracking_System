@@ -43,7 +43,7 @@
                             <option value="">Select user...</option>
                             @foreach (var u in _users.Where(u => u.IsActive))
                             {
-                                <option value="@u.UserID">@u.FullName (@u.RoleName)</option>
+                                <option value="@u.UserID">@u.FullName (@LTSFrontend.Core.Enums.UserRoleExtensions.DisplayName(u.RoleName))</option>
                             }
                         </select>
                     }

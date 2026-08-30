@@ -24,9 +24,6 @@ namespace LTSFrontend.Features.Masters.Services
             return result ?? new List<CaseStatusDTO>();
         }
 
-        public Task<CaseStatusDTO?> GetByIdAsync(int id) =>
-            _api.GetAsync<CaseStatusDTO>(ApiEndpoints.Masters.CaseStatuses.ById(id));
-
         public Task<int> CreateAsync(CaseStatusFormDTO form) =>
             _api.PostAsync<int>(ApiEndpoints.Masters.CaseStatuses.Base_, new
             {

@@ -66,7 +66,7 @@ else
                     <div class="lts-detail-row"><dt>Email</dt><dd>@_user.Email</dd></div>
                     <div class="lts-detail-row"><dt>Phone</dt><dd>@(_user.Phone ?? "-")</dd></div>
                     <div class="lts-detail-row"><dt>Department</dt><dd>@(_user.Department ?? "-")</dd></div>
-                    <div class="lts-detail-row"><dt>Role</dt><dd>@(_user.RoleName ?? "-")</dd></div>
+                    <div class="lts-detail-row"><dt>Role</dt><dd>@(string.IsNullOrWhiteSpace(_user.RoleName) ? "-" : LTSFrontend.Core.Enums.UserRoleExtensions.DisplayName(_user.RoleName))</dd></div>
                     <div class="lts-detail-row"><dt>Status</dt><dd><StatusBadge IsActive="_user.IsActive" /></dd></div>
                 </dl>
             </div>

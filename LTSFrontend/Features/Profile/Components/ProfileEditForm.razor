@@ -42,7 +42,7 @@
         <div class="col-md-6">
             <div class="lts-form-group">
                 <label class="lts-form-label">Role</label>
-                <input type="text" class="lts-form-control" value="@(Profile?.RoleName ?? "-")" disabled />
+                <input type="text" class="lts-form-control" value="@(string.IsNullOrWhiteSpace(Profile?.RoleName) ? "-" : LTSFrontend.Core.Enums.UserRoleExtensions.DisplayName(Profile?.RoleName))" disabled />
             </div>
         </div>
     </div>

@@ -17,7 +17,7 @@
         {
             ((int)UserRole.SuperAdmin, "Super Admin"),
             ((int)UserRole.FirmAdmin, "Firm Admin"),
-            ((int)UserRole.Partner, "Partner"),
+            ((int)UserRole.Partner, "Partner / Senior Lawyer"),
             ((int)UserRole.AssociateLawyer, "Associate Lawyer"),
             ((int)UserRole.Moharrir, "Moharrir"),
             ((int)UserRole.InternParalegal, "Intern / Paralegal")
@@ -66,6 +66,31 @@
                 return AssignableBy((int)role);
 
             return Array.Empty<(int, string)>();
+        }
+
+        /// <summary>
+        /// Maps the raw, compact role name the backend stores/returns (e.g.
+        /// "AssociateLawyer", "InternParalegal", "FirmAdmin" - the exact
+        /// string used for [Authorize(Roles=...)] matching, never spaced)
+        /// to the friendly, spaced display name from the All list above
+        /// (e.g. "Associate Lawyer", "Intern / Paralegal", "Firm Admin").
+        /// Use this everywhere a role name from the API (UserDTO.RoleName,
+        /// Session.Role, etc.) is shown to the user - never bind the raw
+        /// value directly, or roles render un-spaced/without their full
+        /// name (e.g. "Partner" instead of "Partner / Senior Lawyer").
+        /// Falls back to the raw string unchanged if it doesn't match a
+        /// known role, so an unexpected value still renders instead of
+        /// disappearing.
+        /// </summary>
+        public static string DisplayName(string? rawRoleName)
+        {
+            if (string.IsNullOrWhiteSpace(rawRoleName))
+                return rawRoleName ?? string.Empty;
+
+            if (Enum.TryParse<UserRole>(rawRoleName, out var role))
+                return NameOf((int)role);
+
+            return rawRoleName;
         }
     }
 }

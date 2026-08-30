@@ -19,9 +19,6 @@ namespace LTSFrontend.Features.Masters.Services
             return result ?? new List<DepartmentDTO>();
         }
 
-        public Task<DepartmentDTO?> GetByIdAsync(int id) =>
-            _api.GetAsync<DepartmentDTO>(ApiEndpoints.Masters.Departments.ById(id));
-
         public Task<int> CreateAsync(DepartmentFormDTO form) =>
             _api.PostAsync<int>(ApiEndpoints.Masters.Departments.Base_, new
             {

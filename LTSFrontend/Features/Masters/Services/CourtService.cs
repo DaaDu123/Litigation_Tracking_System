@@ -24,9 +24,6 @@ namespace LTSFrontend.Features.Masters.Services
             return result ?? new List<CourtDTO>();
         }
 
-        public Task<CourtDTO?> GetByIdAsync(int id) =>
-            _api.GetAsync<CourtDTO>(ApiEndpoints.Masters.Courts.ById(id));
-
         public Task<int> CreateAsync(CourtFormDTO form) =>
             _api.PostAsync<int>(ApiEndpoints.Masters.Courts.Base_, new
             {

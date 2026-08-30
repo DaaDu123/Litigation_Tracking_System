@@ -142,7 +142,7 @@
                     <option value="">Unassigned</option>
                     @foreach (var user in _legalOfficers)
                     {
-                        <option value="@user.UserID">@user.FullName (@user.RoleName)</option>
+                        <option value="@user.UserID">@user.FullName (@LTSFrontend.Core.Enums.UserRoleExtensions.DisplayName(user.RoleName))</option>
                     }
                 </InputSelect>
             </div>

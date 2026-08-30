@@ -66,7 +66,7 @@ else
                             <td>@u.FullName</td>
                             <td>@u.Email</td>
                             <td>@(u.FirmName ?? "-")</td>
-                            <td>@(u.RoleName ?? "-")</td>
+                            <td>@(string.IsNullOrWhiteSpace(u.RoleName) ? "-" : LTSFrontend.Core.Enums.UserRoleExtensions.DisplayName(u.RoleName))</td>
                             <td>
                                 @if (u.IsReleasedForReuse)
                                 {

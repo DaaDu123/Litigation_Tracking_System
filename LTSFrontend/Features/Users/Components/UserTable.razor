@@ -28,7 +28,7 @@
             <a href="/users/details/@user.UserID">@user.FullName</a>
         </td>
         <td class="lts-cell-muted">@user.Email</td>
-        <td>@(user.RoleName ?? "-")</td>
+        <td>@(string.IsNullOrWhiteSpace(user.RoleName) ? "-" : LTSFrontend.Core.Enums.UserRoleExtensions.DisplayName(user.RoleName))</td>
         <td><StatusBadge IsActive="user.IsActive" /></td>
         @if (CanManage)
         {

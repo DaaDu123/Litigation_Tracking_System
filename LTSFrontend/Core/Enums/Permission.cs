@@ -101,7 +101,7 @@ namespace LTSFrontend.Core.Enums
             {
                 >= 100 and < 200 => "Super Admin",
                 >= 200 and < 300 => "Firm Admin",
-                >= 300 and < 400 => "Partner",
+                >= 300 and < 400 => "Partner / Senior Lawyer",
                 >= 400 and < 500 => "Associate Lawyer",
                 >= 500 and < 600 => "Moharrir",
                 >= 600 and < 700 => "Intern / Paralegal",
