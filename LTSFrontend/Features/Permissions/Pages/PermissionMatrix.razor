@@ -161,9 +161,6 @@
             ? _allPermissions
             : _allPermissions.Where(p => p.PermissionName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    // SuperAdmin implicitly holds every permission (mirrors backend PermissionService.HasPermissionAsync),
-    // so it always shows as granted here even though it has no explicit RolePermission rows.
-    private static bool RoleHasPermission(RoleDTO role, PermissionDTO permission) =>
-        role.RoleName.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase)
-        || role.Permissions.Any(p => p.PermissionID == permission.PermissionID);
+        private static bool RoleHasPermission(RoleDTO role, PermissionDTO permission) =>
+        role.Permissions.Any(p => p.PermissionID == permission.PermissionID);
 }
