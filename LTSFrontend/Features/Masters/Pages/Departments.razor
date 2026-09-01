@@ -158,7 +158,7 @@
                         @foreach (var department in PagedDepartments)
                         {
                             <tr @key="department.DepartmentID">
-                                <td class="lts-cell-primary">
+                                <td class="lts-cell-primary" data-label="Department Name">
                                     @department.DepartmentName
                                     @if (department.IsGlobal)
                                     {
@@ -167,10 +167,10 @@
                                         </span>
                                     }
                                 </td>
-                                <td class="lts-cell-muted">@(department.DepartmentCode ?? "—")</td>
-                                <td class="lts-cell-muted">@(string.IsNullOrWhiteSpace(department.Description) ? "—" : department.Description)</td>
-                                <td><StatusBadge IsActive="department.IsActive" /></td>
-                                <td>
+                                <td class="lts-cell-muted" data-label="Code">@(department.DepartmentCode ?? "—")</td>
+                                <td class="lts-cell-muted" data-label="Description">@(string.IsNullOrWhiteSpace(department.Description) ? "—" : department.Description)</td>
+                                <td data-label="Status"><StatusBadge IsActive="department.IsActive" /></td>
+                                <td data-label="Actions">
                                     <div class="lts-row-actions">
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick="() => OpenDetails(department)">
                                             <i class="bi bi-eye"></i>

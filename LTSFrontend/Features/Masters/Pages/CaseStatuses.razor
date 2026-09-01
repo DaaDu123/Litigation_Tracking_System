@@ -172,8 +172,8 @@
                         @foreach (var status in PagedStatuses)
                         {
                             <tr @key="status.StatusID">
-                                <td class="lts-cell-muted">@status.SequenceNo</td>
-                                <td class="lts-cell-primary">
+                                <td class="lts-cell-muted" data-label="#">@status.SequenceNo</td>
+                                <td class="lts-cell-primary" data-label="Status Name">
                                     @status.StatusName
                                     @if (status.IsGlobal)
                                     {
@@ -182,13 +182,13 @@
                                         </span>
                                     }
                                 </td>
-                                <td>
+                                <td data-label="Color">
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="lts-color-chip" style="background:@status.ColorCode;"></span>
                                         <span class="lts-cell-muted">@status.ColorCode</span>
                                     </div>
                                 </td>
-                                <td>
+                                <td data-label="Type">
                                     @if (status.IsClosed)
                                     {
                                         <span class="lts-scope-pill"><i class="bi bi-lock"></i>Closed</span>
@@ -198,8 +198,8 @@
                                         <span class="lts-scope-pill"><i class="bi bi-unlock"></i>Open</span>
                                     }
                                 </td>
-                                <td><StatusBadge IsActive="status.IsActive" /></td>
-                                <td>
+                                <td data-label="Status"><StatusBadge IsActive="status.IsActive" /></td>
+                                <td data-label="Actions">
                                     <div class="lts-row-actions">
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick="() => OpenDetails(status)">
                                             <i class="bi bi-eye"></i>

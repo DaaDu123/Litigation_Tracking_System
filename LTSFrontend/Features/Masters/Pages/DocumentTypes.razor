@@ -154,7 +154,7 @@
                         @foreach (var type in PagedTypes)
                         {
                             <tr @key="type.DocumentTypeID">
-                                <td class="lts-cell-primary">
+                                <td class="lts-cell-primary" data-label="Type Name">
                                     @type.TypeName
                                     @if (type.IsGlobal)
                                     {
@@ -163,9 +163,9 @@
                                         </span>
                                     }
                                 </td>
-                                <td class="lts-cell-muted">@(string.IsNullOrWhiteSpace(type.Description) ? "—" : type.Description)</td>
-                                <td><StatusBadge IsActive="type.IsActive" /></td>
-                                <td>
+                                <td class="lts-cell-muted" data-label="Description">@(string.IsNullOrWhiteSpace(type.Description) ? "—" : type.Description)</td>
+                                <td data-label="Status"><StatusBadge IsActive="type.IsActive" /></td>
+                                <td data-label="Actions">
                                     <div class="lts-row-actions">
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick="() => OpenDetails(type)">
                                             <i class="bi bi-eye"></i>

@@ -209,7 +209,7 @@
                         @foreach (var court in PagedCourts)
                         {
                             <tr @key="court.CourtID">
-                                <td class="lts-cell-primary">
+                                <td class="lts-cell-primary" data-label="Court Name">
                                     @court.CourtName
                                     @if (court.IsGlobal)
                                     {
@@ -218,11 +218,11 @@
                                         </span>
                                     }
                                 </td>
-                                <td class="lts-cell-muted">@(court.CourtType ?? "—")</td>
-                                <td class="lts-cell-muted">@(court.Jurisdiction ?? "—")</td>
-                                <td><StatusBadge IsActive="court.IsActive" /></td>
-                                <td class="lts-cell-muted">@court.CreatedDate.ToLocalTime().ToString("dd MMM yyyy")</td>
-                                <td>
+                                <td class="lts-cell-muted" data-label="Type">@(court.CourtType ?? "—")</td>
+                                <td class="lts-cell-muted" data-label="Jurisdiction">@(court.Jurisdiction ?? "—")</td>
+                                <td data-label="Status"><StatusBadge IsActive="court.IsActive" /></td>
+                                <td class="lts-cell-muted" data-label="Created">@court.CreatedDate.ToLocalTime().ToString("dd MMM yyyy")</td>
+                                <td data-label="Actions">
                                     <div class="lts-row-actions">
                                         <button class="lts-btn lts-btn-ghost lts-btn-sm lts-btn-icon-only" title="View" @onclick="() => OpenDetails(court)">
                                             <i class="bi bi-eye"></i>

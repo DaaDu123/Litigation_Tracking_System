@@ -1522,6 +1522,64 @@ h1:focus {
             background: var(--lts-surface-2);
         }
 
+/* ---------- Responsive table -> stacked cards ----------
+   Applies to every ".lts-table" list in the app (Master Data, Users,
+   Cases, Firms, Hearings, Documents, Audit Logs, etc.) so small screens
+   never need to scroll the table sideways to read a row. Each <td> gets
+   its column header mirrored onto a "data-label" attribute automatically
+   by wwwroot/js/responsiveTable.js - no per-page changes needed.
+   Excludes ".lts-matrix-table" (the Permission Matrix): that's a genuine
+   grid where a sticky first column + horizontal scroll is the right
+   pattern, not stacked label/value rows. */
+@media (max-width: 640px) {
+    .lts-table:not(.lts-matrix-table) thead {
+        display: none;
+    }
+
+    .lts-table:not(.lts-matrix-table),
+    .lts-table:not(.lts-matrix-table) tbody,
+    .lts-table:not(.lts-matrix-table) tr,
+    .lts-table:not(.lts-matrix-table) td {
+        display: block;
+        width: 100%;
+    }
+
+    .lts-table:not(.lts-matrix-table) tbody tr {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--lts-border-color);
+    }
+
+    .lts-table:not(.lts-matrix-table) tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .lts-table:not(.lts-matrix-table) tbody td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        text-align: right;
+        padding: 0.4rem 0;
+        border-bottom: none;
+    }
+
+    .lts-table:not(.lts-matrix-table) tbody td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--lts-text-muted);
+        text-align: left;
+    }
+
+    .lts-table:not(.lts-matrix-table) tbody td .lts-row-actions {
+        justify-content: flex-end;
+        flex: 1;
+    }
+}
+
 .lts-cell-primary {
     font-weight: 600;
     color: var(--lts-text);
@@ -2356,6 +2414,39 @@ textarea.lts-form-control {
         flex: 1;
     }
 
+    /* Master Data "View Details" modals (Courts, Departments, Case
+       Categories, Case Statuses, Case Stages, Document Types) all use
+       this shared label/value row. The fixed 130px label column left
+       almost no room for the value on small screens - stack instead. */
+    .lts-detail-row {
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .lts-detail-row dt {
+        flex: none;
+    }
+
+    /* Modal header title block could overflow a narrow modal for a long
+       name (e.g. a long court/department name) since flex items don't
+       shrink below their content size by default. */
+    .lts-modal-header > div:not(.lts-modal-icon) {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .lts-modal-title,
+    .lts-modal-subtitle {
+        overflow-wrap: break-word;
+    }
+
+    /* Entity card grid-view header (name + status pill) - same overflow
+       guard for long master-data record names on small screens. */
+    .lts-entity-card-title {
+        min-width: 0;
+        overflow-wrap: break-word;
+    }
+
     .lts-pagination {
         flex-direction: column;
         align-items: stretch;
@@ -2428,6 +2519,7 @@ textarea.lts-form-control {
     .lts-detail-row dd {
         margin: 0;
         flex: 1;
+        min-width: 0;
         font-size: 0.88rem;
         color: var(--lts-text);
         word-break: break-word;
@@ -2669,12 +2761,33 @@ thead .lts-matrix-sticky-col {
         flex-wrap: wrap;
     }
 
+    /* Split the actions group so the theme toggle can sit up top next
+       to the menu button, while Login drops down below the nav links
+       instead of sitting in the top row. */
+    .public-navbar-actions {
+        display: contents;
+    }
+
+    .public-navbar-theme-btn {
+        order: 1;
+    }
+
+    .public-navbar-lang {
+        display: none;
+    }
+
+    .public-navbar-toggle {
+        order: 2;
+        display: inline-flex;
+    }
+
     .public-navbar-links {
         display: none;
         width: 100%;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.9rem;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem 1.4rem;
         order: 3;
         padding-top: 0.85rem;
         margin-top: 0.6rem;
@@ -2685,8 +2798,11 @@ thead .lts-matrix-sticky-col {
         display: flex;
     }
 
-    .public-navbar-toggle {
-        display: inline-flex;
+    .public-navbar-login-btn {
+        order: 4;
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.75rem;
     }
 }
 
