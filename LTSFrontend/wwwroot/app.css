@@ -3081,7 +3081,7 @@ thead .lts-matrix-sticky-col {
         radial-gradient(900px 380px at 85% -10%, rgba(27, 79, 214, 0.08), transparent 60%),
         linear-gradient(160deg, var(--lts-navy) 0%, var(--lts-navy-dark) 100%);
     color: #fff;
-    padding: 4rem 3rem;
+    padding: 1rem 3rem;
     text-align: center;
 }
 

@@ -15,7 +15,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
     // RATE LIMITING / ACCOUNT LOCKOUT (configurable via AccountLockout in
     // appsettings.json; defaults below apply only if config is missing).
     private int MaxFailedAttempts => _configuration.GetValue("AccountLockout:MaxFailedAttempts", 5);
-    private int LockoutDurationHours => _configuration.GetValue("AccountLockout:LockoutDurationHours", 12);
+    private int LockoutDurationMinutes => _configuration.GetValue("AccountLockout:LockoutDurationMinutes", 10);
 
     private static readonly string DummyPasswordHash = BCrypt.Net.BCrypt.HashPassword("dummy-password-for-timing-normalization");
 
@@ -71,11 +71,11 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
             user.FailedLoginAttempts += 1;
             if (user.FailedLoginAttempts >= MaxFailedAttempts)
             {
-                user.LockoutEndUtc = DateTime.UtcNow.AddHours(LockoutDurationHours);
+                user.LockoutEndUtc = DateTime.UtcNow.AddMinutes(LockoutDurationMinutes);
                 user.FailedLoginAttempts = 0; // next window starts clean once LockoutEndUtc passes
-                _logger.LogWarning("User {UserId} locked out for {Hours}h after {Count} failed attempts", user.UserID, LockoutDurationHours, MaxFailedAttempts);
+                _logger.LogWarning("User {UserId} locked out for {Minutes} minute(s) after {Count} failed attempts", user.UserID, LockoutDurationMinutes, MaxFailedAttempts);
                 await _context.SaveChangesAsync(cancellationToken);
-                throw new UnauthorizedException($"Too many failed login attempts. Please try again in {LockoutDurationHours} hours.");
+                throw new UnauthorizedException($"Too many failed login attempts. Please try again in {LockoutDurationMinutes} minute{(LockoutDurationMinutes == 1 ? "" : "s")}.");
             }
             await _context.SaveChangesAsync(cancellationToken);
             _logger.LogWarning("Login failed: Invalid password for user: {UserId}", user.UserID);
