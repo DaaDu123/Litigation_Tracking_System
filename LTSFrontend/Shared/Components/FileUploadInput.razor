@@ -55,7 +55,7 @@
 
         if (file.Size > MaxSizeBytes)
         {
-            _errorMessage = $"File is too large. Maximum size is {MaxSizeBytes / (1024 * 1024)} MB.";
+            _errorMessage = $"File size is too large. Please reduce the image size to {MaxSizeBytes / (1024 * 1024)} MB or less.";
             return;
         }
 

@@ -4,7 +4,7 @@ using LTSBackend.Comman.Security;
 namespace LTSBackend.Features.Documents.Commands.UploadDocument;
 
 // Requires a valid CaseID/DocumentTypeID, a non-empty document name, and a
-// file that is present, non-empty, under 50MB, has an allowed extension,
+// file that is present, non-empty, under 15MB, has an allowed extension,
 // AND whose actual byte signature matches that extension (blocks a
 // renamed/mislabeled file, e.g. a .exe saved as .pdf).
 public class UploadDocumentValidator : AbstractValidator<UploadDocumentCommand>
@@ -31,8 +31,8 @@ public class UploadDocumentValidator : AbstractValidator<UploadDocumentCommand>
             .WithMessage("File is required")
             .Must(f => f?.Length > 0)
             .WithMessage("File cannot be empty")
-            .Must(f => f?.Length <= 50 * 1024 * 1024)
-            .WithMessage("File size cannot exceed 50MB")
+            .Must(f => f?.Length <= 15 * 1024 * 1024)
+            .WithMessage("File size is too large. Please reduce the document size to 15MB or less.")
             .Must(IsValidFileType)
             .WithMessage("Invalid file type. Allowed types: PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG, TXT")
             .Must(HasValidContentSignature)

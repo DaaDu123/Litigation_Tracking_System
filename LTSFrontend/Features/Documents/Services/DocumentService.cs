@@ -7,8 +7,8 @@ namespace LTSFrontend.Features.Documents.Services
 {
     public class DocumentService : IDocumentService
     {
-        // Mirrors the 50MB limit enforced by DocumentsController.UploadDocument.
-        private const long MaxFileSizeBytes = 50 * 1024 * 1024;
+        // Mirrors the 15MB limit enforced by DocumentsController.UploadDocument.
+        private const long MaxFileSizeBytes = 15 * 1024 * 1024;
 
         private readonly ApiClient _api;
         private readonly IJSRuntime _js;
@@ -34,7 +34,7 @@ namespace LTSFrontend.Features.Documents.Services
                 throw new ApiException("Please choose a file to upload.");
 
             if (request.File.Size > MaxFileSizeBytes)
-                throw new ApiException("File size cannot exceed 50MB.");
+                throw new ApiException("File size is too large. Please reduce the document size to 15MB or less.");
 
             using var form = new MultipartFormDataContent();
             form.Add(new StringContent(request.CaseID.ToString()), "CaseID");

@@ -23,7 +23,7 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
 {
     // =====================================================
     // UPLOAD DOCUMENT — CanViewDocuments roles, InternParalegal, FirmAdmin and above
-    // Uploads a file (max 50MB) against a case. Restricted-mode Moharrir
+    // Uploads a file (max 15MB) against a case. Restricted-mode Moharrir
     // "blind upload" (write-only, View/Download disabled after success)
     // and Intern draft-only rules are enforced downstream in the handler,
     // not here — this endpoint just validates the file is present/sized
@@ -46,9 +46,9 @@ public class DocumentsController(IMediator _mediator, ILogger<DocumentsControlle
             return BadRequest(ApiResponse<bool>.FailureResponse("File is required"));
         }
 
-        if (request.File.Length > 50 * 1024 * 1024)
+        if (request.File.Length > 15 * 1024 * 1024)
         {
-            return BadRequest(ApiResponse<bool>.FailureResponse("File size cannot exceed 50MB"));
+            return BadRequest(ApiResponse<bool>.FailureResponse("File size is too large. Please reduce the document size to 15MB or less."));
         }
 
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
