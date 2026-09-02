@@ -25,12 +25,20 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
     {
         _logger.LogInformation("Starting registration for email: {Email}", request.Email);
 
+        // Trim leading/trailing whitespace on all free-text fields so an
+        // accidental leading/trailing space typed by the user is never
+        // persisted (e.g. " John " -> "John", " user@mail.com " -> "user@mail.com").
+        var fullName = request.FullName?.Trim() ?? string.Empty;
+        var email = request.Email?.Trim() ?? string.Empty;
+        var phone = string.IsNullOrWhiteSpace(request.Phone) ? request.Phone : request.Phone.Trim();
+        var department = string.IsNullOrWhiteSpace(request.Department) ? request.Department : request.Department.Trim();
+
         // 1. Check if email already exists
-        bool emailExists = await _context.Users.AsNoTracking().AnyAsync(x => x.Email == request.Email, cancellationToken);
+        bool emailExists = await _context.Users.AsNoTracking().AnyAsync(x => x.Email == email, cancellationToken);
 
         if (emailExists)
         {
-            _logger.LogWarning("Registration failed: Email already exists: {Email}", request.Email);
+            _logger.LogWarning("Registration failed: Email already exists: {Email}", email);
             throw new ValidationException(new List<string> { "Email already exists." });
         }
 
@@ -64,11 +72,11 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         // 3. Create user account
         var user = new User
         {
-            FullName = request.FullName,
-            Email = request.Email,
+            FullName = fullName,
+            Email = email,
             PasswordHash = _passwordService.HashPassword(request.Password),
-            Phone = request.Phone,
-            Department = request.Department,
+            Phone = phone,
+            Department = department,
             RoleID = defaultRole.RoleID,
             FirmID = firm.FirmID,
             IsActive = false,  // Inactive until email verified
@@ -83,23 +91,23 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         _logger.LogInformation("User created successfully with ID: {UserId}", user.UserID);
 
         // 4. Clean up old unused Registration OTPs
-        var oldOtps = await _context.UserOtps.Where(x => x.Email == request.Email && !x.IsUsed && x.Purpose == OtpPurpose.Registration).ToListAsync(cancellationToken);
+        var oldOtps = await _context.UserOtps.Where(x => x.Email == email && !x.IsUsed && x.Purpose == OtpPurpose.Registration).ToListAsync(cancellationToken);
 
         if (oldOtps.Count > 0)
         {
             _context.UserOtps.RemoveRange(oldOtps);
             await _context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Removed {Count} old OTPs for {Email}", oldOtps.Count, request.Email);
+            _logger.LogInformation("Removed {Count} old OTPs for {Email}", oldOtps.Count, email);
         }
 
         // 5. Generate 6-digit OTP
         string otpCode = GenerateSecureOtp();
-        _logger.LogInformation("OTP generated for {Email}", request.Email);
+        _logger.LogInformation("OTP generated for {Email}", email);
 
         // 6. Save OTP with expiry (Purpose = Registration)
         var userOtp = new UserOtp
         {
-            Email = request.Email,
+            Email = email,
             OtpCode = otpCode,
             Purpose = OtpPurpose.Registration,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
@@ -121,13 +129,13 @@ public class RegisterHandler(AppDbContext _context, IPasswordService _passwordSe
         // 8. Send OTP email
         try
         {
-            _logger.LogInformation("Sending OTP email to: {Email}", request.Email);
-            await _emailService.SendOtpEmailAsync(request.Email, request.FullName, otpCode);
-            _logger.LogInformation("OTP email sent successfully to: {Email}", request.Email);
+            _logger.LogInformation("Sending OTP email to: {Email}", email);
+            await _emailService.SendOtpEmailAsync(email, fullName, otpCode);
+            _logger.LogInformation("OTP email sent successfully to: {Email}", email);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send OTP email to: {Email}", request.Email);
+            _logger.LogError(ex, "Failed to send OTP email to: {Email}", email);
             // Don't throw — user can use ResendOtp endpoint if email fails
         }
 

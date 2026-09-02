@@ -79,11 +79,12 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
         }
 
         // 3. Check if new email is unique
-        bool emailExists = await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == request.Email && x.UserID != request.UserID && !x.IsDeleted, cancellationToken);
+        var trimmedEmail = request.Email?.Trim() ?? string.Empty;
+        bool emailExists = await _context.Users.IgnoreQueryFilters().AnyAsync(x => x.Email == trimmedEmail && x.UserID != request.UserID && !x.IsDeleted, cancellationToken);
 
         if (emailExists)
         {
-            _logger.LogWarning("Update failed: Email already in use: {Email}", request.Email);
+            _logger.LogWarning("Update failed: Email already in use: {Email}", trimmedEmail);
             throw new ValidationException(["Email is already in use by another user."]);
         }
 
@@ -104,10 +105,10 @@ public class UpdateUserCommandHandler(AppDbContext _context, IFileService _fileS
 
         // 5. Update user properties
         bool roleOrStatusChanged = user.RoleID != request.RoleID || user.IsActive != request.IsActive;
-        user.FullName = request.FullName;
-        user.Email = request.Email;
-        user.Phone = request.Phone;
-        user.Department = request.Department;
+        user.FullName = request.FullName?.Trim() ?? string.Empty;
+        user.Email = request.Email?.Trim() ?? string.Empty;
+        user.Phone = string.IsNullOrWhiteSpace(request.Phone) ? request.Phone : request.Phone.Trim();
+        user.Department = string.IsNullOrWhiteSpace(request.Department) ? request.Department : request.Department.Trim();
         user.RoleID = request.RoleID;
         user.IsActive = request.IsActive;
         user.UpdatedAt = DateTime.UtcNow;

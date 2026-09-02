@@ -30,17 +30,18 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
     // =====================================================
     public async Task<LoginResponseDTO> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Login attempt for email: {Email}", request.Email);
+        var email = request.Email?.Trim() ?? string.Empty;
+        _logger.LogInformation("Login attempt for email: {Email}", email);
 
         // 1. Find user by email with role
-        var user = await _context.Users.Include(x => x.Role).Include(x => x.Firm).FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+        var user = await _context.Users.Include(x => x.Role).Include(x => x.Firm).FirstOrDefaultAsync(x => x.Email == email, cancellationToken);
 
         if (user == null)
         {
             // Run a dummy verify so this branch costs about the same as the
             // "wrong password" branch below (see DummyPasswordHash comment).
             _passwordService.VerifyPassword(request.Password, DummyPasswordHash);
-            _logger.LogWarning("Login failed: User not found for email: {Email}", request.Email);
+            _logger.LogWarning("Login failed: User not found for email: {Email}", email);
             throw new UnauthorizedException("Invalid credentials.");
         }
 

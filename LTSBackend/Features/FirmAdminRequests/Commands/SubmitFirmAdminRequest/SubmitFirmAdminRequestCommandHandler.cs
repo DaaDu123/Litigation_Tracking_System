@@ -29,6 +29,12 @@ public class SubmitFirmAdminRequestCommandHandler(AppDbContext _context,IPasswor
     {
         var firmCode = request.FirmCode.Trim().ToUpperInvariant();
         var adminEmail = request.AdminEmail.Trim();
+        var firmName = request.FirmName?.Trim() ?? string.Empty;
+        var address = string.IsNullOrWhiteSpace(request.Address) ? request.Address : request.Address.Trim();
+        var contactEmail = string.IsNullOrWhiteSpace(request.ContactEmail) ? request.ContactEmail : request.ContactEmail.Trim();
+        var contactPhone = string.IsNullOrWhiteSpace(request.ContactPhone) ? request.ContactPhone : request.ContactPhone.Trim();
+        var adminFullName = request.AdminFullName?.Trim() ?? string.Empty;
+        var adminPhone = string.IsNullOrWhiteSpace(request.AdminPhone) ? request.AdminPhone : request.AdminPhone.Trim();
 
         // 1. Firm code must not already belong to a live firm, and must not
         // already be tied to another still-Pending request.
@@ -59,15 +65,15 @@ public class SubmitFirmAdminRequestCommandHandler(AppDbContext _context,IPasswor
         // onto the new User row.
         var firmAdminRequest = new FirmAdminRequest
         {
-            FirmName = request.FirmName,
+            FirmName = firmName,
             FirmCode = firmCode,
-            Address = request.Address,
-            ContactEmail = request.ContactEmail,
-            ContactPhone = request.ContactPhone,
-            AdminFullName = request.AdminFullName,
+            Address = address,
+            ContactEmail = contactEmail,
+            ContactPhone = contactPhone,
+            AdminFullName = adminFullName,
             AdminEmail = adminEmail,
             AdminPasswordHash = _passwordService.HashPassword(request.AdminPassword),
-            AdminPhone = request.AdminPhone,
+            AdminPhone = adminPhone,
             Status = "Pending",
             RequestedAt = DateTime.UtcNow
         };

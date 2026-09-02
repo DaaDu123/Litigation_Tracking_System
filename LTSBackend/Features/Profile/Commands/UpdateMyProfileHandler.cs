@@ -46,9 +46,9 @@ public class UpdateMyProfileHandler(AppDbContext _context, IFileService _fileSer
         }
 
         // 3. Update user properties
-        user.FullName = request.FullName;
-        user.Phone = request.Phone;
-        user.Department = request.Department;
+        user.FullName = request.FullName?.Trim() ?? string.Empty;
+        user.Phone = string.IsNullOrWhiteSpace(request.Phone) ? request.Phone : request.Phone.Trim();
+        user.Department = string.IsNullOrWhiteSpace(request.Department) ? request.Department : request.Department.Trim();
         user.UpdatedAt = DateTime.UtcNow;
 
         // 4. Save changes

@@ -32,6 +32,14 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
     {
         _logger.LogInformation("Create user request for email: {Email}", request.Email);
 
+        // Trim leading/trailing whitespace on all free-text fields so an
+        // accidental leading/trailing space typed by the user is never
+        // persisted.
+        var fullName = request.FullName?.Trim() ?? string.Empty;
+        var email = request.Email?.Trim() ?? string.Empty;
+        var phone = string.IsNullOrWhiteSpace(request.Phone) ? request.Phone : request.Phone.Trim();
+        var department = string.IsNullOrWhiteSpace(request.Department) ? request.Department : request.Department.Trim();
+
         // 0. Load the acting user first (needed both for the
         // role-hierarchy checks below AND for the email-reuse
         // ownership check in step 1 - we need to know the acting
@@ -57,7 +65,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
 
         // 1. Check whether the email already exists, and whether a
         // soft-deleted row for it can be reused.
-        var existingUser = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == request.Email, cancellationToken);
+        var existingUser = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == email, cancellationToken);
 
         bool isReuse = false;
 
@@ -67,8 +75,8 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             {
                 // Live user already owns this email - own firm or another
                 // firm, doesn't matter, nobody else can take it.
-                _logger.LogWarning("User creation failed: Email already exists and is active: {Email}", request.Email);
-                throw new ValidationException([$"Email '{request.Email}' already exists and is currently assigned to another user."]);
+                _logger.LogWarning("User creation failed: Email already exists and is active: {Email}", email);
+                throw new ValidationException([$"Email '{email}' already exists and is currently assigned to another user."]);
             }
 
             // existingUser.IsDeleted == true: a soft-deleted record for
@@ -79,8 +87,8 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
 
             if (!sameFirm && !existingUser.IsReleasedForReuse)
             {
-                _logger.LogWarning("User creation failed: Email {Email} is a deleted record owned by firm {OwnerFirmId}, not released, requested by firm {RequestingFirmId}",request.Email, existingUser.FirmID, actingUser.FirmID);
-                throw new ValidationException([$"Email '{request.Email}' already exists and is reserved by another firm's deleted user record. " + "It must be released for reassignment before it can be reused here."]);
+                _logger.LogWarning("User creation failed: Email {Email} is a deleted record owned by firm {OwnerFirmId}, not released, requested by firm {RequestingFirmId}",email, existingUser.FirmID, actingUser.FirmID);
+                throw new ValidationException([$"Email '{email}' already exists and is reserved by another firm's deleted user record. " + "It must be released for reassignment before it can be reused here."]);
             }
 
             // Either the same firm reclaiming its own deleted user, or a
@@ -123,9 +131,9 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         _logger.LogInformation("Role fetched: {RoleName}", role?.RoleName);
 
         // 4. Validate Department if one was provided
-        if (!string.IsNullOrEmpty(request.Department))
+        if (!string.IsNullOrEmpty(department))
         {
-            bool deptExists = await _context.Departments.AsNoTracking().AnyAsync(x => x.DepartmentName == request.Department, cancellationToken);
+            bool deptExists = await _context.Departments.AsNoTracking().AnyAsync(x => x.DepartmentName == department, cancellationToken);
 
             if (!deptExists)
             {
@@ -143,7 +151,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             try
             {
                 profileImagePath = await _fileService.SaveFileAsync(request.ProfileImage, "profile_pictures");
-                _logger.LogInformation("Profile image uploaded for: {Email}", request.Email);
+                _logger.LogInformation("Profile image uploaded for: {Email}", email);
             }
             catch (ValidationException)
             {
@@ -151,7 +159,7 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to upload profile image for: {Email}", request.Email);
+                _logger.LogError(ex, "Failed to upload profile image for: {Email}", email);
             }
         }
 
@@ -170,14 +178,14 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             // since the earlier lookup was a fresh query and the
             // row is invisible to normal tracked queries while
             // IsDeleted == true.
-            var userToRestore = await _context.Users.IgnoreQueryFilters().FirstAsync(x => x.Email == request.Email, cancellationToken);
+            var userToRestore = await _context.Users.IgnoreQueryFilters().FirstAsync(x => x.Email == email, cancellationToken);
 
-            _logger.LogInformation("Reusing soft-deleted user record {UserID} (previously firm {PreviousFirmId}) for email {Email}, new firm {NewFirmId}",userToRestore.UserID, userToRestore.FirmID, request.Email, actingUser.FirmID);
+            _logger.LogInformation("Reusing soft-deleted user record {UserID} (previously firm {PreviousFirmId}) for email {Email}, new firm {NewFirmId}",userToRestore.UserID, userToRestore.FirmID, email, actingUser.FirmID);
 
-            userToRestore.FullName = request.FullName;
+            userToRestore.FullName = fullName;
             userToRestore.PasswordHash = passwordHash;
-            userToRestore.Phone = request.Phone;
-            userToRestore.Department = request.Department;
+            userToRestore.Phone = phone;
+            userToRestore.Department = department;
             userToRestore.Designation = null;
             userToRestore.ProfileImage = profileImagePath;
             userToRestore.RoleID = roleId;
@@ -204,11 +212,11 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
             newUser = new User
             {
                 EmployeeNo = employeeNo,
-                FullName = request.FullName,
-                Email = request.Email,
+                FullName = fullName,
+                Email = email,
                 PasswordHash = passwordHash,
-                Phone = request.Phone,
-                Department = request.Department,
+                Phone = phone,
+                Department = department,
                 Designation = null,
                 ProfileImage = profileImagePath,
                 RoleID = roleId,
@@ -238,8 +246,8 @@ public class CreateUserCommandHandler(AppDbContext _context, IPasswordService _p
         }
         catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("IX_Users_Email", StringComparison.OrdinalIgnoreCase) == true)
         {
-            _logger.LogWarning(ex, "Concurrent create/reuse race detected for email: {Email}", request.Email);
-            throw new ValidationException([$"Email '{request.Email}' was just claimed by another request. Please try again."]);
+            _logger.LogWarning(ex, "Concurrent create/reuse race detected for email: {Email}", email);
+            throw new ValidationException([$"Email '{email}' was just claimed by another request. Please try again."]);
         }
 
         if (!isReuse && newUser != null)

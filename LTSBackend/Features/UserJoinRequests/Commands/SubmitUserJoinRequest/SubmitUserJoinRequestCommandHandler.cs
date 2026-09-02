@@ -29,6 +29,9 @@ public class SubmitUserJoinRequestCommandHandler(AppDbContext _context, IPasswor
     public async Task<int> Handle(SubmitUserJoinRequestCommand request, CancellationToken cancellationToken)
     {
         var email = request.Email.Trim();
+        var fullName = request.FullName?.Trim() ?? string.Empty;
+        var phone = string.IsNullOrWhiteSpace(request.Phone) ? request.Phone : request.Phone.Trim();
+        var department = string.IsNullOrWhiteSpace(request.Department) ? request.Department : request.Department.Trim();
 
         // 1. Target firm must exist and must currently be usable.
         var firm = await _context.Firms.AsNoTracking().FirstOrDefaultAsync(x => x.FirmID == request.FirmID, cancellationToken);
@@ -69,11 +72,11 @@ public class SubmitUserJoinRequestCommandHandler(AppDbContext _context, IPasswor
         var joinRequest = new UserJoinRequest
         {
             FirmID = request.FirmID,
-            FullName = request.FullName,
+            FullName = fullName,
             Email = email,
             PasswordHash = _passwordService.HashPassword(request.Password),
-            Phone = request.Phone,
-            Department = request.Department,
+            Phone = phone,
+            Department = department,
             RequestedRoleID = request.RequestedRoleID,
             Status = "Pending",
             RequestedAt = DateTime.UtcNow
