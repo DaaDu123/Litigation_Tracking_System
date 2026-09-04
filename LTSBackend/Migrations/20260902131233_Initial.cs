@@ -8,11 +8,38 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LTSBackend.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "FirmAdminRequests",
+                columns: table => new
+                {
+                    RequestID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FirmName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    FirmCode = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    ContactEmail = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    ContactPhone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    AdminFullName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    AdminEmail = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    AdminPasswordHash = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    AdminPhone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    RequestedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReviewedBy = table.Column<int>(type: "int", nullable: true),
+                    ReviewedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RejectionReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedFirmID = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FirmAdminRequests", x => x.RequestID);
+                });
+
             migrationBuilder.CreateTable(
                 name: "Firms",
                 columns: table => new
@@ -233,6 +260,37 @@ namespace LTSBackend.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserJoinRequests",
+                columns: table => new
+                {
+                    RequestID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FirmID = table.Column<int>(type: "int", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Department = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    RequestedRoleID = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    RequestedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReviewedBy = table.Column<int>(type: "int", nullable: true),
+                    ReviewedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RejectionReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedUserID = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserJoinRequests", x => x.RequestID);
+                    table.ForeignKey(
+                        name: "FK_UserJoinRequests_Firms_FirmID",
+                        column: x => x.FirmID,
+                        principalTable: "Firms",
+                        principalColumn: "FirmID",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RolePermissions",
                 columns: table => new
                 {
@@ -277,8 +335,10 @@ namespace LTSBackend.Migrations
                     IsExternal = table.Column<bool>(type: "bit", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    IsReleasedForReuse = table.Column<bool>(type: "bit", nullable: false),
                     LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
                     FailedLoginAttempts = table.Column<int>(type: "int", nullable: false),
+                    LockoutEndUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     PasswordChangedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     SecurityStamp = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -845,99 +905,6 @@ namespace LTSBackend.Migrations
                 });
 
             migrationBuilder.InsertData(
-                table: "CaseCategories",
-                columns: new[] { "CategoryID", "CategoryName", "Description", "FirmID", "IsActive" },
-                values: new object[,]
-                {
-                    { 1, "Civil", "Civil matters and disputes", null, true },
-                    { 2, "Criminal", "Criminal cases", null, true },
-                    { 3, "Constitutional", "Constitutional matters", null, true },
-                    { 4, "Corporate", "Corporate and commercial disputes", null, true },
-                    { 5, "Labour", "Labour and employment disputes", null, true },
-                    { 6, "Administrative", "Administrative law matters", null, true },
-                    { 7, "Banking", "Banking and financial disputes", null, true },
-                    { 8, "Tax", "Tax-related matters", null, true }
-                });
-
-            migrationBuilder.InsertData(
-                table: "CaseStages",
-                columns: new[] { "StageID", "Description", "FirmID", "IsActive", "StageName" },
-                values: new object[,]
-                {
-                    { 1, "Initial case filing stage", null, true, "Filing" },
-                    { 2, "Case admission by court", null, true, "Admission" },
-                    { 3, "Evidence submission stage", null, true, "Evidence" },
-                    { 4, "Oral arguments before court", null, true, "Arguments" },
-                    { 5, "Judgment delivery", null, true, "Judgment" },
-                    { 6, "Appeal proceedings", null, true, "Appeal" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "CaseStatus",
-                columns: new[] { "StatusID", "ColorCode", "FirmID", "IsActive", "IsClosed", "SequenceNo", "StatusName" },
-                values: new object[,]
-                {
-                    { 1, "#0066CC", null, true, false, 1, "New" },
-                    { 2, "#FF9900", null, true, false, 2, "Pending" },
-                    { 3, "#00CC66", null, true, false, 3, "Active" },
-                    { 4, "#FF6600", null, true, false, 4, "Hearing Scheduled" },
-                    { 5, "#9900CC", null, true, false, 5, "Judgment Reserved" },
-                    { 6, "#666666", null, true, true, 6, "Closed" },
-                    { 7, "#999999", null, true, true, 7, "Archived" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "Courts",
-                columns: new[] { "CourtID", "Address", "CourtName", "CourtType", "CreatedDate", "FirmID", "IsActive", "Jurisdiction" },
-                values: new object[,]
-                {
-                    { 1, "Constitution Avenue, Islamabad", "Supreme Court of Pakistan", "Federal", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, true, "National" },
-                    { 2, "H-8/4, Islamabad", "Islamabad High Court", "High Court", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, true, "Islamabad Capital Territory" },
-                    { 3, "The Mall, Lahore", "Lahore High Court", "High Court", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, true, "Punjab" },
-                    { 4, "Constitution Avenue, Karachi", "Sindh High Court", "High Court", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, true, "Sindh" },
-                    { 5, "Peshawar", "Peshawar High Court", "High Court", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, true, "Khyber Pakhtunkhwa" },
-                    { 6, "Quetta", "Quetta High Court", "High Court", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, true, "Balochistan" },
-                    { 7, "Thokar Niaz Baig, Lahore", "District Court Lahore", "District Court", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, true, "Lahore District" },
-                    { 8, "Karachi", "District Court Karachi", "District Court", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, true, "Karachi District" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "Departments",
-                columns: new[] { "DepartmentID", "DepartmentCode", "DepartmentName", "Description", "FirmID", "IsActive" },
-                values: new object[,]
-                {
-                    { 1, "FIN", "Finance Department", null, null, true },
-                    { 2, "REV", "Revenue Department", null, null, true },
-                    { 3, "LAW", "Law Department", null, null, true },
-                    { 4, "DEF", "Defense Department", null, null, true },
-                    { 5, "INT", "Interior Department", null, null, true }
-                });
-
-            migrationBuilder.InsertData(
-                table: "DocumentTypes",
-                columns: new[] { "DocumentTypeID", "Description", "FirmID", "IsActive", "TypeName" },
-                values: new object[,]
-                {
-                    { 1, "Main petition/plaint document", null, true, "Petition" },
-                    { 2, "Sworn affidavit", null, true, "Affidavit" },
-                    { 3, "Order issued by court", null, true, "Court Order" },
-                    { 4, "Supporting evidence documents", null, true, "Evidence" },
-                    { 5, "Reply to petition/arguments", null, true, "Reply" },
-                    { 6, "Final judgment document", null, true, "Judgment" },
-                    { 7, "Legal notices", null, true, "Notice" },
-                    { 8, "Appeal documents", null, true, "Appeal" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "Firms",
-                columns: new[] { "FirmID", "Address", "BlockedAt", "BlockedBy", "BlockedReason", "ContactEmail", "ContactPhone", "CreatedAt", "CreatedBy", "CustomDomain", "DeletedAt", "DeletedBy", "FirmCode", "FirmName", "IsBlocked", "IsDeleted", "MigrationCompletedAt", "MigrationNotes", "MigrationRequestedAt", "MigrationRequestedBy", "MigrationStatus", "UpdatedAt" },
-                values: new object[,]
-                {
-                    { 1, null, null, null, null, null, null, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 0, null, null, null, "DEMO", "Demo Law Firm", false, false, null, "Development/Testing Firm", null, null, "None", null },
-                    { 2, null, null, null, null, null, null, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 0, null, null, null, "TEST", "Test Law Firm", false, false, null, "QA Testing Firm", null, null, "None", null }
-                });
-
-            migrationBuilder.InsertData(
                 table: "NotificationTypes",
                 columns: new[] { "NotificationTypeID", "Description", "IsActive", "IsEmail", "IsInApp", "IsSMS", "TypeName" },
                 values: new object[,]
@@ -946,7 +913,10 @@ namespace LTSBackend.Migrations
                     { 2, "Reminder for upcoming court hearing", true, true, true, false, "HearingReminder" },
                     { 3, "Notification when case is assigned", true, true, true, false, "CaseAssignment" },
                     { 4, "Notification when document uploaded to case", true, false, true, false, "DocumentUploaded" },
-                    { 5, "Notification when case status changes", true, true, true, false, "CaseStatusChanged" }
+                    { 5, "Notification when case status changes", true, true, true, false, "CaseStatusChanged" },
+                    { 6, "Sent to every Super Admin when someone requests to become a Firm Admin", true, true, true, false, "FirmAdminRequest" },
+                    { 7, "Sent to a firm's Firm Admin(s) when someone requests to join that firm as Partner/Associate/Moharrir/Intern", true, true, true, false, "UserJoinRequest" },
+                    { 8, "Sent to a newly quick-added user (Email + Temp Password only), prompting them to complete their profile", true, true, true, false, "CompleteProfile" }
                 });
 
             migrationBuilder.InsertData(
@@ -1060,16 +1030,8 @@ namespace LTSBackend.Migrations
 
             migrationBuilder.InsertData(
                 table: "Users",
-                columns: new[] { "UserID", "CreatedAt", "Department", "Designation", "Email", "EmployeeNo", "FailedLoginAttempts", "FirmID", "FullName", "IsActive", "IsDeleted", "IsExternal", "LastLogin", "PasswordChangedDate", "PasswordHash", "Phone", "ProfileImage", "RoleID", "SecurityStamp", "UpdatedAt" },
-                values: new object[,]
-                {
-                    { 1, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "System Administrator", "superadmin@lts.pk", "", 0, null, "Super Administrator", true, false, false, null, null, "$2a$12$mnEYm2TirTnpNbZnz07S..gjd6klD5GFraAi5WJRqyr4yB1t0imd6", null, null, 1, "SEED-STAMP-USER-0001", null },
-                    { 2, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Firm Administrator", "admin@demolaw.pk", "", 0, 1, "Firm Administrator", true, false, false, null, null, "$2a$12$aW90FxlGx4mqKoBvNUZ5TurErcGgJNpN2/r8wu/MsCI3LsN4Wrhte", null, null, 2, "SEED-STAMP-USER-0002", null },
-                    { 3, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Senior Partner", "partner@demolaw.pk", "", 0, 1, "Muhammad Ashraf (Partner)", true, false, false, null, null, "$2a$12$B7zvJrv3ubJs.W9M/QiCDO2ZkSo7q569cqUmCXBzyRGfJO14uIKRG", null, null, 3, "SEED-STAMP-USER-0003", null },
-                    { 4, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Associate Lawyer", "associate@demolaw.pk", "", 0, 1, "Ayesha Khan (Associate)", true, false, false, null, null, "$2a$12$H76onrsOSDwWi3CGjGz4J.IJx7x5kKaCJ2Jk/fDxlEUfQhYrPDddC", null, null, 4, "SEED-STAMP-USER-0004", null },
-                    { 5, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Legal Clerk", "moharrir@demolaw.pk", "", 0, 1, "Hassan Ali (Moharrir)", true, false, false, null, null, "$2a$12$xBm7jXWO7osy9u4A2r1LmO606ZwKNNj6Lico4zq0ndcsew.WMx7ui", null, null, 5, "SEED-STAMP-USER-0005", null },
-                    { 6, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "Paralegal Intern", "intern@demolaw.pk", "", 0, 1, "Amna Saeed (Intern)", true, false, false, null, null, "$2a$12$53G3.jdH6VkrF.dRg9pdgOzSw28kvZo4y31V99DZ4Lii2oqVLNkXy", null, null, 6, "SEED-STAMP-USER-0006", null }
-                });
+                columns: new[] { "UserID", "CreatedAt", "Department", "Designation", "Email", "EmployeeNo", "FailedLoginAttempts", "FirmID", "FullName", "IsActive", "IsDeleted", "IsExternal", "IsReleasedForReuse", "LastLogin", "LockoutEndUtc", "PasswordChangedDate", "PasswordHash", "Phone", "ProfileImage", "RoleID", "SecurityStamp", "UpdatedAt" },
+                values: new object[] { 1, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "System Administrator", "saadmuhammad19115@gmail.com", "", 0, null, "Super Administrator", true, false, false, false, null, null, null, "$2b$12$AGEF6nAJGVAKB/AtUDhyFuq23a7GuZLpG4g7dUeYvYPXmEimSSXN6", null, null, 1, "SEED-STAMP-USER-0001", null });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_Timestamp",
@@ -1234,6 +1196,21 @@ namespace LTSBackend.Migrations
                 column: "FirmID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_FirmAdminRequests_AdminEmail",
+                table: "FirmAdminRequests",
+                column: "AdminEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FirmAdminRequests_FirmCode",
+                table: "FirmAdminRequests",
+                column: "FirmCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FirmAdminRequests_Status",
+                table: "FirmAdminRequests",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Firms_FirmCode",
                 table: "Firms",
                 column: "FirmCode",
@@ -1332,6 +1309,21 @@ namespace LTSBackend.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserJoinRequests_Email",
+                table: "UserJoinRequests",
+                column: "Email");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserJoinRequests_FirmID",
+                table: "UserJoinRequests",
+                column: "FirmID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserJoinRequests_Status",
+                table: "UserJoinRequests",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserOtps_Email_OtpCode",
                 table: "UserOtps",
                 columns: new[] { "Email", "OtpCode" });
@@ -1387,6 +1379,9 @@ namespace LTSBackend.Migrations
                 name: "DocumentPermissions");
 
             migrationBuilder.DropTable(
+                name: "FirmAdminRequests");
+
+            migrationBuilder.DropTable(
                 name: "HearingAttendance");
 
             migrationBuilder.DropTable(
@@ -1403,6 +1398,9 @@ namespace LTSBackend.Migrations
 
             migrationBuilder.DropTable(
                 name: "RolePermissions");
+
+            migrationBuilder.DropTable(
+                name: "UserJoinRequests");
 
             migrationBuilder.DropTable(
                 name: "UserOtps");

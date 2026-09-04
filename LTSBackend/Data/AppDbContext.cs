@@ -287,7 +287,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Timestamp).IsDescending();
             entity.HasIndex(e => e.UserID);
 
-            
+
             entity.HasQueryFilter(e => BypassTenantFilter || (e.User != null && e.User.FirmID == RequestFirmId));
         });
 
@@ -517,22 +517,26 @@ public class AppDbContext : DbContext
             entity.HasQueryFilter(e => BypassTenantFilter || (e.User != null && e.User.FirmID == RequestFirmId));
         });
 
-        // Seed data - initial firms/roles/permissions/etc for a fresh DB
-        SeedFirms(modelBuilder);
+        // Seed data - MINIMAL bootstrap set only.
+        // Firms, Departments, Courts, CaseCategories, CaseStatus, CaseStages,
+        // and DocumentTypes are intentionally NOT seeded. Nothing in the
+        // codebase references their IDs by hardcoded number (verified), so
+        // the app works fine without them - Firms are created organically via
+        // the Request-Firm-Admin-Access approval flow, and the master data
+        // tables can be populated later by a SuperAdmin from inside the app.
+        //
+        // Roles + Permissions + RolePermissions + NotificationTypes stay
+        // seeded because they ARE relied on by hardcoded IDs elsewhere in the
+        // code (CreateUserCommandHandler, SubmitFirmAdminRequestCommandHandler,
+        // SubmitUserJoinRequestCommandHandler, AssignCaseHandler, ReminderService,
+        // FirmAdminRequest approval) - removing them would crash those flows.
         SeedRoles(modelBuilder);
         SeedPermissions(modelBuilder);
         SeedRolePermissions(modelBuilder);
-        SeedDepartments(modelBuilder);
-        SeedCourts(modelBuilder);
-        SeedCaseCategories(modelBuilder);
-        SeedCaseStatus(modelBuilder);
-        SeedCaseStages(modelBuilder);
-        SeedDocumentTypes(modelBuilder);
         SeedUsers(modelBuilder);
         SeedNotificationTypes(modelBuilder);
     }
 
-    // FIRMS - Multi-tenant workspace seeds
     // NOTE: Seed data (HasData) must be deterministic. Using DateTime.UtcNow here
     // (or as a property's default initializer) bakes a different value into the
     // model every single time the project is built, which makes EF Core think the
@@ -540,54 +544,23 @@ public class AppDbContext : DbContext
     // A fixed constant keeps the seeded rows stable across builds/migrations.
     private static readonly DateTime SeedTimestamp = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    private static void SeedFirms(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Firm>().HasData(
-            new Firm
-            {
-                FirmID = 1,
-                FirmName = "Demo Law Firm",
-                FirmCode = "DEMO",
-                MigrationStatus = "None",
-                MigrationNotes = "Development/Testing Firm",
-                CreatedAt = SeedTimestamp
-            },
-            new Firm
-            {
-                FirmID = 2,
-                FirmName = "Test Law Firm",
-                FirmCode = "TEST",
-                MigrationStatus = "None",
-                MigrationNotes = "QA Testing Firm",
-                CreatedAt = SeedTimestamp
-            }
-        );
-    }
-
-    // USERS - Complete seed users with all roles (using real BCrypt hashes)
-    // ⚠️ All six seeded accounts below share the same demo password: Demo@12345
-    // Each has its own distinct salt (hashes differ) even though the password matches.
-    // These are DEV/DEMO credentials only - rotate or remove before any real deployment.
-    // BUG FIX (CRITICAL): none of the six seeded demo users had RoleID set.
-    // GetRole() therefore returned null for all of them, PermissionService
-    // treated every one of them as roleless, and JwtService could not add a
-    // Role claim to their tokens - meaning every seeded account, INCLUDING
-    // the SuperAdmin, was locked out of every permission check out of the
-    // box. RoleID is now set explicitly for each seeded user below.
-    // SecurityStamp values are fixed, deterministic strings (not
-    // Guid.NewGuid()) for the same reason SeedTimestamp is a constant: HasData
-    // requires stable seed values, or EF Core thinks the model has pending
-    // changes on every build even with no real schema change.
+    // USERS - Bootstrap SuperAdmin ONLY.
+    // Every other account (FirmAdmin, Partner, AssociateLawyer, Moharrir,
+    // InternParalegal) is created organically at runtime:
+    //   - FirmAdmin comes from the "Request Firm Admin Access" flow, once a
+    //     SuperAdmin approves it (a new Firm is created at that point too).
+    //   - Partner/Associate/Moharrir/Intern are added afterwards by that
+    //     FirmAdmin via "Create User".
     private static void SeedUsers(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasData(
-            // SuperAdmin - Platform Owner
+            // SuperAdmin - Platform Owner (bootstrap account)
             new User
             {
                 UserID = 1,
-                Email = "superadmin@lts.pk",
+                Email = "saadmuhammad19115@gmail.com",
                 FullName = "Super Administrator",
-                PasswordHash = "$2a$12$mnEYm2TirTnpNbZnz07S..gjd6klD5GFraAi5WJRqyr4yB1t0imd6", // Demo@12345
+                PasswordHash = "$2b$12$AGEF6nAJGVAKB/AtUDhyFuq23a7GuZLpG4g7dUeYvYPXmEimSSXN6",
                 FirmID = null,
                 RoleID = (int)UserRole.SuperAdmin,
                 Designation = "System Administrator",
@@ -595,166 +568,7 @@ public class AppDbContext : DbContext
                 IsActive = true,
                 SecurityStamp = "SEED-STAMP-USER-0001",
                 CreatedAt = SeedTimestamp
-            },
-            // FirmAdmin - Demo Firm Manager
-            new User
-            {
-                UserID = 2,
-                Email = "admin@demolaw.pk",
-                FullName = "Firm Administrator",
-                PasswordHash = "$2a$12$aW90FxlGx4mqKoBvNUZ5TurErcGgJNpN2/r8wu/MsCI3LsN4Wrhte", // Demo@12345
-                FirmID = 1,
-                RoleID = (int)UserRole.FirmAdmin,
-                Designation = "Firm Administrator",
-                IsExternal = false,
-                IsActive = true,
-                SecurityStamp = "SEED-STAMP-USER-0002",
-                CreatedAt = SeedTimestamp
-            },
-            // Partner - Senior Lawyer
-            new User
-            {
-                UserID = 3,
-                Email = "partner@demolaw.pk",
-                FullName = "Muhammad Ashraf (Partner)",
-                PasswordHash = "$2a$12$B7zvJrv3ubJs.W9M/QiCDO2ZkSo7q569cqUmCXBzyRGfJO14uIKRG", // Demo@12345
-                FirmID = 1,
-                RoleID = (int)UserRole.Partner,
-                Designation = "Senior Partner",
-                IsExternal = false,
-                IsActive = true,
-                SecurityStamp = "SEED-STAMP-USER-0003",
-                CreatedAt = SeedTimestamp
-            },
-            // Associate Lawyer
-            new User
-            {
-                UserID = 4,
-                Email = "associate@demolaw.pk",
-                FullName = "Ayesha Khan (Associate)",
-                PasswordHash = "$2a$12$H76onrsOSDwWi3CGjGz4J.IJx7x5kKaCJ2Jk/fDxlEUfQhYrPDddC", // Demo@12345
-                FirmID = 1,
-                RoleID = (int)UserRole.AssociateLawyer,
-                Designation = "Associate Lawyer",
-                IsExternal = false,
-                IsActive = true,
-                SecurityStamp = "SEED-STAMP-USER-0004",
-                CreatedAt = SeedTimestamp
-            },
-            // Moharrir - Legal Clerk
-            new User
-            {
-                UserID = 5,
-                Email = "moharrir@demolaw.pk",
-                FullName = "Hassan Ali (Moharrir)",
-                PasswordHash = "$2a$12$xBm7jXWO7osy9u4A2r1LmO606ZwKNNj6Lico4zq0ndcsew.WMx7ui", // Demo@12345
-                FirmID = 1,
-                RoleID = (int)UserRole.Moharrir,
-                Designation = "Legal Clerk",
-                IsExternal = false,
-                IsActive = true,
-                SecurityStamp = "SEED-STAMP-USER-0005",
-                CreatedAt = SeedTimestamp
-            },
-            // Intern / Paralegal
-            new User
-            {
-                UserID = 6,
-                Email = "intern@demolaw.pk",
-                FullName = "Amna Saeed (Intern)",
-                PasswordHash = "$2a$12$53G3.jdH6VkrF.dRg9pdgOzSw28kvZo4y31V99DZ4Lii2oqVLNkXy", // Demo@12345
-                FirmID = 1,
-                RoleID = (int)UserRole.InternParalegal,
-                Designation = "Paralegal Intern",
-                IsExternal = false,
-                IsActive = true,
-                SecurityStamp = "SEED-STAMP-USER-0006",
-                CreatedAt = SeedTimestamp
             }
-        );
-    }
-
-    // DEPARTMENTS - Government/Organization departments
-    private static void SeedDepartments(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Department>().HasData(
-            new Department { DepartmentID = 1, DepartmentName = "Finance Department", DepartmentCode = "FIN", IsActive = true },
-            new Department { DepartmentID = 2, DepartmentName = "Revenue Department", DepartmentCode = "REV", IsActive = true },
-            new Department { DepartmentID = 3, DepartmentName = "Law Department", DepartmentCode = "LAW", IsActive = true },
-            new Department { DepartmentID = 4, DepartmentName = "Defense Department", DepartmentCode = "DEF", IsActive = true },
-            new Department { DepartmentID = 5, DepartmentName = "Interior Department", DepartmentCode = "INT", IsActive = true }
-        );
-    }
-
-    // COURTS - Pakistani courts hierarchy
-    private static void SeedCourts(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Court>().HasData(
-            new Court { CourtID = 1, CourtName = "Supreme Court of Pakistan", CourtType = "Federal", Jurisdiction = "National", Address = "Constitution Avenue, Islamabad", IsActive = true, CreatedDate = SeedTimestamp },
-            new Court { CourtID = 2, CourtName = "Islamabad High Court", CourtType = "High Court", Jurisdiction = "Islamabad Capital Territory", Address = "H-8/4, Islamabad", IsActive = true, CreatedDate = SeedTimestamp },
-            new Court { CourtID = 3, CourtName = "Lahore High Court", CourtType = "High Court", Jurisdiction = "Punjab", Address = "The Mall, Lahore", IsActive = true, CreatedDate = SeedTimestamp },
-            new Court { CourtID = 4, CourtName = "Sindh High Court", CourtType = "High Court", Jurisdiction = "Sindh", Address = "Constitution Avenue, Karachi", IsActive = true, CreatedDate = SeedTimestamp },
-            new Court { CourtID = 5, CourtName = "Peshawar High Court", CourtType = "High Court", Jurisdiction = "Khyber Pakhtunkhwa", Address = "Peshawar", IsActive = true, CreatedDate = SeedTimestamp },
-            new Court { CourtID = 6, CourtName = "Quetta High Court", CourtType = "High Court", Jurisdiction = "Balochistan", Address = "Quetta", IsActive = true, CreatedDate = SeedTimestamp },
-            new Court { CourtID = 7, CourtName = "District Court Lahore", CourtType = "District Court", Jurisdiction = "Lahore District", Address = "Thokar Niaz Baig, Lahore", IsActive = true, CreatedDate = SeedTimestamp },
-            new Court { CourtID = 8, CourtName = "District Court Karachi", CourtType = "District Court", Jurisdiction = "Karachi District", Address = "Karachi", IsActive = true, CreatedDate = SeedTimestamp }
-        );
-    }
-
-    // CASE CATEGORIES - Types of litigation
-    private static void SeedCaseCategories(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<CaseCategory>().HasData(
-            new CaseCategory { CategoryID = 1, CategoryName = "Civil", Description = "Civil matters and disputes" },
-            new CaseCategory { CategoryID = 2, CategoryName = "Criminal", Description = "Criminal cases" },
-            new CaseCategory { CategoryID = 3, CategoryName = "Constitutional", Description = "Constitutional matters" },
-            new CaseCategory { CategoryID = 4, CategoryName = "Corporate", Description = "Corporate and commercial disputes" },
-            new CaseCategory { CategoryID = 5, CategoryName = "Labour", Description = "Labour and employment disputes" },
-            new CaseCategory { CategoryID = 6, CategoryName = "Administrative", Description = "Administrative law matters" },
-            new CaseCategory { CategoryID = 7, CategoryName = "Banking", Description = "Banking and financial disputes" },
-            new CaseCategory { CategoryID = 8, CategoryName = "Tax", Description = "Tax-related matters" }
-        );
-    }
-
-    // CASE STATUS - Case lifecycle statuses
-    private static void SeedCaseStatus(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<CaseStatus>().HasData(
-            new CaseStatus { StatusID = 1, StatusName = "New", SequenceNo = 1, ColorCode = "#0066CC", IsClosed = false, IsActive = true },
-            new CaseStatus { StatusID = 2, StatusName = "Pending", SequenceNo = 2, ColorCode = "#FF9900", IsClosed = false, IsActive = true },
-            new CaseStatus { StatusID = 3, StatusName = "Active", SequenceNo = 3, ColorCode = "#00CC66", IsClosed = false, IsActive = true },
-            new CaseStatus { StatusID = 4, StatusName = "Hearing Scheduled", SequenceNo = 4, ColorCode = "#FF6600", IsClosed = false, IsActive = true },
-            new CaseStatus { StatusID = 5, StatusName = "Judgment Reserved", SequenceNo = 5, ColorCode = "#9900CC", IsClosed = false, IsActive = true },
-            new CaseStatus { StatusID = 6, StatusName = "Closed", SequenceNo = 6, ColorCode = "#666666", IsClosed = true, IsActive = true },
-            new CaseStatus { StatusID = 7, StatusName = "Archived", SequenceNo = 7, ColorCode = "#999999", IsClosed = true, IsActive = true }
-        );
-    }
-
-    // CASE STAGES - Stages of litigation
-    private static void SeedCaseStages(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<CaseStage>().HasData(
-            new CaseStage { StageID = 1, StageName = "Filing", Description = "Initial case filing stage" },
-            new CaseStage { StageID = 2, StageName = "Admission", Description = "Case admission by court" },
-            new CaseStage { StageID = 3, StageName = "Evidence", Description = "Evidence submission stage" },
-            new CaseStage { StageID = 4, StageName = "Arguments", Description = "Oral arguments before court" },
-            new CaseStage { StageID = 5, StageName = "Judgment", Description = "Judgment delivery" },
-            new CaseStage { StageID = 6, StageName = "Appeal", Description = "Appeal proceedings" }
-        );
-    }
-
-    // DOCUMENT TYPES - Types of legal documents
-    private static void SeedDocumentTypes(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<DocumentType>().HasData(
-            new DocumentType { DocumentTypeID = 1, TypeName = "Petition", Description = "Main petition/plaint document" },
-            new DocumentType { DocumentTypeID = 2, TypeName = "Affidavit", Description = "Sworn affidavit" },
-            new DocumentType { DocumentTypeID = 3, TypeName = "Court Order", Description = "Order issued by court" },
-            new DocumentType { DocumentTypeID = 4, TypeName = "Evidence", Description = "Supporting evidence documents" },
-            new DocumentType { DocumentTypeID = 5, TypeName = "Reply", Description = "Reply to petition/arguments" },
-            new DocumentType { DocumentTypeID = 6, TypeName = "Judgment", Description = "Final judgment document" },
-            new DocumentType { DocumentTypeID = 7, TypeName = "Notice", Description = "Legal notices" },
-            new DocumentType { DocumentTypeID = 8, TypeName = "Appeal", Description = "Appeal documents" }
         );
     }
 

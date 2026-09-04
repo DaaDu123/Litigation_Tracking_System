@@ -740,64 +740,6 @@ namespace LTSBackend.Migrations
                     b.HasIndex("FirmID");
 
                     b.ToTable("CaseCategories");
-
-                    b.HasData(
-                        new
-                        {
-                            CategoryID = 1,
-                            CategoryName = "Civil",
-                            Description = "Civil matters and disputes",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CategoryID = 2,
-                            CategoryName = "Criminal",
-                            Description = "Criminal cases",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CategoryID = 3,
-                            CategoryName = "Constitutional",
-                            Description = "Constitutional matters",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CategoryID = 4,
-                            CategoryName = "Corporate",
-                            Description = "Corporate and commercial disputes",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CategoryID = 5,
-                            CategoryName = "Labour",
-                            Description = "Labour and employment disputes",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CategoryID = 6,
-                            CategoryName = "Administrative",
-                            Description = "Administrative law matters",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CategoryID = 7,
-                            CategoryName = "Banking",
-                            Description = "Banking and financial disputes",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            CategoryID = 8,
-                            CategoryName = "Tax",
-                            Description = "Tax-related matters",
-                            IsActive = true
-                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.CaseStage", b =>
@@ -828,50 +770,6 @@ namespace LTSBackend.Migrations
                     b.HasIndex("FirmID");
 
                     b.ToTable("CaseStages");
-
-                    b.HasData(
-                        new
-                        {
-                            StageID = 1,
-                            Description = "Initial case filing stage",
-                            IsActive = true,
-                            StageName = "Filing"
-                        },
-                        new
-                        {
-                            StageID = 2,
-                            Description = "Case admission by court",
-                            IsActive = true,
-                            StageName = "Admission"
-                        },
-                        new
-                        {
-                            StageID = 3,
-                            Description = "Evidence submission stage",
-                            IsActive = true,
-                            StageName = "Evidence"
-                        },
-                        new
-                        {
-                            StageID = 4,
-                            Description = "Oral arguments before court",
-                            IsActive = true,
-                            StageName = "Arguments"
-                        },
-                        new
-                        {
-                            StageID = 5,
-                            Description = "Judgment delivery",
-                            IsActive = true,
-                            StageName = "Judgment"
-                        },
-                        new
-                        {
-                            StageID = 6,
-                            Description = "Appeal proceedings",
-                            IsActive = true,
-                            StageName = "Appeal"
-                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.CaseStatus", b =>
@@ -909,71 +807,6 @@ namespace LTSBackend.Migrations
                     b.HasIndex("FirmID");
 
                     b.ToTable("CaseStatus");
-
-                    b.HasData(
-                        new
-                        {
-                            StatusID = 1,
-                            ColorCode = "#0066CC",
-                            IsActive = true,
-                            IsClosed = false,
-                            SequenceNo = 1,
-                            StatusName = "New"
-                        },
-                        new
-                        {
-                            StatusID = 2,
-                            ColorCode = "#FF9900",
-                            IsActive = true,
-                            IsClosed = false,
-                            SequenceNo = 2,
-                            StatusName = "Pending"
-                        },
-                        new
-                        {
-                            StatusID = 3,
-                            ColorCode = "#00CC66",
-                            IsActive = true,
-                            IsClosed = false,
-                            SequenceNo = 3,
-                            StatusName = "Active"
-                        },
-                        new
-                        {
-                            StatusID = 4,
-                            ColorCode = "#FF6600",
-                            IsActive = true,
-                            IsClosed = false,
-                            SequenceNo = 4,
-                            StatusName = "Hearing Scheduled"
-                        },
-                        new
-                        {
-                            StatusID = 5,
-                            ColorCode = "#9900CC",
-                            IsActive = true,
-                            IsClosed = false,
-                            SequenceNo = 5,
-                            StatusName = "Judgment Reserved"
-                        },
-                        new
-                        {
-                            StatusID = 6,
-                            ColorCode = "#666666",
-                            IsActive = true,
-                            IsClosed = true,
-                            SequenceNo = 6,
-                            StatusName = "Closed"
-                        },
-                        new
-                        {
-                            StatusID = 7,
-                            ColorCode = "#999999",
-                            IsActive = true,
-                            IsClosed = true,
-                            SequenceNo = 7,
-                            StatusName = "Archived"
-                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.Court", b =>
@@ -1015,88 +848,6 @@ namespace LTSBackend.Migrations
                     b.HasIndex("FirmID");
 
                     b.ToTable("Courts");
-
-                    b.HasData(
-                        new
-                        {
-                            CourtID = 1,
-                            Address = "Constitution Avenue, Islamabad",
-                            CourtName = "Supreme Court of Pakistan",
-                            CourtType = "Federal",
-                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Jurisdiction = "National"
-                        },
-                        new
-                        {
-                            CourtID = 2,
-                            Address = "H-8/4, Islamabad",
-                            CourtName = "Islamabad High Court",
-                            CourtType = "High Court",
-                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Jurisdiction = "Islamabad Capital Territory"
-                        },
-                        new
-                        {
-                            CourtID = 3,
-                            Address = "The Mall, Lahore",
-                            CourtName = "Lahore High Court",
-                            CourtType = "High Court",
-                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Jurisdiction = "Punjab"
-                        },
-                        new
-                        {
-                            CourtID = 4,
-                            Address = "Constitution Avenue, Karachi",
-                            CourtName = "Sindh High Court",
-                            CourtType = "High Court",
-                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Jurisdiction = "Sindh"
-                        },
-                        new
-                        {
-                            CourtID = 5,
-                            Address = "Peshawar",
-                            CourtName = "Peshawar High Court",
-                            CourtType = "High Court",
-                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Jurisdiction = "Khyber Pakhtunkhwa"
-                        },
-                        new
-                        {
-                            CourtID = 6,
-                            Address = "Quetta",
-                            CourtName = "Quetta High Court",
-                            CourtType = "High Court",
-                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Jurisdiction = "Balochistan"
-                        },
-                        new
-                        {
-                            CourtID = 7,
-                            Address = "Thokar Niaz Baig, Lahore",
-                            CourtName = "District Court Lahore",
-                            CourtType = "District Court",
-                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Jurisdiction = "Lahore District"
-                        },
-                        new
-                        {
-                            CourtID = 8,
-                            Address = "Karachi",
-                            CourtName = "District Court Karachi",
-                            CourtType = "District Court",
-                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Jurisdiction = "Karachi District"
-                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.Department", b =>
@@ -1131,43 +882,6 @@ namespace LTSBackend.Migrations
                     b.HasIndex("FirmID");
 
                     b.ToTable("Departments");
-
-                    b.HasData(
-                        new
-                        {
-                            DepartmentID = 1,
-                            DepartmentCode = "FIN",
-                            DepartmentName = "Finance Department",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            DepartmentID = 2,
-                            DepartmentCode = "REV",
-                            DepartmentName = "Revenue Department",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            DepartmentID = 3,
-                            DepartmentCode = "LAW",
-                            DepartmentName = "Law Department",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            DepartmentID = 4,
-                            DepartmentCode = "DEF",
-                            DepartmentName = "Defense Department",
-                            IsActive = true
-                        },
-                        new
-                        {
-                            DepartmentID = 5,
-                            DepartmentCode = "INT",
-                            DepartmentName = "Interior Department",
-                            IsActive = true
-                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Masters.DocumentType", b =>
@@ -1198,64 +912,6 @@ namespace LTSBackend.Migrations
                     b.HasIndex("FirmID");
 
                     b.ToTable("DocumentTypes");
-
-                    b.HasData(
-                        new
-                        {
-                            DocumentTypeID = 1,
-                            Description = "Main petition/plaint document",
-                            IsActive = true,
-                            TypeName = "Petition"
-                        },
-                        new
-                        {
-                            DocumentTypeID = 2,
-                            Description = "Sworn affidavit",
-                            IsActive = true,
-                            TypeName = "Affidavit"
-                        },
-                        new
-                        {
-                            DocumentTypeID = 3,
-                            Description = "Order issued by court",
-                            IsActive = true,
-                            TypeName = "Court Order"
-                        },
-                        new
-                        {
-                            DocumentTypeID = 4,
-                            Description = "Supporting evidence documents",
-                            IsActive = true,
-                            TypeName = "Evidence"
-                        },
-                        new
-                        {
-                            DocumentTypeID = 5,
-                            Description = "Reply to petition/arguments",
-                            IsActive = true,
-                            TypeName = "Reply"
-                        },
-                        new
-                        {
-                            DocumentTypeID = 6,
-                            Description = "Final judgment document",
-                            IsActive = true,
-                            TypeName = "Judgment"
-                        },
-                        new
-                        {
-                            DocumentTypeID = 7,
-                            Description = "Legal notices",
-                            IsActive = true,
-                            TypeName = "Notice"
-                        },
-                        new
-                        {
-                            DocumentTypeID = 8,
-                            Description = "Appeal documents",
-                            IsActive = true,
-                            TypeName = "Appeal"
-                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.Firm", b =>
@@ -1349,32 +1005,6 @@ namespace LTSBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("Firms");
-
-                    b.HasData(
-                        new
-                        {
-                            FirmID = 1,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CreatedBy = 0,
-                            FirmCode = "DEMO",
-                            FirmName = "Demo Law Firm",
-                            IsBlocked = false,
-                            IsDeleted = false,
-                            MigrationNotes = "Development/Testing Firm",
-                            MigrationStatus = "None"
-                        },
-                        new
-                        {
-                            FirmID = 2,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CreatedBy = 0,
-                            FirmCode = "TEST",
-                            FirmName = "Test Law Firm",
-                            IsBlocked = false,
-                            IsDeleted = false,
-                            MigrationNotes = "QA Testing Firm",
-                            MigrationStatus = "None"
-                        });
                 });
 
             modelBuilder.Entity("LTSBackend.Models.Security.FirmAdminRequest", b =>
@@ -2420,7 +2050,7 @@ namespace LTSBackend.Migrations
                             UserID = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Designation = "System Administrator",
-                            Email = "superadmin@lts.pk",
+                            Email = "saadmuhammad19115@gmail.com",
                             EmployeeNo = "",
                             FailedLoginAttempts = 0,
                             FullName = "Super Administrator",
@@ -2428,99 +2058,9 @@ namespace LTSBackend.Migrations
                             IsDeleted = false,
                             IsExternal = false,
                             IsReleasedForReuse = false,
-                            PasswordHash = "$2a$12$mnEYm2TirTnpNbZnz07S..gjd6klD5GFraAi5WJRqyr4yB1t0imd6",
+                            PasswordHash = "$2b$12$AGEF6nAJGVAKB/AtUDhyFuq23a7GuZLpG4g7dUeYvYPXmEimSSXN6",
                             RoleID = 1,
                             SecurityStamp = "SEED-STAMP-USER-0001"
-                        },
-                        new
-                        {
-                            UserID = 2,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Designation = "Firm Administrator",
-                            Email = "admin@demolaw.pk",
-                            EmployeeNo = "",
-                            FailedLoginAttempts = 0,
-                            FirmID = 1,
-                            FullName = "Firm Administrator",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsExternal = false,
-                            IsReleasedForReuse = false,
-                            PasswordHash = "$2a$12$aW90FxlGx4mqKoBvNUZ5TurErcGgJNpN2/r8wu/MsCI3LsN4Wrhte",
-                            RoleID = 2,
-                            SecurityStamp = "SEED-STAMP-USER-0002"
-                        },
-                        new
-                        {
-                            UserID = 3,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Designation = "Senior Partner",
-                            Email = "partner@demolaw.pk",
-                            EmployeeNo = "",
-                            FailedLoginAttempts = 0,
-                            FirmID = 1,
-                            FullName = "Muhammad Ashraf (Partner)",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsExternal = false,
-                            IsReleasedForReuse = false,
-                            PasswordHash = "$2a$12$B7zvJrv3ubJs.W9M/QiCDO2ZkSo7q569cqUmCXBzyRGfJO14uIKRG",
-                            RoleID = 3,
-                            SecurityStamp = "SEED-STAMP-USER-0003"
-                        },
-                        new
-                        {
-                            UserID = 4,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Designation = "Associate Lawyer",
-                            Email = "associate@demolaw.pk",
-                            EmployeeNo = "",
-                            FailedLoginAttempts = 0,
-                            FirmID = 1,
-                            FullName = "Ayesha Khan (Associate)",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsExternal = false,
-                            IsReleasedForReuse = false,
-                            PasswordHash = "$2a$12$H76onrsOSDwWi3CGjGz4J.IJx7x5kKaCJ2Jk/fDxlEUfQhYrPDddC",
-                            RoleID = 4,
-                            SecurityStamp = "SEED-STAMP-USER-0004"
-                        },
-                        new
-                        {
-                            UserID = 5,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Designation = "Legal Clerk",
-                            Email = "moharrir@demolaw.pk",
-                            EmployeeNo = "",
-                            FailedLoginAttempts = 0,
-                            FirmID = 1,
-                            FullName = "Hassan Ali (Moharrir)",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsExternal = false,
-                            IsReleasedForReuse = false,
-                            PasswordHash = "$2a$12$xBm7jXWO7osy9u4A2r1LmO606ZwKNNj6Lico4zq0ndcsew.WMx7ui",
-                            RoleID = 5,
-                            SecurityStamp = "SEED-STAMP-USER-0005"
-                        },
-                        new
-                        {
-                            UserID = 6,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Designation = "Paralegal Intern",
-                            Email = "intern@demolaw.pk",
-                            EmployeeNo = "",
-                            FailedLoginAttempts = 0,
-                            FirmID = 1,
-                            FullName = "Amna Saeed (Intern)",
-                            IsActive = true,
-                            IsDeleted = false,
-                            IsExternal = false,
-                            IsReleasedForReuse = false,
-                            PasswordHash = "$2a$12$53G3.jdH6VkrF.dRg9pdgOzSw28kvZo4y31V99DZ4Lii2oqVLNkXy",
-                            RoleID = 6,
-                            SecurityStamp = "SEED-STAMP-USER-0006"
                         });
                 });
 
