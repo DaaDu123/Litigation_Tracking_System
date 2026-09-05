@@ -1,52 +1,40 @@
 name: Build and Deploy LTS
-
 on:
   push:
     branches: [main]
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:
           context: ./LTSBackend
-          file: ./LTSBackend/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/lts-backend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/lts-backend:${{ github.sha }}
-
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./LTSFrontend
-          file: ./LTSFrontend/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/lts-frontend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/lts-frontend:${{ github.sha }}
-
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # Sync only the deploy-relevant files (compose file + nginx config)
-      # in case you change them — real secrets stay in the .env file on the box.
       - name: Copy deploy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -56,7 +44,6 @@ jobs:
           source: "docker-compose.yml,nginx/default.conf"
           target: "/home/${{ secrets.EC2_USER }}/lts-deploy"
           strip_components: 0
-
       - name: Pull latest images and restart stack
         uses: appleboy/ssh-action@v1.0.3
         with:
