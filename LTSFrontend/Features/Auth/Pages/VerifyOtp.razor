@@ -86,24 +86,8 @@
             var result = await AuthService.VerifyOtpAsync(_model);
 
             var provider = (CustomAuthStateProvider)AuthStateProvider;
-            await provider.MarkUserAsAuthenticatedAsync(
-                result.UserID, result.FullName, result.Email, null,
-                result.AccessToken, DateTime.UtcNow.AddMinutes(60));
 
-            string? role = null;
-            try
-            {
-                var profile = await UserService.GetMyProfileAsync();
-                role = profile?.RoleName;
-            }
-            catch
-            {
-                // Non-fatal.
-            }
-
-            await provider.MarkUserAsAuthenticatedAsync(
-                result.UserID, result.FullName, result.Email, role,
-                result.AccessToken, DateTime.UtcNow.AddMinutes(60));
+            await provider.MarkUserAsAuthenticatedAsync(result.UserID, result.FullName, result.Email, result.RoleName, result.AccessToken, result.AccessTokenExpiry);
 
             // No forceLoad - see Login.razor comment: session is already
             // live in this circuit, a hard reload only risks the

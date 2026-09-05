@@ -42,6 +42,8 @@ namespace LTSFrontend.Core.Extensions
             services.AddScoped<CustomAuthStateProvider>();
             services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 
+            services.AddSingleton<TokenRefreshGate>();
+
             services.AddHttpClient<ApiClient>((sp, client) =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();

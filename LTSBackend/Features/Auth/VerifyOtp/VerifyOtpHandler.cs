@@ -93,7 +93,9 @@ public class VerifyOtpHandler(AppDbContext _context, IJwtService _jwtService, IA
             UserID = user.UserID,
             FullName = user.FullName,
             Email = user.Email,
+            RoleName = user.Role?.RoleName,
             AccessToken = accessToken,
+            AccessTokenExpiry = _jwtService.GetAccessTokenExpiry(),
             Message = "Email verified successfully! You can now login."
         };
     }

@@ -16,20 +16,14 @@ namespace LTSFrontend.Core.Http
         private readonly ITokenStorageService _tokenStorage;
 
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+        private readonly TokenRefreshGate _refreshGate;
 
-        // Guards TryRefreshAccessTokenAsync so that several requests firing
-        // at once right as the token expires (e.g. a page that kicks off
-        // 3-4 API calls in parallel on load) don't each independently hit
-        // POST /auth/refresh-token - only the first waits on the real
-        // network call, the rest wait on this lock and then reuse whatever
-        // token it produced.
-        private readonly SemaphoreSlim _refreshLock = new(1, 1);
-
-        public ApiClient(HttpClient httpClient, UserSessionState session, ITokenStorageService tokenStorage)
+        public ApiClient(HttpClient httpClient, UserSessionState session, ITokenStorageService tokenStorage, TokenRefreshGate refreshGate)
         {
             Http = httpClient;
             _session = session;
             _tokenStorage = tokenStorage;
+            _refreshGate = refreshGate;
         }
 
         public Task<T?> GetAsync<T>(string url, CancellationToken ct = default)
@@ -108,7 +102,7 @@ namespace LTSFrontend.Core.Http
                 }
             }
 
-            // SILENT TOKEN REFRESH: the access token is short-lived (60 min
+            // SILENT TOKEN REFRESH: the access token is short-lived (7 min
             // by default - see JwtSettings.ExpiryMinutes on the backend).
             // Without this, once it expires every single request would
             // start failing with 401 until the user manually logs out and
@@ -135,12 +129,17 @@ namespace LTSFrontend.Core.Http
 
         private async Task<bool> TryRefreshAccessTokenAsync()
         {
-            await _refreshLock.WaitAsync();
+            await _refreshGate.Lock.WaitAsync();
             try
             {
                 // Someone else may have already refreshed while we were
                 // waiting for the lock - re-check before making another
-                // network call.
+                // network call. This is now effective: _refreshGate is a
+                // singleton, so "someone else" can be a completely
+                // different ApiClient instance (different feature service)
+                // and this check will still see the update, because
+                // UserSessionState is also shared (Scoped, and Blazor WASM
+                // has one root scope per app / browser tab).
                 if (!string.IsNullOrWhiteSpace(_session.AccessToken) && _session.AccessTokenExpiry.HasValue && _session.AccessTokenExpiry.Value > DateTime.UtcNow.AddSeconds(30))
                 {
                     return true;
@@ -187,7 +186,7 @@ namespace LTSFrontend.Core.Http
             }
             finally
             {
-                _refreshLock.Release();
+                _refreshGate.Lock.Release();
             }
         }
 

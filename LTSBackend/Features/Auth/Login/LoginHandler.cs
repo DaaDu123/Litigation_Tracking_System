@@ -176,6 +176,7 @@ public class LoginHandler(AppDbContext _context, IPasswordService _passwordServi
             UserID = user.UserID,
             FullName = user.FullName,
             Email = user.Email,
+            RoleName = user.Role?.RoleName,
             AccessToken = accessToken,
             AccessTokenExpiry = accessTokenExpiry
         };

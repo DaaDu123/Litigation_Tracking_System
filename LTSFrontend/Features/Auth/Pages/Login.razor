@@ -85,24 +85,9 @@
             var result = await AuthService.LoginAsync(_model);
 
             var provider = (CustomAuthStateProvider)AuthStateProvider;
-            await provider.MarkUserAsAuthenticatedAsync(
-                result.UserID, result.FullName, result.Email, null,
-                result.AccessToken, result.AccessTokenExpiry);
 
-            string? role = null;
-            try
-            {
-                var profile = await UserService.GetMyProfileAsync();
-                role = profile?.RoleName;
-            }
-            catch
-            {
-                // Non-fatal: user stays logged in without a role claim.
-            }
-
-            await provider.MarkUserAsAuthenticatedAsync(
-                result.UserID, result.FullName, result.Email, role,
-                result.AccessToken, result.AccessTokenExpiry);
+            
+            await provider.MarkUserAsAuthenticatedAsync(result.UserID, result.FullName, result.Email, result.RoleName, result.AccessToken, result.AccessTokenExpiry);
 
             // No forceLoad: the session is already live in this circuit
             // (MarkUserAsAuthenticatedAsync above both set it in-memory and

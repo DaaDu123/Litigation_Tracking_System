@@ -215,7 +215,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.HasKey(e => e.RefreshTokenID);
-            entity.Property(e => e.Token).IsRequired();
+
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(64);
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => new { e.UserID, e.IsRevoked });
+
             entity.Property(e => e.ExpiryDate).IsRequired();
             entity.HasOne(e => e.User).WithMany(u => u.RefreshTokens).HasForeignKey(e => e.UserID).OnDelete(DeleteBehavior.Cascade);
 
