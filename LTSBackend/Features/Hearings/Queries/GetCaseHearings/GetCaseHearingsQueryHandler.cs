@@ -11,18 +11,9 @@ using LTSBackend.Services.Permissions;
 
 namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
 {
-    public class GetCaseHearingsQueryHandler : IRequestHandler<GetCaseHearingsQuery, PagedHearingResult<HearingDetailDTO>>
+    public class GetCaseHearingsQueryHandler(AppDbContext _context, ICurrentUserService _currentUser, IPermissionService _permissionService) : IRequestHandler<GetCaseHearingsQuery, PagedHearingResult<HearingDetailDTO>>
     {
-        private readonly AppDbContext _context;
-        private readonly ICurrentUserService _currentUser;
-        private readonly IPermissionService _permissionService;
-
-        public GetCaseHearingsQueryHandler(AppDbContext context, ICurrentUserService currentUser, IPermissionService permissionService)
-        {
-            _context = context;
-            _currentUser = currentUser;
-            _permissionService = permissionService;
-        }
+        
 
         // =====================================================
         // HANDLE — paged list of a case's hearings, scoped to who's allowed to see it
@@ -50,12 +41,13 @@ namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
             }
 
             var query = _context.Hearings
+                .AsNoTracking()
                 .Include(h => h.Case)
                 .Include(h => h.Court)
                 .Where(h => h.CaseID == request.CaseId);
 
             // Multi-tenant isolation
-                query = query.Where(h => h.Case.FirmID == _currentUser.FirmID);
+            query = query.Where(h => h.Case.FirmID == _currentUser.FirmID);
 
             query = query.OrderByDescending(h => h.HearingDate);
 
@@ -68,37 +60,11 @@ namespace LTSBackend.Features.Hearings.Queries.GetCaseHearings
 
             var creatorIds = hearings.Select(h => h.CreatedBy).Distinct().ToList();
             var creatorNames = await _context.Users
+                .AsNoTracking()
                 .Where(u => creatorIds.Contains(u.UserID))
                 .ToDictionaryAsync(u => u.UserID, u => u.FullName, cancellationToken);
 
-            var hearingDTOs = hearings.Select(h =>
-            {
-                int daysRemaining = (int)(h.HearingDate - DateTime.UtcNow).TotalDays;
-                string priority = daysRemaining <= 1 ? "Critical" :
-                                daysRemaining <= 7 ? "High" :
-                                daysRemaining <= 15 ? "Medium" : "Normal";
-
-                return new HearingDetailDTO
-                {
-                    HearingId = h.HearingID,
-                    CaseId = h.CaseID,
-                    CaseNumber = h.Case?.CaseNumber,
-                    CaseTitle = h.Case?.CaseTitle,
-                    CourtId = h.CourtID,
-                    CourtName = h.Court?.CourtName,
-                    HearingDate = h.HearingDate,
-                    CourtRoom = h.CourtRoom,
-                    JudgeName = h.JudgeName,
-                    HearingPurpose = h.Purpose,
-                    HearingOutcome = h.Outcome,
-                    NextHearingDate = h.NextHearingDate,
-                    Remarks = h.Remarks,
-                    CreatedByUser = creatorNames.TryGetValue(h.CreatedBy, out var name) ? name : null,
-                    CreatedDate = h.CreatedDate,
-                    DaysRemaining = daysRemaining,
-                    HearingPriority = priority
-                };
-            }).ToList();
+            var hearingDTOs = HearingMappingHelper.MapToDetailDtos(hearings, creatorNames);
 
             return new PagedHearingResult<HearingDetailDTO>
             {

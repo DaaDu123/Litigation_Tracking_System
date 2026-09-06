@@ -6,33 +6,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.Documents.Queries.GetCaseDocuments
 {
-    public class GetCaseDocumentsQueryHandler (AppDbContext _context) : IRequestHandler<GetCaseDocumentsQuery, List<DocumentDetailDTO>>
+    public class GetCaseDocumentsQueryHandler(AppDbContext _context) : IRequestHandler<GetCaseDocumentsQuery, List<DocumentDetailDTO>>
     {
-        // =====================================================
-        // HANDLE — lists a case's latest documents, filtered per-viewer
-        // A layered set of visibility rules, all resolved once per user
-        // up front (see the N+1 fix note in memory: role/firm/
-        // case-assignment resolved once, then per-document overrides
-        // batched in a single query) rather than per document:
-        //   - Firm isolation (SuperAdmin exempt), and the user's own
-        //     account/firm must be active and not blocked/deleted.
-        //   - AssociateLawyer/InternParalegal/Moharrir must be actively
-        //     assigned to this case.
-        //   - Moharrir additionally only sees documents where a
-        //     per-user or per-role DocumentPermissions override (or
-        //     their Elevated-mode default) grants CanView.
-        //   - Draft (Intern-uploaded, unapproved) documents are hidden
-        //     from everyone except their own uploader and
-        //     FirmAdmin/Partner.
-        // =====================================================
         public async Task<List<DocumentDetailDTO>> Handle(GetCaseDocumentsQuery request, CancellationToken cancellationToken)
         {
-            var caseFirmId = await _context.Cases
+            var caseInfo = await _context.Cases
                 .AsNoTracking()
                 .Where(c => c.CaseID == request.CaseID)
-                .Select(c => (int?)c.FirmID)
+                .Select(c => new { c.FirmID, c.CaseNumber })
                 .FirstOrDefaultAsync(cancellationToken);
 
+            var caseFirmId = caseInfo?.FirmID;
             var user = await _context.Users
                 .IgnoreQueryFilters()
                 .AsNoTracking()
@@ -120,11 +104,7 @@ namespace LTSBackend.Features.Documents.Queries.GetCaseDocuments
                 .Where(u => allNameIds.Contains(u.UserID))
                 .ToDictionaryAsync(u => u.UserID, u => u.FullName, cancellationToken);
 
-            var caseNumber = await _context.Cases
-                .AsNoTracking()
-                .Where(c => c.CaseID == request.CaseID)
-                .Select(c => c.CaseNumber)
-                .FirstOrDefaultAsync(cancellationToken) ?? "Unknown";
+            var caseNumber = caseInfo?.CaseNumber ?? "Unknown";
 
             bool canSeeDrafts = role == UserRole.FirmAdmin || role == UserRole.Partner;
 

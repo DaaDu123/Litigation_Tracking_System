@@ -5,22 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LTSBackend.Features.LoginHistory.Commands.DeleteOldHistory;
 
-/// <summary>
-/// Bulk-deletes logged-out login history records older than the given
-/// number of days (a retention/cleanup sweep).
-///
-/// TENANT ISOLATION (fixed - see AppDbContext.cs): previously ran with no
-/// FirmID scoping at all, so if this had ever been granted to a Firm Admin
-/// it would have permanently deleted every firm's old login records in one
-/// call. The global query filter on LoginHistory now scopes this
-/// automatically to the caller's own firm; for SuperAdmin (who bypasses the
-/// filter by design) it correctly remains a platform-wide retention sweep,
-/// which is the intended behaviour for a platform-level operator.
-///
-/// Currently only reachable by SuperAdmin in practice - see the comment in
-/// DeleteLoginHistoryHandler.cs for why DeleteLoginHistory is not granted
-/// to Firm Admin by default.
-/// </summary>
 public class DeleteOldHistoryHandler(AppDbContext context) : IRequestHandler<DeleteOldHistoryCommand, int>
 {
     // =====================================================
@@ -32,13 +16,13 @@ public class DeleteOldHistoryHandler(AppDbContext context) : IRequestHandler<Del
     {
         var cutOffDate = DateTime.UtcNow.AddDays(-request.Days);
 
-        var oldHistory = await context.LoginHistories.Where(x => x.IsLoggedOut && x.LoginTime < cutOffDate).ToListAsync(cancellationToken);
-
-        if (oldHistory.Count == 0)
-            return 0;
-
-        context.LoginHistories.RemoveRange(oldHistory);
-        await context.SaveChangesAsync(cancellationToken);
-        return oldHistory.Count;
+        // ROOT-CAUSE FIX (performance): previously loaded every matching
+        // row into memory (ToListAsync) just to RemoveRange + SaveChanges
+        // them - for a large old-record backlog that's thousands of
+        // tracked entities for no reason. ExecuteDeleteAsync (EF Core 7+)
+        // translates straight to a single SQL DELETE statement.
+        return await context.LoginHistories
+            .Where(x => x.IsLoggedOut && x.LoginTime < cutOffDate)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 }

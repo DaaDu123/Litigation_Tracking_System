@@ -31,12 +31,13 @@ namespace LTSBackend.Features.Hearings.Queries.GetUpcomingHearings
         public async Task<PagedHearingResult<HearingDetailDTO>> Handle(GetUpcomingHearingsQuery request, CancellationToken cancellationToken)
         {
             var query = _context.Hearings
+                .AsNoTracking()
                 .Include(h => h.Case)
                 .Include(h => h.Court)
                 .Where(h => h.HearingDate >= DateTime.UtcNow);
 
             // FIX: previously this leaked EVERY firm's upcoming hearings to any logged-in user
-                query = query.Where(h => h.Case.FirmID == _currentUser.FirmID);
+            query = query.Where(h => h.Case.FirmID == _currentUser.FirmID);
 
             if (request.CaseId.HasValue)
                 query = query.Where(h => h.CaseID == request.CaseId.Value);
@@ -55,37 +56,11 @@ namespace LTSBackend.Features.Hearings.Queries.GetUpcomingHearings
 
             var creatorIds = hearings.Select(h => h.CreatedBy).Distinct().ToList();
             var creatorNames = await _context.Users
+                .AsNoTracking()
                 .Where(u => creatorIds.Contains(u.UserID))
                 .ToDictionaryAsync(u => u.UserID, u => u.FullName, cancellationToken);
 
-            var hearingDTOs = hearings.Select(h =>
-            {
-                int daysRemaining = (int)(h.HearingDate - DateTime.UtcNow).TotalDays;
-                string priority = daysRemaining <= 1 ? "Critical" :
-                                daysRemaining <= 7 ? "High" :
-                                daysRemaining <= 15 ? "Medium" : "Normal";
-
-                return new HearingDetailDTO
-                {
-                    HearingId = h.HearingID,
-                    CaseId = h.CaseID,
-                    CaseNumber = h.Case?.CaseNumber,
-                    CaseTitle = h.Case?.CaseTitle,
-                    CourtId = h.CourtID,
-                    CourtName = h.Court?.CourtName,
-                    HearingDate = h.HearingDate,
-                    CourtRoom = h.CourtRoom,
-                    JudgeName = h.JudgeName,
-                    HearingPurpose = h.Purpose,
-                    HearingOutcome = h.Outcome,
-                    NextHearingDate = h.NextHearingDate,
-                    Remarks = h.Remarks,
-                    CreatedByUser = creatorNames.TryGetValue(h.CreatedBy, out var name) ? name : null,
-                    CreatedDate = h.CreatedDate,
-                    DaysRemaining = daysRemaining,
-                    HearingPriority = priority
-                };
-            }).ToList();
+            var hearingDTOs = HearingMappingHelper.MapToDetailDtos(hearings, creatorNames);
 
             return new PagedHearingResult<HearingDetailDTO>
             {
