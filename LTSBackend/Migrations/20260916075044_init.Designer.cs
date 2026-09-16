@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LTSBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260902131233_Initial")]
-    partial class Initial
+    [Migration("20260916075044_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1549,14 +1549,18 @@ namespace LTSBackend.Migrations
 
                     b.Property<string>("Token")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("UserID")
                         .HasColumnType("int");
 
                     b.HasKey("RefreshTokenID");
 
-                    b.HasIndex("UserID");
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserID", "IsRevoked");
 
                     b.ToTable("RefreshTokens");
                 });

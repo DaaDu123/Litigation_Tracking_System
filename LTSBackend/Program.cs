@@ -22,6 +22,7 @@ builder.Services
     .AddAppSwagger();
 
 var app = builder.Build();
+Console.WriteLine($"[DEBUG] Connection string: {builder.Configuration.GetConnectionString("DefaultConnection")}");
 
 app.UseAppMiddlewarePipeline();
 
